@@ -464,6 +464,8 @@ export default function SportOS() {
   const updateInjuryReport=(id,updates)=>setInjuryReports(p=>p.map(r=>r.id===id?{...r,...updates}:r));
   const [wellnessLogs,setWellnessLogs]=useState(MOCK_WELLNESS_LOGS);
   const addWellnessLog=r=>setWellnessLogs(p=>[r,...p]);
+  const [sesionesCreadas,setSesionesCreadas]=useState([]);
+  const addSesion=s=>setSesionesCreadas(p=>[s,...p]);
 
   const sp = SPORTS_CONFIG[sport];
   const club = CLUBS[sport];
@@ -591,8 +593,8 @@ export default function SportOS() {
           {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRIES={COUNTRIES} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
           {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor}/>}
           {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={PLAYERS_RUGBY} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} wellnessLogs={wellnessLogs}/>}
-          {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay}/>}
-          {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog}/>}
+          {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} sesionesCreadas={sesionesCreadas} addSesion={addSesion}/>}
+          {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas}/>}
           {role==="padre"&&<PadreView showToast={showToast} setWearablesOpen={setWearablesOpen} injuryReports={injuryReports} updateInjuryReport={updateInjuryReport}/>}
           <BackendNotes open={backendOpen} setOpen={setBackendOpen}/>
         </div>
@@ -817,11 +819,12 @@ function EquipoMedicoView({players,showToast,sportColor,injuryReports,addInjuryR
 const EJERCICIOS_LISTA = ["Sentadilla","Sentadilla Frontal","Press Banca","Press Militar","Peso Muerto","Peso Muerto Rumano","Hip Thrust","Pull-up","Remo con Barra","Remo en Polea","Fondos","Zancada","Box Jump","Power Clean","Hang Clean","Push Press","Sled Push","Farmer Carry","Plancha","Core Press"];
 const BLOQUE_COLORS = ["#F97316","#3B82F6","#22C55E","#A855F7","#F59E0B","#EF4444","#06B6D4"];
 
-function NuevaSesionModal({onClose,showToast}) {
+function NuevaSesionModal({onClose,showToast,addSesion,categorias=["M18","M16","M14"]}) {
   const hoy=new Date().toISOString().split("T")[0];
   const [fecha,setFecha]=useState(hoy);
   const [tipo,setTipo]=useState("Fuerza");
   const [titulo,setTitulo]=useState("");
+  const [categoria,setCategoria]=useState("M18");
   const [bloques,setBloques]=useState([mkBloque("A")]);
   function mkBloque(letra){return {id:Date.now()+Math.random(),letra,nombre:"Principal",objetivo:"FUERZA",filas:[mkFila()]};}
   function mkFila(){return {id:Date.now()+Math.random(),patron:"",ejercicio:"",series:3,reps:8,tipoRep:"reps",kg:"",rir:"",rpe:""};}
@@ -832,7 +835,7 @@ function NuevaSesionModal({onClose,showToast}) {
   const addFila=(bid)=>setBloques(p=>p.map(b=>b.id===bid?{...b,filas:[...b.filas,mkFila()]}:b));
   const delFila=(bid,fid)=>setBloques(p=>p.map(b=>b.id===bid?{...b,filas:b.filas.filter(f=>f.id!==fid)}:b));
   const updFila=(bid,fid,u)=>setBloques(p=>p.map(b=>b.id===bid?{...b,filas:b.filas.map(f=>f.id===fid?{...f,...u}:f)}:b));
-  const save=()=>{if(!titulo.trim()){showToast("Ingresa un título para la sesión","warning");return;}showToast(`✅ Sesión "${titulo}" guardada en el plan`,"success");onClose();};
+  const save=()=>{if(!titulo.trim()){showToast("Ingresa un título para la sesión","warning");return;}addSesion({id:Date.now(),fecha,tipo,titulo,categoria,bloques});showToast(`✅ Sesión "${titulo}" asignada a ${categoria}`,"success");onClose();};
   const OBJETIVOS=["OBJETIVO","FUERZA","POTENCIA","HIPERTROFIA","RESISTENCIA","OTRO"];
   const inStyle={...ss.input,fontSize:"14px",padding:"10px 12px"};
   return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px",overflowY:"auto"}}>
@@ -844,11 +847,16 @@ function NuevaSesionModal({onClose,showToast}) {
           <button onClick={onClose} style={{...ss.btn,background:"transparent",color:"#71717a",padding:"4px 10px",fontSize:"18px",lineHeight:1}}>✕</button>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginBottom:"16px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"16px",marginBottom:"16px"}}>
         <div><div style={ss.label}>Fecha</div><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{...inStyle,colorScheme:"dark"}}/></div>
         <div><div style={ss.label}>Tipo</div>
           <select value={tipo} onChange={e=>setTipo(e.target.value)} style={inStyle}>
             {["Fuerza","Potencia","Hipertrofia","Resistencia","Técnica","Recuperación","Otro"].map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div><div style={ss.label}>Categoría</div>
+          <select value={categoria} onChange={e=>setCategoria(e.target.value)} style={inStyle}>
+            {categorias.map(c=><option key={c}>{c}</option>)}
           </select>
         </div>
       </div>
@@ -1638,7 +1646,7 @@ function AsistenciaGrid({players,sportColor,showToast}) {
   </div>;
 }
 
-function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublishedPlan,newExForm,setNewExForm,newEx,setNewEx,gymPlanExercises,setGymPlanExercises,rankTab,setRankTab,expandedDay,setExpandedDay}) {
+function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublishedPlan,newExForm,setNewExForm,newEx,setNewEx,gymPlanExercises,setGymPlanExercises,rankTab,setRankTab,expandedDay,setExpandedDay,sesionesCreadas,addSesion}) {
   const [nuevaSesionOpen,setNuevaSesionOpen]=useState(false);
   const days=["lunes","miercoles","viernes"];
   const dayLabels={lunes:"Lunes",miercoles:"Miércoles",viernes:"Viernes"};
@@ -1654,7 +1662,7 @@ function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublish
   const statusIcon=(s)=>s==="ok"?"✅":s==="parcial"?"⚠️":"⏳";
 
   if(module==="microciclo") return <div>
-    {nuevaSesionOpen&&<NuevaSesionModal onClose={()=>setNuevaSesionOpen(false)} showToast={showToast}/>}
+    {nuevaSesionOpen&&<NuevaSesionModal onClose={()=>setNuevaSesionOpen(false)} showToast={showToast} addSesion={addSesion} categorias={["M18","M16","M14","M12","Senior"]}/>}
     <SectionTitle title={`Microciclo — Semana ${GYM_PLAN.week}`} sub={`${GYM_PLAN.coach} · ${sp.name}`} action={<div style={{display:"flex",gap:"8px"}}>
       <button onClick={()=>setNuevaSesionOpen(true)} className="btn-hover" style={{...ss.btn,background:"#fafafa",color:"#09090b",fontWeight:600,fontSize:"12px"}}>+ Nueva sesión</button>
       <button onClick={()=>{setPublishedPlan(true);showToast("Plan publicado. 15 jugadores notificados vía push y WhatsApp 📱");}} className="btn-hover" style={{...ss.btn,background:publishedPlan?"#22C55E22":"#22C55E",color:publishedPlan?"#22C55E":"#fff",border:publishedPlan?"1px solid #22C55E":"none",fontSize:"12px"}}>{publishedPlan?"✅ Plan publicado":"📢 Publicar plan"}</button>
@@ -1707,7 +1715,7 @@ function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublish
   return null;
 }
 
-function JugadorView({module,sport,sp,club,player,players,sportColor,countryData,convocado,setConvocado,setWhatsappModal,showToast,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,rankTab,setRankTab,injuryReports,addInjuryReport,updateInjuryReport,addWellnessLog}) {
+function JugadorView({module,sport,sp,club,player,players,sportColor,countryData,convocado,setConvocado,setWhatsappModal,showToast,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,rankTab,setRankTab,injuryReports,addInjuryReport,updateInjuryReport,addWellnessLog,sesionesCreadas}) {
   const camiseta = player.num;
   const isNominated = true;
   const [showLesionForm,setShowLesionForm]=useState(false);
@@ -1746,7 +1754,7 @@ function JugadorView({module,sport,sp,club,player,players,sportColor,countryData
       <Badge color={injuryReports.filter(r=>r.player===player.name).length>0?sportColor:"#4A5568"}>{injuryReports.filter(r=>r.player===player.name).length} reportes</Badge>
     </div>
   </div>;
-  if(module==="migym") return <GymJugador player={player} sportColor={sportColor} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} showToast={showToast} rankTab={rankTab} setRankTab={setRankTab} players={players} addWellnessLog={addWellnessLog}/>;
+  if(module==="migym") return <GymJugador player={player} sportColor={sportColor} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} showToast={showToast} rankTab={rankTab} setRankTab={setRankTab} players={players} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas}/>;
   if(module==="micuota"){
     const historial=[
       {mes:"Mayo 2026",monto:club.cuota,estado:"pagado",fecha:"05-05-2026",metodo:countryData.payments[0]},
@@ -1865,7 +1873,7 @@ function JugadorView({module,sport,sp,club,player,players,sportColor,countryData
   return null;
 }
 
-function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,showToast,rankTab,setRankTab,players,addWellnessLog}) {
+function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,showToast,rankTab,setRankTab,players,addWellnessLog,sesionesCreadas}) {
   const todayPlan=GYM_PLAN.sessions.lunes;
   const [wellnessDone,setWellnessDone]=useState(false);
   const [wellnessNota,setWellnessNota]=useState("");
@@ -1897,6 +1905,18 @@ function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setComp
     </div>}
     {completedSession&&wellnessDone&&<div style={{...ss.card,marginBottom:"16px",padding:"10px 14px",background:"rgba(34,197,94,0.05)",border:"1px solid rgba(34,197,94,0.2)"}}>
       <span style={{fontSize:"12px",color:"#22C55E"}}>✅ Estado post-sesión registrado · el equipo médico ya puede verlo</span>
+    </div>}
+    {sesionesCreadas.filter(s=>s.categoria===player.cat).length>0&&<div style={{...ss.card,marginBottom:"16px",border:"1px solid #27272a"}}>
+      <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>📋 Sesiones asignadas por el preparador</div>
+      {sesionesCreadas.filter(s=>s.categoria===player.cat).map((ses,i)=><div key={ses.id} style={{padding:"10px 12px",background:"rgba(255,255,255,0.01)",borderRadius:"8px",marginBottom:i<sesionesCreadas.filter(s=>s.categoria===player.cat).length-1?"8px":"0",borderLeft:`3px solid ${sportColor}`,borderTop:"1px solid #27272a"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"6px"}}>
+          <div style={{fontWeight:500,fontSize:"13px",color:"#fafafa"}}>{ses.titulo}</div>
+          <Badge color={sportColor}>{ses.tipo}</Badge>
+        </div>
+        <div style={{fontSize:"11px",color:"#a1a1aa",display:"flex",gap:"12px"}}>
+          <span>📅 {ses.fecha}</span><span>🏋️ {ses.bloques.length} bloques · {ses.bloques.reduce((t,b)=>t+b.filas.length,0)} ejercicios</span>
+        </div>
+      </div>)}
     </div>}
     {todayPlan.exercises.map((ex,ei)=>{
       const prev1RM=PREV_1RM[ex.name]||100;
