@@ -489,7 +489,7 @@ export default function SportOS() {
 
   const MODULE_MAP = {
     superadmin:[{id:"dashboard",label:"Dashboard Global"},{id:"clubes",label:"Clubes"},{id:"comisiones",label:"Comisiones"},{id:"comparativa",label:"SportOS vs SportEasy"}],
-    admin:[{id:"miclub",label:"Mi Club"},{id:"jugadores",label:"Jugadores"},{id:"finanzas",label:"Finanzas"}],
+    admin:[{id:"miclub",label:"Mi Club"},{id:"jugadores",label:"Jugadores"},{id:"lesiones",label:"🩺 Lesiones"},{id:"desempeño",label:"📈 Desempeño"},{id:"finanzas",label:"Finanzas"}],
     entrenador:[{id:"muro",label:"El Muro"},{id:"matchcenter",label:"Match Center"},{id:"nomina",label:"Nómina"},{id:"estadisticas",label:"Estadísticas"},{id:"asistencia",label:"Asistencia"},{id:"salud",label:"Salud"},{id:"equipomedico",label:"Equipo Médico"}],
     preparador:[{id:"microciclo",label:"Microciclo"},{id:"estadoplantel",label:"Estado Plantel"},{id:"rankingfuerza",label:"Ranking Fuerza"},{id:"lesiones",label:"Análisis de Lesiones"}],
     jugador:[{id:"midashboard",label:"Mi Dashboard"},{id:"migym",label:"Mi Gym"},{id:"mislesiones",label:"Mis Lesiones"},{id:"micuota",label:"Mi Cuota"},{id:"nominasclub",label:"Nóminas del Club"},{id:"miconvocatoria",label:"Mi Convocatoria"}],
@@ -595,7 +595,7 @@ export default function SportOS() {
       <div style={ss.main}>
         <div key={role+module} className="module-enter">
           {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRIES={COUNTRIES} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
-          {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor}/>}
+          {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor} injuryReports={injuryReports}/>}
           {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={PLAYERS_RUGBY} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} wellnessLogs={wellnessLogs}/>}
           {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} sesionesCreadas={sesionesCreadas} addSesion={addSesion}/>}
           {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas} registrosSesion={registrosSesion} logRegistro={logRegistro} getRegistro={getRegistro} calcVolSesion={calcVolSesion}/>}
@@ -1361,7 +1361,101 @@ function ComparisonTable() {
   </div>;
 }
 
-function AdminView({module,sport,sp,club,activeClubs,setActiveClubs,countryData,players,showToast,sportColor}) {
+function LesionesAdminView({injuryReports,showToast}) {
+  const [filtroTipo,setFiltroTipo]=useState("Todos");
+  const [filtroEstado,setFiltroEstado]=useState("Todos");
+  const tiposUnicos=[...new Set(injuryReports.map(r=>r.tipo))];
+  const reps=injuryReports.filter(r=>(filtroTipo==="Todos"||r.tipo===filtroTipo)&&(filtroEstado==="Todos"||(filtroEstado==="Activo"&&!r.fechaVuelta)||(filtroEstado==="Recuperado"&&r.fechaVuelta)));
+  const lesionesXsemana=Array.from({length:4},(_,i)=>{const d=new Date();d.setDate(d.getDate()-i*7);const w=Math.floor(d.getTime()/604800000);return reps.filter(r=>Math.floor(new Date(r.fecha+"T12:00:00").getTime()/604800000)===w).length;}).reverse();
+  return <div>
+    <SectionTitle title="🩺 Reporte de Lesiones" sub={`${reps.length} lesión(es) registrada(s)`}/>
+    <div style={{display:"flex",gap:"12px",marginBottom:"20px",flexWrap:"wrap"}}>
+      <div style={{flex:1,minWidth:"150px"}}><div style={ss.label}>Tipo</div>
+        <select value={filtroTipo} onChange={e=>setFiltroTipo(e.target.value)} style={ss.input}>
+          <option>Todos</option>{tiposUnicos.map(t=><option key={t}>{t}</option>)}
+        </select>
+      </div>
+      <div style={{flex:1,minWidth:"150px"}}><div style={ss.label}>Estado</div>
+        <select value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)} style={ss.input}>
+          {["Todos","Activo","Recuperado"].map(e=><option key={e}>{e}</option>)}
+        </select>
+      </div>
+    </div>
+    <div style={{...ss.card,marginBottom:"20px"}}>
+      <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>Lesiones por semana (últimas 4)</div>
+      <div style={{display:"flex",alignItems:"flex-end",gap:"8px",height:"120px"}}>
+        {lesionesXsemana.map((v,i)=>{const h=Math.max(20,v*30);return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end"}}>
+          <div style={{width:"100%",height:h,background:"#3B82F6",borderRadius:"6px 6px 0 0",marginBottom:"4px"}}/>
+          <span style={{fontSize:"11px",color:"#a1a1aa"}}>-{3-i}w</span>
+        </div>;})}
+      </div>
+    </div>
+    <div style={ss.card}>
+      <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>Historial</div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:"600px",fontSize:"12px"}}>
+          <thead><tr style={{borderBottom:"1px solid #27272a"}}>
+            {["JUGADOR","TIPO","SEVERIDAD","DIAGNÓSTICO","DÍAS EST.","ESTADO","FECHA"].map(h=><th key={h} style={{textAlign:"left",color:"#52525b",padding:"8px 10px",fontWeight:600,fontSize:"11px",letterSpacing:"0.07em"}}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {reps.map(r=>{const dias=r.fechaVuelta?Math.ceil((new Date(r.fechaVuelta+"T12:00:00")-new Date(r.fecha+"T12:00:00"))/(1000*3600*24)):0;return <tr key={r.id} style={{borderBottom:"1px solid #27272a"}}>
+              <td style={{padding:"8px 10px"}}>{r.player}</td>
+              <td style={{padding:"8px 10px"}}>{r.tipo}</td>
+              <td style={{padding:"8px 10px"}}><Semaforo status={r.severity==="rojo"?"rojo":r.severity==="amarillo"?"amarillo":"verde"}/></td>
+              <td style={{padding:"8px 10px",color:"#a1a1aa",fontSize:"11px"}}>{r.diagnostico.substring(0,30)}...</td>
+              <td style={{padding:"8px 10px"}}>{dias} días</td>
+              <td style={{padding:"8px 10px"}}><Badge color={r.fechaVuelta?"#22C55E":"#F59E0B"}>{r.fechaVuelta?"Recuperado":"Activo"}</Badge></td>
+              <td style={{padding:"8px 10px",color:"#a1a1aa"}}>{r.fecha}</td>
+            </tr>;})}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>;
+}
+
+function DesempenoAdminView({players,showToast,sportColor}) {
+  const PREV_1RM={Sentadilla:140,"Hip Thrust":120,"Press Banca":110,"Pull-up":90,"Power Clean":95};
+  const asistencia=[{name:"Andrés Castro",pct:95},{name:"Felipe Morales",pct:88},{name:"Diego Saavedra",pct:92},{name:"Cristóbal Vega",pct:73},{name:"Matías Herrera",pct:100}];
+  const topJugadores=players.slice(0,5).map(p=>({...p,"1rm":PREV_1RM["Sentadilla"]+Math.random()*30}));
+  const progreso=[{semana:"Semana 1",andrés:120,felipe:105,diego:98,cristóbal:110,matías:125},{semana:"Semana 2",andrés:125,felipe:108,diego:101,cristóbal:112,matías:128},{semana:"Semana 3",andrés:130,felipe:110,diego:104,cristóbal:115,matías:130},{semana:"Semana 4",andrés:140,felipe:115,diego:110,cristóbal:118,matías:135}];
+  return <div>
+    <SectionTitle title="📈 Análisis de Desempeño" sub="Ranking y evolución de jugadores"/>
+    <div style={{...ss.card,marginBottom:"20px"}}>
+      <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>Evolución de 1RM · Top 5</div>
+      <div style={{width:"100%",height:"240px",display:"flex",alignItems:"flex-end",gap:"4px",justifyContent:"space-around",padding:"20px 0"}}>
+        {progreso.map((p,i)=><div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,gap:"4px"}}>
+          <div style={{display:"flex",gap:"2px",height:"180px",alignItems:"flex-end"}}>
+            {[p.andrés,p.felipe,p.diego,p.cristóbal,p.matías].map((v,j)=>{const h=(v/150)*150;return <div key={j} style={{flex:1,height:h,background:["#3B82F6","#F59E0B","#22C55E","#A855F7","#EC4899"][j],opacity:0.7,borderRadius:"3px"}}/>;  })}
+          </div>
+          <span style={{fontSize:"10px",color:"#a1a1aa"}}>{p.semana}</span>
+        </div>)}
+      </div>
+    </div>
+    <div style={ss.card}>
+      <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>Ranking · 1RM Sentadilla</div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:"500px",fontSize:"12px"}}>
+          <thead><tr style={{borderBottom:"1px solid #27272a"}}>
+            {["POS","JUGADOR","POSICIÓN","1RM","ASISTENCIA","SESIONES"].map(h=><th key={h} style={{textAlign:"left",color:"#52525b",padding:"8px 10px",fontWeight:600,fontSize:"11px",letterSpacing:"0.07em"}}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {topJugadores.map((p,i)=>{const a=asistencia.find(x=>x.name===p.name);return <tr key={p.id} style={{borderBottom:"1px solid #27272a"}}>
+              <td style={{padding:"8px 10px",fontWeight:600,color:"#3B82F6"}}>{i+1}</td>
+              <td style={{padding:"8px 10px"}}>{p.name}</td>
+              <td style={{padding:"8px 10px",color:"#a1a1aa"}}>{p.pos}</td>
+              <td style={{padding:"8px 10px",fontWeight:600}}>{Math.round(p["1rm"])} kg</td>
+              <td style={{padding:"8px 10px"}}><ProgressBar value={a?.pct||0} max={100} color={sportColor} height={6}/></td>
+              <td style={{padding:"8px 10px",color:"#a1a1aa"}}>12</td>
+            </tr>;})}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>;
+}
+
+function AdminView({module,sport,sp,club,activeClubs,setActiveClubs,countryData,players,showToast,sportColor,injuryReports}) {
   const [primaryColor,setPrimaryColor]=useState("#1B4332");
   const [secondaryColor,setSecondaryColor]=useState("#FFD700");
   if(module==="miclub") return <div>
@@ -1412,6 +1506,8 @@ function AdminView({module,sport,sp,club,activeClubs,setActiveClubs,countryData,
       </tr>)}</tbody>
     </table>
   </div>;
+  if(module==="lesiones") return <LesionesAdminView injuryReports={injuryReports} showToast={showToast}/>;
+  if(module==="desempeño") return <DesempenoAdminView players={players} showToast={showToast} sportColor={sportColor}/>;
   if(module==="finanzas") return <div>
     <SectionTitle title="Finanzas del Club" sub={`${countryData.flag} ${countryData.name} · ${countryData.tax}`}/>
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"20px"}}>
