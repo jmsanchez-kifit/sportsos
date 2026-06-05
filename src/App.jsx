@@ -183,15 +183,15 @@ const INCIDENT_LOG = [
 ];
 
 const ss = {
-  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",background:"#060B15",color:"#E8EDF5",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden"},
-  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 18px",height:"56px",background:"rgba(7,12,24,0.97)",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0,backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)"},
-  sidebar:{width:"210px",background:"rgba(7,12,24,0.95)",borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)"},
-  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#2D3748 transparent"},
-  card:{background:"rgba(12,19,34,0.95)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"14px",padding:"18px",backdropFilter:"blur(8px)"},
-  muted:{color:"#6B7A99",fontSize:"12px"},
-  label:{color:"#6B7A99",fontSize:"10px",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"6px",fontWeight:600},
-  btn:{padding:"7px 16px",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"12px",fontWeight:500,transition:"all 0.18s ease"},
-  input:{background:"rgba(4,8,18,0.9)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"8px",color:"#E8EDF5",padding:"8px 12px",fontSize:"13px",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"},
+  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",background:"#09090b",color:"#fafafa",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden"},
+  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 20px",height:"56px",background:"#09090b",borderBottom:"1px solid #27272a",flexShrink:0},
+  sidebar:{width:"220px",background:"#09090b",borderRight:"1px solid #27272a",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"},
+  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#3f3f46 transparent"},
+  card:{background:"#09090b",border:"1px solid #27272a",borderRadius:"12px",padding:"20px"},
+  muted:{color:"#a1a1aa",fontSize:"13px"},
+  label:{color:"#71717a",fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"6px",fontWeight:600},
+  btn:{padding:"8px 16px",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"13px",fontWeight:500,transition:"all 0.15s ease"},
+  input:{background:"#09090b",border:"1px solid #3f3f46",borderRadius:"8px",color:"#fafafa",padding:"8px 12px",fontSize:"13px",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"},
 };
 
 function Sparkline({data,color="#3B82F6",width=120,height=36,fill=true}) {
@@ -271,35 +271,35 @@ function Toast({msg,type,onClose}) {
 }
 
 function Badge({color,children,size="sm"}) {
-  const fs = size==="sm"?"11px":"13px", px = size==="sm"?"8px":"12px", py = size==="sm"?"3px":"5px";
-  return <span style={{background:color+"18",color,border:`1px solid ${color}30`,borderRadius:"99px",padding:`${py} ${px}`,fontSize:fs,fontWeight:600,whiteSpace:"nowrap",letterSpacing:"0.01em",display:"inline-flex",alignItems:"center",gap:"3px"}}>{children}</span>;
+  const fs = size==="sm"?"11px":"12px", px = size==="sm"?"8px":"11px", py = size==="sm"?"2px":"4px";
+  return <span style={{background:color+"20",color,border:`1px solid ${color}38`,borderRadius:"6px",padding:`${py} ${px}`,fontSize:fs,fontWeight:500,whiteSpace:"nowrap",letterSpacing:"0.01em",display:"inline-flex",alignItems:"center",gap:"4px"}}>{children}</span>;
 }
 
 function ProgressBar({value,max,color,height=6}) {
   const pct = Math.min(100,Math.round((value/max)*100));
-  return <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"99px",height,overflow:"hidden"}}>
-    <div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${color}99,${color})`,borderRadius:"99px",transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",boxShadow:`0 0 8px ${color}44`}}/>
+  return <div style={{background:"#27272a",borderRadius:"99px",height,overflow:"hidden"}}>
+    <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:"99px",transition:"width 0.5s ease"}}/>
   </div>;
 }
 
 function Semaforo({status}) {
   const c = status==="verde"?"#22C55E":status==="amarillo"?"#F59E0B":"#EF4444";
-  return <span style={{width:"9px",height:"9px",borderRadius:"50%",background:c,display:"inline-block",boxShadow:`0 0 8px ${c}cc, 0 0 16px ${c}44`,flexShrink:0}}/>;
+  return <span style={{width:"8px",height:"8px",borderRadius:"50%",background:c,display:"inline-block",flexShrink:0,boxShadow:`0 0 6px ${c}88`}}/>;
 }
 
 function Stat({label,value,sub,color}) {
-  return <div style={{...ss.card,textAlign:"center",background:color?`linear-gradient(135deg,${color}14,rgba(12,19,34,0.95))`:"rgba(12,19,34,0.95)",border:color?`1px solid ${color}25`:"1px solid rgba(255,255,255,0.07)"}}>
+  return <div style={{...ss.card}}>
     <div style={{...ss.label,marginBottom:"8px"}}>{label}</div>
-    <div style={{fontSize:"28px",fontWeight:800,color:color||"#E8EDF5",letterSpacing:"-0.03em",lineHeight:1}}>{value}</div>
-    {sub&&<div style={{...ss.muted,marginTop:"6px",fontSize:"11px"}}>{sub}</div>}
+    <div style={{fontSize:"28px",fontWeight:700,color:color||"#fafafa",letterSpacing:"-0.02em",lineHeight:1}}>{value}</div>
+    {sub&&<div style={{...ss.muted,marginTop:"6px",fontSize:"12px"}}>{sub}</div>}
   </div>;
 }
 
 function SectionTitle({title,sub,action}) {
-  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"24px",gap:"12px",flexWrap:"wrap"}}>
+  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px",gap:"12px",flexWrap:"wrap"}}>
     <div>
-      <h2 style={{margin:0,fontSize:"20px",fontWeight:700,letterSpacing:"-0.02em",lineHeight:1.2}}>{title}</h2>
-      {sub&&<p style={{...ss.muted,margin:"6px 0 0",fontSize:"13px"}}>{sub}</p>}
+      <h2 style={{margin:0,fontSize:"18px",fontWeight:600,letterSpacing:"-0.01em",color:"#fafafa"}}>{title}</h2>
+      {sub&&<p style={{...ss.muted,margin:"4px 0 0",fontSize:"13px"}}>{sub}</p>}
     </div>
     {action}
   </div>;
@@ -506,20 +506,21 @@ export default function SportOS() {
       @keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
       @keyframes recordPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
-      @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-      .nav-item:hover{background:rgba(255,255,255,0.06)!important}
-      .btn-hover:hover{opacity:0.92!important;transform:translateY(-2px)!important;box-shadow:0 8px 20px rgba(0,0,0,0.4)!important}
-      .sport-tab:hover{background:rgba(255,255,255,0.08)!important}
-      .drag-row:hover{background:rgba(255,255,255,0.04)!important}
+      .nav-item:hover{background:#18181b!important;color:#fafafa!important}
+      .btn-hover:hover{opacity:0.88!important;filter:brightness(1.08)!important}
+      .sport-tab:hover{background:#18181b!important}
+      .drag-row:hover{background:#18181b!important}
+      .table-row:hover td{background:#18181b}
       input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
-      input:not([type=color]):focus{border-color:rgba(59,130,246,0.5)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important}
-      select:focus{border-color:rgba(59,130,246,0.5)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important;outline:none}
-      textarea:focus{border-color:rgba(59,130,246,0.5)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important;outline:none}
-      ::-webkit-scrollbar{width:4px;height:4px}
+      input:not([type=color]):focus{border-color:#3f3f46!important;box-shadow:0 0 0 2px rgba(63,63,70,0.5)!important}
+      select:focus{border-color:#3f3f46!important;box-shadow:0 0 0 2px rgba(63,63,70,0.5)!important;outline:none}
+      textarea:focus{border-color:#3f3f46!important;box-shadow:0 0 0 2px rgba(63,63,70,0.5)!important;outline:none}
+      ::-webkit-scrollbar{width:6px;height:6px}
       ::-webkit-scrollbar-track{background:transparent}
-      ::-webkit-scrollbar-thumb{background:#1E2D45;border-radius:4px}
-      ::-webkit-scrollbar-thumb:hover{background:#2D3F5A}
+      ::-webkit-scrollbar-thumb{background:#3f3f46;border-radius:99px}
+      ::-webkit-scrollbar-thumb:hover{background:#52525b}
       *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+      th{font-size:12px!important;font-weight:500!important;color:#71717a!important;text-transform:uppercase!important;letter-spacing:0.05em!important}
     `}</style>
 
     <div style={ss.topbar}>
@@ -552,8 +553,8 @@ export default function SportOS() {
         {!demoMode
           ?<div style={{padding:"12px 8px 4px"}}>
             <div style={{...ss.label,paddingLeft:"8px"}}>Rol activo</div>
-            {ROLES.map(r=><button key={r.id} onClick={()=>setRole(r.id)} className="nav-item" style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 8px",borderRadius:"6px",border:"none",cursor:"pointer",background:role===r.id?"rgba(59,130,246,0.15)":"transparent",color:role===r.id?"#3B82F6":"#8896B0",width:"100%",textAlign:"left",fontSize:"11px",fontWeight:role===r.id?600:400,marginBottom:"2px"}}>
-              <span>{r.icon}</span><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.label}</span>
+            {ROLES.map(r=><button key={r.id} onClick={()=>setRole(r.id)} className="nav-item" style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 10px",borderRadius:"8px",border:"none",cursor:"pointer",background:role===r.id?"#18181b":"transparent",color:role===r.id?"#fafafa":"#a1a1aa",width:"100%",textAlign:"left",fontSize:"13px",fontWeight:role===r.id?500:400,marginBottom:"1px",transition:"all 0.12s"}}>
+              <span style={{fontSize:"14px"}}>{r.icon}</span><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.label}</span>
             </button>)}
           </div>
           :<div style={{padding:"12px 8px 4px"}}>
@@ -568,7 +569,7 @@ export default function SportOS() {
           </div>}
         <div style={{padding:"12px 8px 4px",borderTop:"1px solid rgba(255,255,255,0.07)",marginTop:"4px"}}>
           <div style={{...ss.label,paddingLeft:"8px"}}>Módulos</div>
-          {sportModules.map(m=><button key={m.id} onClick={()=>setModule(m.id)} className="nav-item" style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 10px",borderRadius:"8px",border:"none",borderLeft:module===m.id?`2px solid ${sportColor}`:"2px solid transparent",cursor:"pointer",background:module===m.id?sportColor+"15":"transparent",color:module===m.id?sportColor:"#6B7A99",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?600:400,marginBottom:"2px",transition:"all 0.15s"}}>{m.label}</button>)}
+          {sportModules.map(m=><button key={m.id} onClick={()=>setModule(m.id)} className="nav-item" style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 10px",borderRadius:"8px",border:"none",cursor:"pointer",background:module===m.id?"#18181b":"transparent",color:module===m.id?"#fafafa":"#a1a1aa",width:"100%",textAlign:"left",fontSize:"13px",fontWeight:module===m.id?500:400,marginBottom:"1px",transition:"all 0.12s"}}>{m.label}</button>)}
         </div>
         <div style={{marginTop:"auto",padding:"12px",borderTop:"1px solid rgba(255,255,255,0.07)"}}>
           <div style={{...ss.card,padding:"10px"}}>
@@ -1157,7 +1158,7 @@ function LesionesView({sportColor,showToast}) {
 function OnboardingScreen({onSelect}) {
   const [selSport,setSelSport]=useState(null);
   const [selCountry,setSelCountry]=useState("CL");
-  return <div style={{minHeight:"100vh",background:"#060B15",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px",fontFamily:"'Inter',system-ui,sans-serif"}}>
+  return <div style={{minHeight:"100vh",background:"#09090b",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px",fontFamily:"'Inter',system-ui,sans-serif"}}>
     <div style={{fontSize:"42px",fontWeight:800,color:"#E8EDF5",marginBottom:"8px",textAlign:"center"}}>⚡ SportOS</div>
     <div style={{color:"#8896B0",fontSize:"16px",marginBottom:"40px",textAlign:"center"}}>La plataforma deportiva de América Latina</div>
     <div style={{fontSize:"13px",color:"#8896B0",marginBottom:"16px",textTransform:"uppercase",letterSpacing:"0.08em"}}>Elige tu deporte</div>
