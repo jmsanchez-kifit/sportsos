@@ -466,6 +466,10 @@ export default function SportOS() {
   const addWellnessLog=r=>setWellnessLogs(p=>[r,...p]);
   const [sesionesCreadas,setSesionesCreadas]=useState([]);
   const addSesion=s=>setSesionesCreadas(p=>[s,...p]);
+  const [registrosSesion,setRegistrosSesion]=useState({});
+  const logRegistro=(sesionId,bloqueIdx,filaIdx,field,val)=>setRegistrosSesion(prev=>{const k=`${sesionId}_${bloqueIdx}_${filaIdx}`;return {...prev,[k]:{...(prev[k]||{}),[field]:val}};});
+  const getRegistro=(sesionId,bloqueIdx,filaIdx,field)=>{const k=`${sesionId}_${bloqueIdx}_${filaIdx}`;return registrosSesion[k]?registrosSesion[k][field]:"";};
+  const calcVolSesion=(sesionId)=>{let t=0;sesionesCreadas.find(s=>s.id===sesionId)?.bloques.forEach((b,bi)=>{b.filas.forEach((f,fi)=>{const kg=parseFloat(getRegistro(sesionId,bi,fi,"kg")||0);const r=parseFloat(getRegistro(sesionId,bi,fi,"reps")||0);t+=kg*r;});});return t;};
 
   const sp = SPORTS_CONFIG[sport];
   const club = CLUBS[sport];
@@ -594,7 +598,7 @@ export default function SportOS() {
           {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor}/>}
           {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={PLAYERS_RUGBY} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} wellnessLogs={wellnessLogs}/>}
           {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} sesionesCreadas={sesionesCreadas} addSesion={addSesion}/>}
-          {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas}/>}
+          {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas} registrosSesion={registrosSesion} logRegistro={logRegistro} getRegistro={getRegistro} calcVolSesion={calcVolSesion}/>}
           {role==="padre"&&<PadreView showToast={showToast} setWearablesOpen={setWearablesOpen} injuryReports={injuryReports} updateInjuryReport={updateInjuryReport}/>}
           <BackendNotes open={backendOpen} setOpen={setBackendOpen}/>
         </div>
@@ -1715,7 +1719,7 @@ function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublish
   return null;
 }
 
-function JugadorView({module,sport,sp,club,player,players,sportColor,countryData,convocado,setConvocado,setWhatsappModal,showToast,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,rankTab,setRankTab,injuryReports,addInjuryReport,updateInjuryReport,addWellnessLog,sesionesCreadas}) {
+function JugadorView({module,sport,sp,club,player,players,sportColor,countryData,convocado,setConvocado,setWhatsappModal,showToast,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,rankTab,setRankTab,injuryReports,addInjuryReport,updateInjuryReport,addWellnessLog,sesionesCreadas,registrosSesion,logRegistro,getRegistro,calcVolSesion}) {
   const camiseta = player.num;
   const isNominated = true;
   const [showLesionForm,setShowLesionForm]=useState(false);
@@ -1754,7 +1758,7 @@ function JugadorView({module,sport,sp,club,player,players,sportColor,countryData
       <Badge color={injuryReports.filter(r=>r.player===player.name).length>0?sportColor:"#4A5568"}>{injuryReports.filter(r=>r.player===player.name).length} reportes</Badge>
     </div>
   </div>;
-  if(module==="migym") return <GymJugador player={player} sportColor={sportColor} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} showToast={showToast} rankTab={rankTab} setRankTab={setRankTab} players={players} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas}/>;
+  if(module==="migym") return <GymJugador player={player} sportColor={sportColor} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} showToast={showToast} rankTab={rankTab} setRankTab={setRankTab} players={players} addWellnessLog={addWellnessLog} sesionesCreadas={sesionesCreadas} registrosSesion={registrosSesion} logRegistro={logRegistro} getRegistro={getRegistro} calcVolSesion={calcVolSesion}/>;
   if(module==="micuota"){
     const historial=[
       {mes:"Mayo 2026",monto:club.cuota,estado:"pagado",fecha:"05-05-2026",metodo:countryData.payments[0]},
@@ -1873,7 +1877,7 @@ function JugadorView({module,sport,sp,club,player,players,sportColor,countryData
   return null;
 }
 
-function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,showToast,rankTab,setRankTab,players,addWellnessLog,sesionesCreadas}) {
+function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setCompletedSession,newRecord,setNewRecord,expandedEx,setExpandedEx,showToast,rankTab,setRankTab,players,addWellnessLog,sesionesCreadas,registrosSesion,logRegistro,getRegistro,calcVolSesion}) {
   const todayPlan=GYM_PLAN.sessions.lunes;
   const [wellnessDone,setWellnessDone]=useState(false);
   const [wellnessNota,setWellnessNota]=useState("");
@@ -1908,15 +1912,65 @@ function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setComp
     </div>}
     {sesionesCreadas.filter(s=>s.categoria===player.cat).length>0&&<div style={{...ss.card,marginBottom:"16px",border:"1px solid #27272a"}}>
       <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>📋 Sesiones asignadas por el preparador</div>
-      {sesionesCreadas.filter(s=>s.categoria===player.cat).map((ses,i)=><div key={ses.id} style={{padding:"10px 12px",background:"rgba(255,255,255,0.01)",borderRadius:"8px",marginBottom:i<sesionesCreadas.filter(s=>s.categoria===player.cat).length-1?"8px":"0",borderLeft:`3px solid ${sportColor}`,borderTop:"1px solid #27272a"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"6px"}}>
-          <div style={{fontWeight:500,fontSize:"13px",color:"#fafafa"}}>{ses.titulo}</div>
-          <Badge color={sportColor}>{ses.tipo}</Badge>
+      {sesionesCreadas.filter(s=>s.categoria===player.cat).map((ses)=>{
+        const [exp,setExp]=useState(false);
+        const vol=calcVolSesion(ses.id);
+        return <div key={ses.id} style={{marginBottom:"12px",border:"1px solid #27272a",borderRadius:"10px",overflow:"hidden"}}>
+          <button onClick={()=>setExp(!exp)} style={{width:"100%",background:"transparent",border:"none",padding:"12px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
+            <div style={{display:"flex",gap:"10px",alignItems:"center",flex:1,textAlign:"left"}}>
+              <span style={{fontSize:"14px",transition:"transform 0.15s",transform:exp?"rotate(90deg)":"rotate(0)"}}>▶</span>
+              <div>
+                <div style={{fontWeight:500,fontSize:"13px",color:"#fafafa"}}>{ses.titulo}</div>
+                <div style={{fontSize:"11px",color:"#a1a1aa"}}>📅 {ses.fecha} · {ses.bloques.length} bloques</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+              <Badge color={sportColor}>{ses.tipo}</Badge>
+              {vol>0&&<Badge color="#22C55E">{vol.toLocaleString()} kg</Badge>}
+            </div>
+          </button>
+          {exp&&<div style={{padding:"12px 14px",background:"#0d0d10",borderTop:"1px solid #27272a",overflowX:"auto"}}>
+            {ses.bloques.map((bloque,bi)=><div key={bloque.id} style={{marginBottom:"14px"}}>
+              <div style={{background:BLOQUE_COLORS[bi%BLOQUE_COLORS.length]+"20",border:`1px solid ${BLOQUE_COLORS[bi%BLOQUE_COLORS.length]}44`,borderRadius:"8px",padding:"8px 12px",marginBottom:"8px",fontSize:"11px",fontWeight:700,color:BLOQUE_COLORS[bi%BLOQUE_COLORS.length],letterSpacing:"0.06em"}}>BLOQUE {bloque.letra}</div>
+              <table style={{width:"100%",borderCollapse:"collapse",minWidth:"600px",fontSize:"12px"}}>
+                <thead><tr style={{borderBottom:"1px solid #27272a"}}>
+                  {["EJERCICIO","SERIES","REPS","KG","RIR","RPE"].map((h,i)=><th key={i} style={{textAlign:"left",color:"#52525b",padding:"6px 6px 8px",fontWeight:600,fontSize:"10px",letterSpacing:"0.07em",whiteSpace:"nowrap"}}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {bloque.filas.map((f,fi)=><tr key={f.id}>
+                    <td style={{padding:"6px"}}><span style={{fontSize:"12px"}}>{f.ejercicio||"—"}</span></td>
+                    <td style={{padding:"6px"}}><input type="number" defaultValue={f.series} onChange={e=>logRegistro(ses.id,bi,fi,"series",Number(e.target.value))} style={{...ss.input,width:"48px",fontSize:"11px",padding:"4px 6px",textAlign:"center"}}/></td>
+                    <td style={{padding:"6px"}}><input type="number" defaultValue={f.reps} onChange={e=>logRegistro(ses.id,bi,fi,"reps",Number(e.target.value))} style={{...ss.input,width:"48px",fontSize:"11px",padding:"4px 6px",textAlign:"center"}}/></td>
+                    <td style={{padding:"6px"}}><input value={getRegistro(ses.id,bi,fi,"kg")} onChange={e=>logRegistro(ses.id,bi,fi,"kg",e.target.value)} placeholder="kg" style={{...ss.input,width:"52px",fontSize:"11px",padding:"4px 6px",textAlign:"center"}}/></td>
+                    <td style={{padding:"6px"}}><input value={getRegistro(ses.id,bi,fi,"rir")} onChange={e=>logRegistro(ses.id,bi,fi,"rir",e.target.value)} placeholder="—" style={{...ss.input,width:"48px",fontSize:"11px",padding:"4px 6px",textAlign:"center"}}/></td>
+                    <td style={{padding:"6px"}}><input value={getRegistro(ses.id,bi,fi,"rpe")} onChange={e=>logRegistro(ses.id,bi,fi,"rpe",e.target.value)} placeholder="—" style={{...ss.input,width:"48px",fontSize:"11px",padding:"4px 6px",textAlign:"center"}}/></td>
+                  </tr>)}
+                </tbody>
+              </table>
+            </div>)}
+          </div>}
+        </div>;
+      })}
+    </div>}
+    {sesionesCreadas.filter(s=>s.categoria===player.cat).length>0&&<div style={{...ss.card,marginBottom:"20px"}}>
+      <div style={{fontWeight:600,fontSize:"13px",marginBottom:"12px"}}>📊 Mi desempeño · Sesiones</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px",marginBottom:"14px"}}>
+        <Stat label="Sesiones" value={sesionesCreadas.filter(s=>s.categoria===player.cat).length} sub="asignadas" color={sportColor}/>
+        <Stat label="Volumen total" value={sesionesCreadas.filter(s=>s.categoria===player.cat).reduce((t,s)=>t+calcVolSesion(s.id),0).toLocaleString()} sub="kg levantados" color="#22C55E"/>
+        <Stat label="Promedio" value={sesionesCreadas.filter(s=>s.categoria===player.cat).length>0?Math.round(sesionesCreadas.filter(s=>s.categoria===player.cat).reduce((t,s)=>t+calcVolSesion(s.id),0)/sesionesCreadas.filter(s=>s.categoria===player.cat).length):"0"} sub="kg/sesión" color="#3B82F6"/>
+      </div>
+      <div style={{background:"#0d0d10",borderRadius:"8px",padding:"12px",border:"1px solid #27272a"}}>
+        <div style={{fontWeight:500,fontSize:"12px",marginBottom:"10px",color:"#a1a1aa"}}>🏆 Ranking del equipo</div>
+        <div style={{fontSize:"12px",display:"flex",flexDirection:"column",gap:"6px"}}>
+          {[{name:"Andrés Castro",vol:sesionesCreadas.filter(s=>s.categoria===player.cat).reduce((t,s)=>t+calcVolSesion(s.id),0)},{name:"Felipe Morales",vol:Math.floor(sesionesCreadas.filter(s=>s.categoria===player.cat).reduce((t,s)=>t+calcVolSesion(s.id),0)*0.85)},{name:"Diego Saavedra",vol:Math.floor(sesionesCreadas.filter(s=>s.categoria===player.cat).reduce((t,s)=>t+calcVolSesion(s.id),0)*0.72)},{name:"Cristóbal Vega",vol:Math.floor(sesionesCreadas.filter(s=>s.categoria===player.cat).reduce((t,s)=>t+calcVolSesion(s.id),0)*0.68)}].sort((a,b)=>b.vol-a.vol).map((j,i)=><div key={j.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 10px",background:j.name===player.name?"rgba(59,130,246,0.1)":"transparent",borderRadius:"6px",border:j.name===player.name?"1px solid #3B82F6":"none"}}>
+            <span style={{display:"flex",alignItems:"center",gap:"8px"}}>
+              <span style={{fontWeight:700,color:"#52525b",width:"20px"}}>{i+1}.</span>
+              <span style={{color:j.name===player.name?"#3B82F6":"#a1a1aa"}}>{j.name}</span>
+            </span>
+            <span style={{fontWeight:600,color:"#fafafa"}}>{j.vol.toLocaleString()} kg</span>
+          </div>)}
         </div>
-        <div style={{fontSize:"11px",color:"#a1a1aa",display:"flex",gap:"12px"}}>
-          <span>📅 {ses.fecha}</span><span>🏋️ {ses.bloques.length} bloques · {ses.bloques.reduce((t,b)=>t+b.filas.length,0)} ejercicios</span>
-        </div>
-      </div>)}
+      </div>
     </div>}
     {todayPlan.exercises.map((ex,ei)=>{
       const prev1RM=PREV_1RM[ex.name]||100;
