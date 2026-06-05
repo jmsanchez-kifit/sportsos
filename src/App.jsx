@@ -824,7 +824,7 @@ function NuevaSesionModal({onClose,showToast,addSesion,categorias=["M18","M16","
   const [fecha,setFecha]=useState(hoy);
   const [tipo,setTipo]=useState("Fuerza");
   const [titulo,setTitulo]=useState("");
-  const [categoria,setCategoria]=useState("M18");
+  const [categoria,setCategoria]=useState("Superior");
   const [bloques,setBloques]=useState([mkBloque("A")]);
   function mkBloque(letra){return {id:Date.now()+Math.random(),letra,nombre:"Principal",objetivo:"FUERZA",filas:[mkFila()]};}
   function mkFila(){return {id:Date.now()+Math.random(),patron:"",ejercicio:"",series:3,reps:8,tipoRep:"reps",kg:"",rir:"",rpe:""};}
@@ -1662,7 +1662,7 @@ function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublish
   const statusIcon=(s)=>s==="ok"?"✅":s==="parcial"?"⚠️":"⏳";
 
   if(module==="microciclo") return <div>
-    {nuevaSesionOpen&&<NuevaSesionModal onClose={()=>setNuevaSesionOpen(false)} showToast={showToast} addSesion={addSesion} categorias={["M18","M16","M14","M12","Senior"]}/>}
+    {nuevaSesionOpen&&<NuevaSesionModal onClose={()=>setNuevaSesionOpen(false)} showToast={showToast} addSesion={addSesion} categorias={["M12","M14","M16","M18","Senior","Superior"]}/>}
     <SectionTitle title={`Microciclo — Semana ${GYM_PLAN.week}`} sub={`${GYM_PLAN.coach} · ${sp.name}`} action={<div style={{display:"flex",gap:"8px"}}>
       <button onClick={()=>setNuevaSesionOpen(true)} className="btn-hover" style={{...ss.btn,background:"#fafafa",color:"#09090b",fontWeight:600,fontSize:"12px"}}>+ Nueva sesión</button>
       <button onClick={()=>{setPublishedPlan(true);showToast("Plan publicado. 15 jugadores notificados vía push y WhatsApp 📱");}} className="btn-hover" style={{...ss.btn,background:publishedPlan?"#22C55E22":"#22C55E",color:publishedPlan?"#22C55E":"#fff",border:publishedPlan?"1px solid #22C55E":"none",fontSize:"12px"}}>{publishedPlan?"✅ Plan publicado":"📢 Publicar plan"}</button>
