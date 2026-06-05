@@ -183,15 +183,15 @@ const INCIDENT_LOG = [
 ];
 
 const ss = {
-  wrap:{display:"flex",flexDirection:"column",height:"720px",background:"#070C18",color:"#E8EDF5",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden",borderRadius:"12px"},
-  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 14px",height:"52px",background:"#0B1120",borderBottom:"1px solid rgba(255,255,255,0.07)",flexShrink:0},
-  sidebar:{width:"200px",background:"#0B1120",borderRight:"1px solid rgba(255,255,255,0.07)",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"},
-  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#4A5568 #070C18"},
-  card:{background:"#101829",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",padding:"16px"},
-  muted:{color:"#8896B0",fontSize:"12px"},
-  label:{color:"#8896B0",fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"4px"},
-  btn:{padding:"6px 14px",borderRadius:"6px",border:"none",cursor:"pointer",fontSize:"12px",fontWeight:500,transition:"opacity 0.15s, transform 0.1s"},
-  input:{background:"#0B1120",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"6px",color:"#E8EDF5",padding:"7px 10px",fontSize:"13px",outline:"none",width:"100%",boxSizing:"border-box"},
+  wrap:{display:"flex",flexDirection:"column",height:"720px",background:"#060B15",color:"#E8EDF5",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden",borderRadius:"16px",boxShadow:"0 32px 80px rgba(0,0,0,0.7)"},
+  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 18px",height:"56px",background:"rgba(7,12,24,0.97)",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0,backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)"},
+  sidebar:{width:"210px",background:"rgba(7,12,24,0.95)",borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)"},
+  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#2D3748 transparent"},
+  card:{background:"rgba(12,19,34,0.95)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"14px",padding:"18px",backdropFilter:"blur(8px)"},
+  muted:{color:"#6B7A99",fontSize:"12px"},
+  label:{color:"#6B7A99",fontSize:"10px",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"6px",fontWeight:600},
+  btn:{padding:"7px 16px",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"12px",fontWeight:500,transition:"all 0.18s ease"},
+  input:{background:"rgba(4,8,18,0.9)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"8px",color:"#E8EDF5",padding:"8px 12px",fontSize:"13px",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"},
 };
 
 function Sparkline({data,color="#3B82F6",width=120,height=36,fill=true}) {
@@ -271,35 +271,35 @@ function Toast({msg,type,onClose}) {
 }
 
 function Badge({color,children,size="sm"}) {
-  const fs = size==="sm"?"11px":"13px", px = size==="sm"?"6px":"10px", py = size==="sm"?"2px":"4px";
-  return <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:"4px",padding:`${py} ${px}`,fontSize:fs,fontWeight:500,whiteSpace:"nowrap"}}>{children}</span>;
+  const fs = size==="sm"?"11px":"13px", px = size==="sm"?"8px":"12px", py = size==="sm"?"3px":"5px";
+  return <span style={{background:color+"18",color,border:`1px solid ${color}30`,borderRadius:"99px",padding:`${py} ${px}`,fontSize:fs,fontWeight:600,whiteSpace:"nowrap",letterSpacing:"0.01em",display:"inline-flex",alignItems:"center",gap:"3px"}}>{children}</span>;
 }
 
 function ProgressBar({value,max,color,height=6}) {
   const pct = Math.min(100,Math.round((value/max)*100));
-  return <div style={{background:"rgba(255,255,255,0.08)",borderRadius:"99px",height,overflow:"hidden"}}>
-    <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:"99px",transition:"width 0.4s ease"}}/>
+  return <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"99px",height,overflow:"hidden"}}>
+    <div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${color}99,${color})`,borderRadius:"99px",transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",boxShadow:`0 0 8px ${color}44`}}/>
   </div>;
 }
 
 function Semaforo({status}) {
   const c = status==="verde"?"#22C55E":status==="amarillo"?"#F59E0B":"#EF4444";
-  return <span style={{width:"8px",height:"8px",borderRadius:"50%",background:c,display:"inline-block",boxShadow:`0 0 6px ${c}88`}}/>;
+  return <span style={{width:"9px",height:"9px",borderRadius:"50%",background:c,display:"inline-block",boxShadow:`0 0 8px ${c}cc, 0 0 16px ${c}44`,flexShrink:0}}/>;
 }
 
 function Stat({label,value,sub,color}) {
-  return <div style={{...ss.card,textAlign:"center"}}>
-    <div style={{...ss.muted,marginBottom:"4px"}}>{label}</div>
-    <div style={{fontSize:"22px",fontWeight:700,color:color||"#E8EDF5"}}>{value}</div>
-    {sub&&<div style={{...ss.muted,marginTop:"2px",fontSize:"11px"}}>{sub}</div>}
+  return <div style={{...ss.card,textAlign:"center",background:color?`linear-gradient(135deg,${color}14,rgba(12,19,34,0.95))`:"rgba(12,19,34,0.95)",border:color?`1px solid ${color}25`:"1px solid rgba(255,255,255,0.07)"}}>
+    <div style={{...ss.label,marginBottom:"8px"}}>{label}</div>
+    <div style={{fontSize:"28px",fontWeight:800,color:color||"#E8EDF5",letterSpacing:"-0.03em",lineHeight:1}}>{value}</div>
+    {sub&&<div style={{...ss.muted,marginTop:"6px",fontSize:"11px"}}>{sub}</div>}
   </div>;
 }
 
 function SectionTitle({title,sub,action}) {
-  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px",gap:"12px",flexWrap:"wrap"}}>
+  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"24px",gap:"12px",flexWrap:"wrap"}}>
     <div>
-      <h2 style={{margin:0,fontSize:"18px",fontWeight:600}}>{title}</h2>
-      {sub&&<p style={{...ss.muted,margin:"4px 0 0"}}>{sub}</p>}
+      <h2 style={{margin:0,fontSize:"20px",fontWeight:700,letterSpacing:"-0.02em",lineHeight:1.2}}>{title}</h2>
+      {sub&&<p style={{...ss.muted,margin:"6px 0 0",fontSize:"13px"}}>{sub}</p>}
     </div>
     {action}
   </div>;
@@ -506,18 +506,24 @@ export default function SportOS() {
       @keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
       @keyframes recordPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
-      .nav-item:hover{background:rgba(255,255,255,0.05)!important}
-      .btn-hover:hover{opacity:0.85!important;transform:scale(0.98)!important}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+      .nav-item:hover{background:rgba(255,255,255,0.06)!important}
+      .btn-hover:hover{opacity:0.92!important;transform:translateY(-2px)!important;box-shadow:0 8px 20px rgba(0,0,0,0.4)!important}
       .sport-tab:hover{background:rgba(255,255,255,0.08)!important}
       .drag-row:hover{background:rgba(255,255,255,0.04)!important}
       input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+      input:not([type=color]):focus{border-color:rgba(59,130,246,0.5)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important}
+      select:focus{border-color:rgba(59,130,246,0.5)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important;outline:none}
+      textarea:focus{border-color:rgba(59,130,246,0.5)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important;outline:none}
       ::-webkit-scrollbar{width:4px;height:4px}
-      ::-webkit-scrollbar-track{background:#070C18}
-      ::-webkit-scrollbar-thumb{background:#4A5568;border-radius:2px}
+      ::-webkit-scrollbar-track{background:transparent}
+      ::-webkit-scrollbar-thumb{background:#1E2D45;border-radius:4px}
+      ::-webkit-scrollbar-thumb:hover{background:#2D3F5A}
+      *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     `}</style>
 
     <div style={ss.topbar}>
-      <div style={{fontWeight:700,fontSize:"15px",color:sportColor,marginRight:"4px",whiteSpace:"nowrap"}}>⚡ SportOS</div>
+      <div style={{fontWeight:800,fontSize:"16px",color:sportColor,marginRight:"4px",whiteSpace:"nowrap",letterSpacing:"-0.03em"}}>⚡ SportOS</div>
       <div style={{display:"flex",gap:"2px",background:"rgba(255,255,255,0.05)",borderRadius:"8px",padding:"3px",overflowX:"auto"}}>
         {Object.entries(SPORTS_CONFIG).map(([k,v])=>{
           const isActive2 = role==="admin"?activeClubs[k]:k===sport;
@@ -562,7 +568,7 @@ export default function SportOS() {
           </div>}
         <div style={{padding:"12px 8px 4px",borderTop:"1px solid rgba(255,255,255,0.07)",marginTop:"4px"}}>
           <div style={{...ss.label,paddingLeft:"8px"}}>Módulos</div>
-          {sportModules.map(m=><button key={m.id} onClick={()=>setModule(m.id)} className="nav-item" style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 8px",borderRadius:"6px",border:"none",cursor:"pointer",background:module===m.id?sportColor+"22":"transparent",color:module===m.id?sportColor:"#8896B0",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?600:400,marginBottom:"2px"}}>{m.label}</button>)}
+          {sportModules.map(m=><button key={m.id} onClick={()=>setModule(m.id)} className="nav-item" style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 10px",borderRadius:"8px",border:"none",borderLeft:module===m.id?`2px solid ${sportColor}`:"2px solid transparent",cursor:"pointer",background:module===m.id?sportColor+"15":"transparent",color:module===m.id?sportColor:"#6B7A99",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?600:400,marginBottom:"2px",transition:"all 0.15s"}}>{m.label}</button>)}
         </div>
         <div style={{marginTop:"auto",padding:"12px",borderTop:"1px solid rgba(255,255,255,0.07)"}}>
           <div style={{...ss.card,padding:"10px"}}>
