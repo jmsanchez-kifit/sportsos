@@ -183,7 +183,7 @@ const INCIDENT_LOG = [
 ];
 
 const ss = {
-  wrap:{display:"flex",flexDirection:"column",height:"720px",background:"#060B15",color:"#E8EDF5",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden",borderRadius:"16px",boxShadow:"0 32px 80px rgba(0,0,0,0.7)"},
+  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",background:"#060B15",color:"#E8EDF5",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden"},
   topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 18px",height:"56px",background:"rgba(7,12,24,0.97)",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0,backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)"},
   sidebar:{width:"210px",background:"rgba(7,12,24,0.95)",borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)"},
   main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#2D3748 transparent"},
@@ -1157,7 +1157,7 @@ function LesionesView({sportColor,showToast}) {
 function OnboardingScreen({onSelect}) {
   const [selSport,setSelSport]=useState(null);
   const [selCountry,setSelCountry]=useState("CL");
-  return <div style={{minHeight:"720px",background:"#070C18",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px",fontFamily:"'Inter',system-ui,sans-serif",borderRadius:"12px"}}>
+  return <div style={{minHeight:"100vh",background:"#060B15",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px",fontFamily:"'Inter',system-ui,sans-serif"}}>
     <div style={{fontSize:"42px",fontWeight:800,color:"#E8EDF5",marginBottom:"8px",textAlign:"center"}}>⚡ SportOS</div>
     <div style={{color:"#8896B0",fontSize:"16px",marginBottom:"40px",textAlign:"center"}}>La plataforma deportiva de América Latina</div>
     <div style={{fontSize:"13px",color:"#8896B0",marginBottom:"16px",textTransform:"uppercase",letterSpacing:"0.08em"}}>Elige tu deporte</div>
