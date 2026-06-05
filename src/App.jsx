@@ -1949,6 +1949,10 @@ function GymJugador({player,sportColor,gymLog,setGymLog,completedSession,setComp
               </table>
             </div>)}
           </div>}
+          {exp&&<div style={{padding:"12px 14px",borderTop:"1px solid #27272a",background:"#0d0d10",borderRadius:"0 0 10px 10px",display:"flex",gap:"8px",justifyContent:"flex-end"}}>
+            <button onClick={()=>setExp(false)} style={{...ss.btn,background:"transparent",color:"#a1a1aa",border:"1px solid #3f3f46"}}>Cancelar</button>
+            <button onClick={()=>{showToast(`✅ Sesión "${ses.titulo}" guardada · ${calcVolSesion(ses.id).toLocaleString()} kg`,"success");setExp(false);}} className="btn-hover" style={{...ss.btn,background:"#fafafa",color:"#09090b",fontWeight:600}}>💾 Guardar</button>
+          </div>}
         </div>;
       })}
     </div>}
