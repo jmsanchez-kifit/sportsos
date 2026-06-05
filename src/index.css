@@ -8,8 +8,8 @@ html, body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #060B15;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: #09090b;
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

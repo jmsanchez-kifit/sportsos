@@ -183,7 +183,7 @@ const INCIDENT_LOG = [
 ];
 
 const ss = {
-  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",background:"#09090b",color:"#fafafa",fontFamily:"'Inter',system-ui,sans-serif",overflow:"hidden"},
+  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",backgroundColor:"#09090b",backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)",backgroundSize:"22px 22px",color:"#fafafa",fontFamily:"'Geist','Inter',system-ui,sans-serif",overflow:"hidden"},
   topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 20px",height:"56px",background:"#09090b",borderBottom:"1px solid #27272a",flexShrink:0},
   sidebar:{width:"220px",background:"#09090b",borderRight:"1px solid #27272a",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"},
   main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#3f3f46 transparent"},
@@ -506,6 +506,8 @@ export default function SportOS() {
       @keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
       @keyframes recordPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+      @keyframes moduleEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+      .module-enter{animation:moduleEnter 0.28s cubic-bezier(0.16,1,0.3,1)}
       .nav-item:hover{background:#18181b!important;color:#fafafa!important}
       .btn-hover:hover{opacity:0.88!important;filter:brightness(1.08)!important}
       .sport-tab:hover{background:#18181b!important}
@@ -585,13 +587,15 @@ export default function SportOS() {
       </div>
 
       <div style={ss.main}>
-        {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRIES={COUNTRIES} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
-        {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor}/>}
-        {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={PLAYERS_RUGBY} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} wellnessLogs={wellnessLogs}/>}
-        {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay}/>}
-        {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog}/>}
-        {role==="padre"&&<PadreView showToast={showToast} setWearablesOpen={setWearablesOpen} injuryReports={injuryReports} updateInjuryReport={updateInjuryReport}/>}
-        <BackendNotes open={backendOpen} setOpen={setBackendOpen}/>
+        <div key={role+module} className="module-enter">
+          {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRIES={COUNTRIES} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
+          {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor}/>}
+          {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={PLAYERS_RUGBY} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} wellnessLogs={wellnessLogs}/>}
+          {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay}/>}
+          {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} injuryReports={injuryReports} addInjuryReport={addInjuryReport} updateInjuryReport={updateInjuryReport} addWellnessLog={addWellnessLog}/>}
+          {role==="padre"&&<PadreView showToast={showToast} setWearablesOpen={setWearablesOpen} injuryReports={injuryReports} updateInjuryReport={updateInjuryReport}/>}
+          <BackendNotes open={backendOpen} setOpen={setBackendOpen}/>
+        </div>
       </div>
     </div>
   </div>;
