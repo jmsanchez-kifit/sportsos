@@ -814,6 +814,97 @@ function EquipoMedicoView({players,showToast,sportColor,injuryReports,addInjuryR
   </div>;
 }
 
+const EJERCICIOS_LISTA = ["Sentadilla","Sentadilla Frontal","Press Banca","Press Militar","Peso Muerto","Peso Muerto Rumano","Hip Thrust","Pull-up","Remo con Barra","Remo en Polea","Fondos","Zancada","Box Jump","Power Clean","Hang Clean","Push Press","Sled Push","Farmer Carry","Plancha","Core Press"];
+const BLOQUE_COLORS = ["#F97316","#3B82F6","#22C55E","#A855F7","#F59E0B","#EF4444","#06B6D4"];
+
+function NuevaSesionModal({onClose,showToast}) {
+  const hoy=new Date().toISOString().split("T")[0];
+  const [fecha,setFecha]=useState(hoy);
+  const [tipo,setTipo]=useState("Fuerza");
+  const [titulo,setTitulo]=useState("");
+  const [bloques,setBloques]=useState([mkBloque("A")]);
+  function mkBloque(letra){return {id:Date.now()+Math.random(),letra,nombre:"Principal",objetivo:"FUERZA",filas:[mkFila()]};}
+  function mkFila(){return {id:Date.now()+Math.random(),patron:"",ejercicio:"",series:3,reps:8,tipoRep:"reps",kg:"",rir:"",rpe:""};}
+  const addBloque=()=>{const l="ABCDEFGHIJ"[bloques.length]||String.fromCharCode(65+bloques.length);setBloques(p=>[...p,mkBloque(l)]);};
+  const delBloque=(id)=>setBloques(p=>p.filter(b=>b.id!==id));
+  const dupBloque=(id)=>{const i=bloques.findIndex(b=>b.id===id);const c={...bloques[i],id:Date.now(),letra:"ABCDEFGHIJ"[bloques.length]||"+"};setBloques(p=>[...p.slice(0,i+1),c,...p.slice(i+1)]);};
+  const updBloque=(id,u)=>setBloques(p=>p.map(b=>b.id===id?{...b,...u}:b));
+  const addFila=(bid)=>setBloques(p=>p.map(b=>b.id===bid?{...b,filas:[...b.filas,mkFila()]}:b));
+  const delFila=(bid,fid)=>setBloques(p=>p.map(b=>b.id===bid?{...b,filas:b.filas.filter(f=>f.id!==fid)}:b));
+  const updFila=(bid,fid,u)=>setBloques(p=>p.map(b=>b.id===bid?{...b,filas:b.filas.map(f=>f.id===fid?{...f,...u}:f)}:b));
+  const save=()=>{if(!titulo.trim()){showToast("Ingresa un título para la sesión","warning");return;}showToast(`✅ Sesión "${titulo}" guardada en el plan`,"success");onClose();};
+  const OBJETIVOS=["OBJETIVO","FUERZA","POTENCIA","HIPERTROFIA","RESISTENCIA","OTRO"];
+  const inStyle={...ss.input,fontSize:"14px",padding:"10px 12px"};
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px",overflowY:"auto"}}>
+    <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:"880px",background:"#111114",border:"1px solid #27272a",borderRadius:"14px",padding:"28px",margin:"auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"28px"}}>
+        <h2 style={{margin:0,fontSize:"22px",fontWeight:700,letterSpacing:"-0.02em"}}>Nueva sesión</h2>
+        <div style={{display:"flex",gap:"10px",alignItems:"center"}}>
+          <button onClick={()=>showToast("Función de importar disponible en versión Pro","warning")} style={{...ss.btn,background:"transparent",color:"#a1a1aa",border:"1px solid #3f3f46",fontSize:"12px",gap:"6px",display:"flex",alignItems:"center"}}>⬆ Subir Excel/PDF</button>
+          <button onClick={onClose} style={{...ss.btn,background:"transparent",color:"#71717a",padding:"4px 10px",fontSize:"18px",lineHeight:1}}>✕</button>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginBottom:"16px"}}>
+        <div><div style={ss.label}>Fecha</div><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{...inStyle,colorScheme:"dark"}}/></div>
+        <div><div style={ss.label}>Tipo</div>
+          <select value={tipo} onChange={e=>setTipo(e.target.value)} style={inStyle}>
+            {["Fuerza","Potencia","Hipertrofia","Resistencia","Técnica","Recuperación","Otro"].map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{marginBottom:"24px"}}><div style={ss.label}>Título</div><input value={titulo} onChange={e=>setTitulo(e.target.value)} placeholder="Ej: Upper Body Push" style={inStyle}/></div>
+
+      {bloques.map((b,bi)=>{
+        const color=BLOQUE_COLORS[bi%BLOQUE_COLORS.length];
+        return <div key={b.id} style={{marginBottom:"12px",border:"1px solid #27272a",borderRadius:"10px",overflow:"hidden"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",background:"#0d0d10",borderBottom:"1px solid #27272a"}}>
+            <span style={{color:"#3f3f46",fontSize:"14px",cursor:"grab"}}>⠿⠿</span>
+            <span style={{background:color+"20",color,border:`1px solid ${color}44`,borderRadius:"6px",padding:"3px 10px",fontSize:"11px",fontWeight:700,letterSpacing:"0.06em",whiteSpace:"nowrap"}}>BLOQUE {b.letra}</span>
+            <input value={b.nombre} onChange={e=>updBloque(b.id,{nombre:e.target.value})} style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#fafafa",fontSize:"15px",fontWeight:500,fontFamily:"inherit"}}/>
+            <button onClick={()=>dupBloque(b.id)} title="Duplicar" style={{...ss.btn,background:"transparent",color:"#52525b",padding:"4px 8px",fontSize:"15px"}}>⧉</button>
+            <button onClick={()=>delBloque(b.id)} title="Eliminar" style={{...ss.btn,background:"transparent",color:"#52525b",padding:"4px 8px",fontSize:"13px"}}>🗑</button>
+          </div>
+          <div style={{display:"flex",gap:"0",padding:"0 14px",background:"#0d0d10",borderBottom:"1px solid #27272a"}}>
+            {OBJETIVOS.map(obj=><button key={obj} onClick={()=>updBloque(b.id,{objetivo:obj})} style={{...ss.btn,padding:"8px 12px",fontSize:"11px",fontWeight:600,letterSpacing:"0.05em",background:b.objetivo===obj?"#fafafa":"transparent",color:b.objetivo===obj?"#09090b":"#52525b",borderRadius:"6px 6px 0 0",border:"none",transition:"all 0.1s"}}>{obj}</button>)}
+          </div>
+          <div style={{padding:"8px 14px 12px",background:"#09090b",overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:"680px"}}>
+              <thead><tr style={{borderBottom:"1px solid #27272a"}}>
+                {["PATRÓN","EJERCICIO","SERIES","REPETICIONES","","KG","RIR","RPE",""].map((h,i)=><th key={i} style={{textAlign:"left",color:"#52525b",padding:"6px 6px 8px",fontWeight:600,fontSize:"10px",letterSpacing:"0.07em",whiteSpace:"nowrap"}}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {b.filas.map(f=><tr key={f.id}>
+                  <td style={{padding:"4px 4px"}}><div style={{display:"flex",alignItems:"center",gap:"6px"}}><span style={{color:"#3f3f46",cursor:"grab",fontSize:"12px"}}>⠿</span><input value={f.patron} onChange={e=>updFila(b.id,f.id,{patron:e.target.value})} placeholder="Patrón..." style={{...ss.input,width:"110px",fontSize:"12px",padding:"6px 8px"}}/></div></td>
+                  <td style={{padding:"4px 4px"}}><select value={f.ejercicio} onChange={e=>updFila(b.id,f.id,{ejercicio:e.target.value})} style={{...ss.input,width:"180px",fontSize:"12px",padding:"6px 8px"}}><option value="">Ejercicio...</option>{EJERCICIOS_LISTA.map(e=><option key={e}>{e}</option>)}</select></td>
+                  <td style={{padding:"4px 4px"}}><input type="number" value={f.series} onChange={e=>updFila(b.id,f.id,{series:Number(e.target.value)})} style={{...ss.input,width:"52px",fontSize:"13px",padding:"6px 8px",textAlign:"center"}}/></td>
+                  <td style={{padding:"4px 4px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"3px"}}>
+                      {[{icon:"🏋️",v:"reps"},{icon:"⏱",v:"time"},{icon:"🔗",v:"link"}].map(t=><button key={t.v} onClick={()=>updFila(b.id,f.id,{tipoRep:t.v})} style={{...ss.btn,padding:"4px 6px",fontSize:"11px",background:f.tipoRep===t.v?"#27272a":"transparent",color:f.tipoRep===t.v?"#fafafa":"#52525b",border:`1px solid ${f.tipoRep===t.v?"#3f3f46":"transparent"}`,borderRadius:"6px"}}>{t.icon}</button>)}
+                      <input type="number" value={f.reps} onChange={e=>updFila(b.id,f.id,{reps:Number(e.target.value)})} style={{...ss.input,width:"48px",fontSize:"13px",padding:"6px 8px",textAlign:"center",marginLeft:"4px"}}/>
+                    </div>
+                  </td>
+                  <td style={{padding:"4px 6px",color:"#52525b",fontSize:"13px"}}>×</td>
+                  <td style={{padding:"4px 4px"}}><input value={f.kg} onChange={e=>updFila(b.id,f.id,{kg:e.target.value})} placeholder="kg" style={{...ss.input,width:"56px",fontSize:"12px",padding:"6px 8px",textAlign:"center"}}/></td>
+                  <td style={{padding:"4px 4px"}}><input value={f.rir} onChange={e=>updFila(b.id,f.id,{rir:e.target.value})} placeholder="—" style={{...ss.input,width:"48px",fontSize:"12px",padding:"6px 8px",textAlign:"center"}}/></td>
+                  <td style={{padding:"4px 4px"}}><input value={f.rpe} onChange={e=>updFila(b.id,f.id,{rpe:e.target.value})} placeholder="—" style={{...ss.input,width:"48px",fontSize:"12px",padding:"6px 8px",textAlign:"center"}}/></td>
+                  <td style={{padding:"4px 4px"}}><button onClick={()=>delFila(b.id,f.id)} style={{...ss.btn,background:"transparent",color:"#52525b",padding:"4px 6px",fontSize:"12px"}}>✕</button></td>
+                </tr>)}
+              </tbody>
+            </table>
+            <button onClick={()=>addFila(b.id)} style={{...ss.btn,background:"transparent",color:"#a1a1aa",border:"none",fontSize:"13px",marginTop:"8px",padding:"4px 2px"}}>+ Añadir fila</button>
+          </div>
+        </div>;
+      })}
+
+      <button onClick={addBloque} style={{...ss.btn,width:"100%",background:"transparent",color:"#71717a",border:"1px dashed #3f3f46",padding:"14px",fontSize:"13px",marginBottom:"24px",borderRadius:"10px",transition:"all 0.15s"}}>+ Nuevo bloque</button>
+      <div style={{display:"flex",gap:"10px",justifyContent:"flex-end"}}>
+        <button onClick={onClose} style={{...ss.btn,background:"transparent",color:"#a1a1aa",border:"1px solid #3f3f46"}}>Cancelar</button>
+        <button onClick={save} className="btn-hover" style={{...ss.btn,background:"#fafafa",color:"#09090b",fontWeight:600}}>Guardar sesión</button>
+      </div>
+    </div>
+  </div>;
+}
+
 function PadreView({showToast,setWearablesOpen,injuryReports,updateInjuryReport}) {
   const [riskExpanded,setRiskExpanded]=useState(false);
   const [device,setDevice]=useState("appleWatch");
@@ -1548,6 +1639,7 @@ function AsistenciaGrid({players,sportColor,showToast}) {
 }
 
 function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublishedPlan,newExForm,setNewExForm,newEx,setNewEx,gymPlanExercises,setGymPlanExercises,rankTab,setRankTab,expandedDay,setExpandedDay}) {
+  const [nuevaSesionOpen,setNuevaSesionOpen]=useState(false);
   const days=["lunes","miercoles","viernes"];
   const dayLabels={lunes:"Lunes",miercoles:"Miércoles",viernes:"Viernes"};
   const planSessions=gymPlanExercises||GYM_PLAN.sessions;
@@ -1562,7 +1654,11 @@ function PreparadorView({module,sp,showToast,sportColor,publishedPlan,setPublish
   const statusIcon=(s)=>s==="ok"?"✅":s==="parcial"?"⚠️":"⏳";
 
   if(module==="microciclo") return <div>
-    <SectionTitle title={`Microciclo — Semana ${GYM_PLAN.week}`} sub={`${GYM_PLAN.coach} · ${sp.name}`} action={<button onClick={()=>{setPublishedPlan(true);showToast("Plan publicado. 15 jugadores notificados vía push y WhatsApp 📱");}} className="btn-hover" style={{...ss.btn,background:publishedPlan?"#22C55E22":"#22C55E",color:publishedPlan?"#22C55E":"#fff",border:publishedPlan?"1px solid #22C55E":"none",fontSize:"12px"}}>{publishedPlan?"✅ Plan publicado":"📢 Publicar plan"}</button>}/>
+    {nuevaSesionOpen&&<NuevaSesionModal onClose={()=>setNuevaSesionOpen(false)} showToast={showToast}/>}
+    <SectionTitle title={`Microciclo — Semana ${GYM_PLAN.week}`} sub={`${GYM_PLAN.coach} · ${sp.name}`} action={<div style={{display:"flex",gap:"8px"}}>
+      <button onClick={()=>setNuevaSesionOpen(true)} className="btn-hover" style={{...ss.btn,background:"#fafafa",color:"#09090b",fontWeight:600,fontSize:"12px"}}>+ Nueva sesión</button>
+      <button onClick={()=>{setPublishedPlan(true);showToast("Plan publicado. 15 jugadores notificados vía push y WhatsApp 📱");}} className="btn-hover" style={{...ss.btn,background:publishedPlan?"#22C55E22":"#22C55E",color:publishedPlan?"#22C55E":"#fff",border:publishedPlan?"1px solid #22C55E":"none",fontSize:"12px"}}>{publishedPlan?"✅ Plan publicado":"📢 Publicar plan"}</button>
+    </div>}/>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"20px"}}>
       <Stat label="Plan activo" value="Semana 8" sub="Pretemporada 2025" color={sportColor}/>
       <Stat label="Cumplimiento" value="78%" sub="Promedio plantel" color="#22C55E"/>
