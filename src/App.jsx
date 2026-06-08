@@ -183,15 +183,15 @@ const INCIDENT_LOG = [
 ];
 
 const ss = {
-  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",backgroundColor:"#09090b",backgroundImage:"radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)",backgroundSize:"22px 22px",color:"#fafafa",fontFamily:"'Geist','Inter',system-ui,sans-serif",overflow:"hidden"},
-  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 20px",height:"56px",background:"#09090b",borderBottom:"1px solid #27272a",flexShrink:0},
-  sidebar:{width:"220px",background:"#09090b",borderRight:"1px solid #27272a",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"},
-  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#3f3f46 transparent"},
-  card:{background:"#09090b",border:"1px solid #27272a",borderRadius:"12px",padding:"20px"},
-  muted:{color:"#a1a1aa",fontSize:"13px"},
-  label:{color:"#71717a",fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"6px",fontWeight:600},
-  btn:{padding:"8px 16px",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"13px",fontWeight:500,transition:"all 0.15s ease"},
-  input:{background:"#09090b",border:"1px solid #3f3f46",borderRadius:"8px",color:"#fafafa",padding:"8px 12px",fontSize:"13px",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"},
+  wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",backgroundColor:"#0a0a0a",backgroundImage:"radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",backgroundSize:"22px 22px",color:"#fafafa",fontFamily:"'Geist','Inter',system-ui,sans-serif",overflow:"hidden"},
+  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 20px",height:"56px",background:"#0a0a0a",borderBottom:"1px solid #ef444422",flexShrink:0},
+  sidebar:{width:"220px",background:"#0a0a0a",borderRight:"1px solid #ef444415",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"},
+  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#ef4444 transparent"},
+  card:{background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:"12px",padding:"20px",transition:"all 0.2s ease"},
+  muted:{color:"#9ca3af",fontSize:"13px"},
+  label:{color:"#9ca3af",fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"6px",fontWeight:600,fontFamily:"'Syne','Geist',system-ui,sans-serif"},
+  btn:{padding:"8px 16px",borderRadius:"8px",border:"1px solid transparent",cursor:"pointer",fontSize:"13px",fontWeight:500,transition:"all 0.2s ease",fontFamily:"'Syne','Geist',system-ui,sans-serif"},
+  input:{background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:"8px",color:"#fafafa",padding:"8px 12px",fontSize:"13px",outline:"none",width:"100%",boxSizing:"border-box",transition:"all 0.2s ease",fontFamily:"'Geist',system-ui,sans-serif"},
 };
 
 function Sparkline({data,color="#3B82F6",width=120,height=36,fill=true}) {
@@ -271,8 +271,8 @@ function Toast({msg,type,onClose}) {
 }
 
 function Badge({color,children,size="sm"}) {
-  const fs = size==="sm"?"11px":"12px", px = size==="sm"?"8px":"11px", py = size==="sm"?"2px":"4px";
-  return <span style={{background:color+"20",color,border:`1px solid ${color}38`,borderRadius:"6px",padding:`${py} ${px}`,fontSize:fs,fontWeight:500,whiteSpace:"nowrap",letterSpacing:"0.01em",display:"inline-flex",alignItems:"center",gap:"4px"}}>{children}</span>;
+  const fs = size==="sm"?"11px":"12px", px = size==="sm"?"9px":"12px", py = size==="sm"?"3px":"5px";
+  return <span style={{background:color+"15",color,border:`1px solid ${color}30`,borderRadius:"6px",padding:`${py} ${px}`,fontSize:fs,fontWeight:600,whiteSpace:"nowrap",letterSpacing:"0.02em",display:"inline-flex",alignItems:"center",gap:"4px",fontFamily:"'Syne','Geist',system-ui,sans-serif",transition:"all 0.2s ease"}}>{children}</span>;
 }
 
 function ProgressBar({value,max,color,height=6}) {
@@ -288,18 +288,18 @@ function Semaforo({status}) {
 }
 
 function Stat({label,value,sub,color}) {
-  return <div style={{...ss.card}}>
-    <div style={{...ss.label,marginBottom:"8px"}}>{label}</div>
-    <div style={{fontSize:"28px",fontWeight:700,color:color||"#fafafa",letterSpacing:"-0.02em",lineHeight:1}}>{value}</div>
-    {sub&&<div style={{...ss.muted,marginTop:"6px",fontSize:"12px"}}>{sub}</div>}
+  return <div style={{...ss.card,borderColor:color+"22"}}>
+    <div style={{...ss.label,marginBottom:"8px",fontFamily:"'Syne','Geist',system-ui,sans-serif"}}>{label}</div>
+    <div style={{fontSize:"32px",fontWeight:800,color:color||"#ef4444",letterSpacing:"-0.03em",lineHeight:1,fontFamily:"'DM Mono','Courier',monospace",marginBottom:"4px"}}>{value}</div>
+    {sub&&<div style={{...ss.muted,marginTop:"6px",fontSize:"11px",fontFamily:"'Geist',system-ui,sans-serif"}}>{sub}</div>}
   </div>;
 }
 
 function SectionTitle({title,sub,action}) {
-  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px",gap:"12px",flexWrap:"wrap"}}>
+  return <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"24px",gap:"12px",flexWrap:"wrap"}}>
     <div>
-      <h2 style={{margin:0,fontSize:"18px",fontWeight:600,letterSpacing:"-0.01em",color:"#fafafa"}}>{title}</h2>
-      {sub&&<p style={{...ss.muted,margin:"4px 0 0",fontSize:"13px"}}>{sub}</p>}
+      <h2 style={{margin:0,fontSize:"24px",fontWeight:700,letterSpacing:"-0.03em",color:"#fafafa",fontFamily:"'Syne','Geist',system-ui,sans-serif"}}>{title}</h2>
+      {sub&&<p style={{...ss.muted,margin:"6px 0 0",fontSize:"13px",fontFamily:"'Geist',system-ui,sans-serif"}}>{sub}</p>}
     </div>
     {action}
   </div>;
@@ -513,26 +513,27 @@ export default function SportOS() {
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
       @keyframes recordPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
       @keyframes moduleEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes glow-red{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}100%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
       .module-enter{animation:moduleEnter 0.28s cubic-bezier(0.16,1,0.3,1)}
-      .nav-item:hover{background:#18181b!important;color:#fafafa!important}
-      .btn-hover:hover{opacity:0.88!important;filter:brightness(1.08)!important}
-      .sport-tab:hover{background:#18181b!important}
-      .drag-row:hover{background:#18181b!important}
-      .table-row:hover td{background:#18181b}
+      .nav-item:hover{background:#ef444412!important;color:#ef4444!important;border-radius:8px;transition:all 0.2s}
+      .btn-hover:hover{transform:translateY(-2px)!important;box-shadow:0 8px 16px rgba(239,68,68,0.2)!important;border-color:#ef4444!important}
+      .btn-hover:active{transform:translateY(0)!important}
+      .sport-tab:hover{background:#ef444408!important;border-color:#ef444422!important}
+      .drag-row:hover{background:#ef444405!important}
+      .table-row:hover td{background:#1a1a1a}
       input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
-      input:not([type=color]):focus{border-color:#3f3f46!important;box-shadow:0 0 0 2px rgba(63,63,70,0.5)!important}
-      select:focus{border-color:#3f3f46!important;box-shadow:0 0 0 2px rgba(63,63,70,0.5)!important;outline:none}
-      textarea:focus{border-color:#3f3f46!important;box-shadow:0 0 0 2px rgba(63,63,70,0.5)!important;outline:none}
+      input:not([type=color]):focus,select:focus,textarea:focus{border-color:#ef4444!important;box-shadow:0 0 0 2px rgba(239,68,68,0.2)!important;outline:none!important}
       ::-webkit-scrollbar{width:6px;height:6px}
       ::-webkit-scrollbar-track{background:transparent}
-      ::-webkit-scrollbar-thumb{background:#3f3f46;border-radius:99px}
-      ::-webkit-scrollbar-thumb:hover{background:#52525b}
+      ::-webkit-scrollbar-thumb{background:#ef444444;border-radius:99px;transition:background 0.2s}
+      ::-webkit-scrollbar-thumb:hover{background:#ef4444}
       *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-      th{font-size:12px!important;font-weight:500!important;color:#71717a!important;text-transform:uppercase!important;letter-spacing:0.05em!important}
+      th{font-size:11px!important;font-weight:600!important;color:#9ca3af!important;text-transform:uppercase!important;letter-spacing:0.08em!important;font-family:'Syne',system-ui,sans-serif!important}
+      h1,h2,h3,h4,h5,h6{font-family:'Syne',system-ui,sans-serif!important;letter-spacing:-0.02em}
     `}</style>
 
     <div style={ss.topbar}>
-      <div style={{fontWeight:800,fontSize:"16px",color:sportColor,marginRight:"4px",whiteSpace:"nowrap",letterSpacing:"-0.03em"}}>⚡ SportOS</div>
+      <div style={{fontWeight:800,fontSize:"18px",color:"#ef4444",marginRight:"4px",whiteSpace:"nowrap",letterSpacing:"-0.03em",fontFamily:"'Syne','Geist',system-ui,sans-serif"}}>⚡ SportOS</div>
       <div style={{display:"flex",gap:"2px",background:"rgba(255,255,255,0.05)",borderRadius:"8px",padding:"3px",overflowX:"auto"}}>
         {Object.entries(SPORTS_CONFIG).map(([k,v])=>{
           const isActive2 = role==="admin"?activeClubs[k]:k===sport;
