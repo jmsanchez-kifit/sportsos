@@ -184,9 +184,10 @@ const INCIDENT_LOG = [
 
 const ss = {
   wrap:{display:"flex",flexDirection:"column",height:"100vh",width:"100%",backgroundColor:"#0a0a0a",backgroundImage:"radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",backgroundSize:"22px 22px",color:"#fafafa",fontFamily:"'Geist','Inter',system-ui,sans-serif",overflow:"hidden"},
-  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 20px",height:"56px",background:"#0a0a0a",borderBottom:"1px solid #ef444422",flexShrink:0},
-  sidebar:{width:"220px",background:"#0a0a0a",borderRight:"1px solid #ef444415",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"},
-  main:{flex:1,overflowY:"auto",padding:"24px",scrollbarWidth:"thin",scrollbarColor:"#ef4444 transparent"},
+  topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 14px",height:"52px",background:"#0a0a0a",borderBottom:"1px solid #ef444422",flexShrink:0},
+  sidebar:{width:"220px",background:"#0a0a0a",borderRight:"1px solid #ef444415",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto",minWidth:"0"},
+  sidebarMobile:{position:"fixed",left:0,top:0,width:"100%",height:"100%",background:"#0a0a0a",zIndex:99,display:"none",flexDirection:"column",overflowY:"auto"},
+  main:{flex:1,overflowY:"auto",padding:"16px",scrollbarWidth:"thin",scrollbarColor:"#ef4444 transparent"},
   card:{background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:"12px",padding:"20px",transition:"all 0.2s ease"},
   muted:{color:"#9ca3af",fontSize:"13px"},
   label:{color:"#9ca3af",fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"6px",fontWeight:600,fontFamily:"'Syne','Geist',system-ui,sans-serif"},

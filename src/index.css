@@ -8,10 +8,18 @@ html, body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #09090b;
+  background: #0a0a0a;
   font-family: 'Geist', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, select, button {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 #root {
@@ -19,4 +27,21 @@ html, body {
   width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 16px;
+  }
+
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input, textarea, select {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
