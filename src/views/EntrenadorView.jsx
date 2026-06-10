@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fadeUp, scaleIn } from "../styles/motion";
 import { ss } from "../styles/tokens";
 import { FORMATIONS, TEAMS } from "../data/sports";
-import { MOCK_POSTS } from "../data/mockData";
+import { usePosts } from "../lib/usePosts";
+import { useAttendance } from "../lib/useAttendance";
 import SectionTitle from "../components/SectionTitle";
 import Badge from "../components/Badge";
 import Semaforo from "../components/Semaforo";
@@ -131,10 +132,32 @@ function NominaDND({sport, sp, club, players, sportColor, showToast}) {
   );
 }
 
+/* ── MuroInput ─────────────────────────────────────────── */
+function MuroInput({sportColor, onPublish}) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (!text.trim()) return;
+    setBusy(true);
+    await onPublish(text.trim());
+    setText("");
+    setBusy(false);
+  };
+  return (
+    <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",padding:"12px",display:"flex",gap:"10px",alignItems:"center"}}>
+      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:800,color:sportColor,flexShrink:0,border:`1.5px solid ${sportColor}55`}}>E</div>
+      <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Publicar actualización al equipo..." style={{...ss.input,flex:1}}/>
+      <motion.button disabled={busy||!text.trim()} whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={submit}
+        style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}dd)`,color:"#fff",boxShadow:`0 4px 12px ${sportColor}55`,opacity:busy||!text.trim()?0.5:1}}>
+        {busy?"...":"Publicar"}
+      </motion.button>
+    </motion.div>
+  );
+}
+
 /* ── AsistenciaGrid ─────────────────────────────────────────── */
-function AsistenciaGrid({players, sportColor, showToast}) {
-  const [present, setPresent] = useState({});
-  const toggle = (id)=>setPresent(p=>({...p,[id]:!p[id]}));
+function AsistenciaGrid({players, sportColor, showToast, present={}, saving={}, onToggle}) {
+  const toggle = onToggle || (() => {});
   const count = Object.values(present).filter(Boolean).length;
   return (
     <div>
@@ -158,9 +181,14 @@ function AsistenciaGrid({players, sportColor, showToast}) {
 }
 
 /* ── EntrenadorView ─────────────────────────────────────────── */
-export default function EntrenadorView({module, sport, sp, club, players, postLikes, setPostLikes, showToast, sportColor, currentCategory, hiaModal, setHiaModal, userCats=[], isDemo=true, partidos=[], setPartidos=()=>{}}) {
+export default function EntrenadorView({module, sport, sp, club, players, postLikes, setPostLikes, showToast, sportColor, currentCategory, hiaModal, setHiaModal, userCats=[], isDemo=true, partidos=[], setPartidos=()=>{}, clubId=null, currentUserId=null}) {
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
   const sv = (p,k)=>(p.stats&&p.stats[k]!=null)?p.stats[k]:((p.id*13+k.length*7)%18)+1;
+
+  // Datos reales desde Supabase (con fallback a mock)
+  const { posts, createPost } = usePosts(clubId);
+  const today = new Date().toISOString().split("T")[0];
+  const { present: attendancePresent, saving: attendanceSaving, toggle: attendanceToggle, load: loadAttendance } = useAttendance(clubId, today);
 
   // En modo real filtra jugadores por las categorías asignadas al entrenador
   const visiblePlayers = isDemo ? players : players.filter(p => userCats.includes(p.cat));
@@ -272,19 +300,20 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
         </motion.div>
 
         {/* Feed de posts */}
-        <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",padding:"12px",display:"flex",gap:"10px",alignItems:"center"}}>
-          <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:800,color:sportColor,flexShrink:0,border:`1.5px solid ${sportColor}55`}}>E</div>
-          <input placeholder="Publicar actualización al equipo..." style={{...ss.input,flex:1}}/>
-          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>showToast("Post publicado","success")} style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}dd)`,color:"#fff",boxShadow:`0 4px 12px ${sportColor}55`}}>Publicar</motion.button>
-        </motion.div>
-        {MOCK_POSTS.map((post,i)=>(
-          <motion.div key={post.id} {...fadeUp} transition={{duration:0.4,delay:i*0.08}} whileHover={{y:-2}} style={{...ss.card,marginBottom:"12px",borderLeft:`3px solid ${postColors[post.type]}`}}>
+        <MuroInput sportColor={sportColor} onPublish={async (text) => {
+          try {
+            await createPost({ authorId: currentUserId, text, type: "general" });
+            showToast("Post publicado", "success");
+          } catch { showToast("Error al publicar","error"); }
+        }}/>
+        {posts.map((post,i)=>(
+          <motion.div key={post.id} {...fadeUp} transition={{duration:0.4,delay:i*0.08}} whileHover={{y:-2}} style={{...ss.card,marginBottom:"12px",borderLeft:`3px solid ${postColors[post.type]||"#6B7280"}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px"}}><Badge color={postColors[post.type]}>{post.type}</Badge><span style={{fontWeight:600,fontSize:"13px"}}>{post.author}</span></div>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}><Badge color={postColors[post.type]||"#6B7280"}>{post.type}</Badge><span style={{fontWeight:600,fontSize:"13px"}}>{post.author}</span></div>
               <span style={ss.muted}>{post.time}</span>
             </div>
             <p style={{margin:"0 0 12px",fontSize:"13px",lineHeight:1.6,color:"var(--text-1)"}}>{post.text}</p>
-            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.9}} onClick={()=>setPostLikes(prev=>({...prev,[post.id]:prev[post.id]+1}))} style={{...ss.btn,background:"transparent",color:"var(--text-2)",fontSize:"12px",padding:"5px 12px",border:"1px solid var(--border-soft)"}}>❤️ {postLikes[post.id]}</motion.button>
+            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.9}} onClick={()=>setPostLikes(prev=>({...prev,[post.id]:(prev[post.id]||0)+1}))} style={{...ss.btn,background:"transparent",color:"var(--text-2)",fontSize:"12px",padding:"5px 12px",border:"1px solid var(--border-soft)"}}>❤️ {postLikes[post.id]||post.likes||0}</motion.button>
           </motion.div>
         ))}
       </div>
@@ -577,7 +606,7 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
     </div>
   );
 
-  if(module==="asistencia") return <div><CatsBanner/><SectionTitle title="Control de Asistencia"/><AsistenciaGrid players={visiblePlayers} sportColor={sportColor} showToast={showToast}/></div>;
+  if(module==="asistencia") return <div><CatsBanner/><SectionTitle title="Control de Asistencia"/><AsistenciaGrid players={visiblePlayers} sportColor={sportColor} showToast={showToast} present={attendancePresent} saving={attendanceSaving} onToggle={(id)=>{attendanceToggle(id);}} /></div>;
 
   if(module==="salud") return (
     <div>
