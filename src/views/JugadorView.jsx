@@ -1,0 +1,414 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeUp, scaleIn } from "../styles/motion";
+import { ss } from "../styles/tokens";
+import { FORMATIONS, TEAMS } from "../data/sports";
+import { GYM_PLAN } from "../data/gymPlan";
+import { MOCK_POSTS } from "../data/mockData";
+import SectionTitle from "../components/SectionTitle";
+import Badge from "../components/Badge";
+import Semaforo from "../components/Semaforo";
+import Cancha from "../components/Cancha";
+import ProgressBar from "../components/ProgressBar";
+import RankingView from "../components/RankingView";
+
+/* ── MiCuota ────────────────────────────────────────────────── */
+function MiCuota({player, club, countryData, sportColor, showToast, payments, setPayments}) {
+  const [selectedMethod, setSelectedMethod] = useState(countryData.payments[0]);
+  const [paying, setPaying] = useState(false);
+  const [paid, setPaid] = useState(player.cuota === "ok");
+
+  const myPayments = payments.filter(p => p.playerId === player.id);
+
+  const handlePay = () => {
+    setPaying(true);
+    setTimeout(() => {
+      const newPayment = {
+        id: payments.length + 1,
+        playerId: player.id,
+        playerName: player.name,
+        amount: club.cuota,
+        method: selectedMethod,
+        date: new Date().toISOString().split("T")[0],
+        status: "pagado",
+      };
+      setPayments(prev => [newPayment, ...prev]);
+      setPaid(true);
+      setPaying(false);
+      showToast(`✅ Cuota pagada con ${selectedMethod}`, "success");
+    }, 1800);
+  };
+
+  const methodIcons = { Khipu:"💚", Transbank:"💳", Transferencia:"🏦", "Mercado Pago":"🔵", Pix:"🟢" };
+
+  return (
+    <div>
+      <SectionTitle title="Mi Cuota" sub={`${club.name} · ${countryData.flag} ${countryData.currency}`}/>
+
+      {/* Estado actual */}
+      <motion.div {...fadeUp} style={{...ss.card, marginBottom:"16px", border:`2px solid ${paid?"#22C55E55":"#EF444455"}`, background:paid?"linear-gradient(135deg,rgba(34,197,94,0.08),transparent)":"linear-gradient(135deg,rgba(239,68,68,0.08),transparent)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"12px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"14px"}}>
+            <div style={{width:"52px",height:"52px",borderRadius:"50%",background:paid?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",border:`2px solid ${paid?"#22C55E55":"#EF444455"}`}}>
+              {paid ? "✅" : "⚠️"}
+            </div>
+            <div>
+              <div style={{fontSize:"15px",fontWeight:700}}>{paid ? "Cuota al día" : "Cuota pendiente"}</div>
+              <div style={{...ss.muted, marginTop:"4px"}}>Mes en curso · vence el 30</div>
+            </div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:"28px",fontWeight:800,color:paid?"#22C55E":"#EF4444",letterSpacing:"-0.02em"}}>{countryData.symbol}{club.cuota.toLocaleString()}</div>
+            <div style={ss.muted}>{countryData.currency}</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Formulario de pago */}
+      {!paid && (
+        <motion.div {...fadeUp} transition={{delay:0.1}} style={{...ss.card, marginBottom:"16px"}}>
+          <div style={{fontWeight:600,fontSize:"14px",marginBottom:"14px"}}>💳 Pagar cuota mensual</div>
+
+          <div style={ss.label}>Selecciona tu método de pago</div>
+          <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"20px"}}>
+            {countryData.payments.map(m => (
+              <motion.button key={m} whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={()=>setSelectedMethod(m)}
+                style={{...ss.btn, background:selectedMethod===m?`linear-gradient(135deg,${sportColor}33,${sportColor}11)`:"var(--bg-elev-2)", color:selectedMethod===m?sportColor:"var(--text-2)", border:`1px solid ${selectedMethod===m?sportColor+"55":"var(--border-soft)"}`, padding:"10px 18px", fontSize:"13px", boxShadow:selectedMethod===m?`0 0 16px ${sportColor}33`:"none"}}>
+                {methodIcons[m]||"💳"} {m}
+              </motion.button>
+            ))}
+          </div>
+
+          <div style={{...ss.card, background:"var(--bg-elev-1)", marginBottom:"16px", padding:"14px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:"8px",fontSize:"13px"}}>
+              <span style={{color:"var(--text-2)"}}>Cuota mensual</span>
+              <span>{countryData.symbol}{club.cuota.toLocaleString()}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:"8px",fontSize:"13px"}}>
+              <span style={{color:"var(--text-2)"}}>Comisión plataforma</span>
+              <span style={{color:"var(--text-3)"}}>$0</span>
+            </div>
+            <div style={{borderTop:"1px solid var(--border-soft)",paddingTop:"8px",display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:"15px"}}>
+              <span>Total</span>
+              <span style={{color:sportColor}}>{countryData.symbol}{club.cuota.toLocaleString()} {countryData.currency}</span>
+            </div>
+          </div>
+
+          <motion.button whileHover={!paying?{scale:1.02,y:-2}:{}} whileTap={!paying?{scale:0.98}:{}} onClick={handlePay} disabled={paying}
+            style={{...ss.btn, background:paying?"rgba(255,255,255,0.06)":`linear-gradient(135deg,${sportColor},${sportColor}cc)`, color:paying?"var(--text-3)":"#fff", width:"100%", padding:"14px", fontSize:"14px", fontWeight:700, boxShadow:paying?"none":`0 8px 24px ${sportColor}44`, cursor:paying?"not-allowed":"pointer"}}>
+            {paying ? "⏳ Procesando pago..." : `💳 Pagar con ${selectedMethod}`}
+          </motion.button>
+        </motion.div>
+      )}
+
+      {/* Confirmación post-pago */}
+      {paid && myPayments.length > 0 && (
+        <motion.div {...scaleIn} style={{...ss.card, marginBottom:"16px", border:"2px solid rgba(34,197,94,0.4)", background:"linear-gradient(135deg,rgba(34,197,94,0.08),transparent)"}}>
+          <div style={{color:"#22C55E",fontWeight:700,fontSize:"14px",marginBottom:"10px",display:"flex",alignItems:"center",gap:"8px"}}>🎉 ¡Pago registrado!</div>
+          <div style={{fontSize:"13px",color:"var(--text-2)"}}>Método: <strong style={{color:"var(--text-1)"}}>{myPayments[0].method}</strong></div>
+          <div style={{fontSize:"13px",color:"var(--text-2)",marginTop:"4px"}}>Fecha: <strong style={{color:"var(--text-1)"}}>{myPayments[0].date}</strong></div>
+          <div style={{fontSize:"13px",color:"var(--text-2)",marginTop:"4px"}}>Monto: <strong style={{color:"#22C55E"}}>{countryData.symbol}{myPayments[0].amount.toLocaleString()}</strong></div>
+        </motion.div>
+      )}
+
+      {/* Historial de pagos */}
+      {myPayments.length > 0 && (
+        <motion.div {...fadeUp} transition={{delay:0.2}} style={ss.card}>
+          <div style={{fontWeight:600,fontSize:"14px",marginBottom:"14px"}}>📋 Historial de pagos</div>
+          {myPayments.map((p,i) => (
+            <motion.div key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.05}} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:i<myPayments.length-1?"1px solid var(--border-soft)":"none"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                <div style={{width:"34px",height:"34px",borderRadius:"50%",background:"rgba(34,197,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",border:"1px solid rgba(34,197,94,0.3)"}}>✅</div>
+                <div>
+                  <div style={{fontSize:"13px",fontWeight:500}}>{p.method}</div>
+                  <div style={ss.muted}>{p.date}</div>
+                </div>
+              </div>
+              <div style={{fontWeight:700,color:"#22C55E"}}>{countryData.symbol}{p.amount.toLocaleString()}</div>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+/* ── GymJugador ─────────────────────────────────────────────── */
+function GymJugador({player, sportColor, gymLog, setGymLog, completedSession, setCompletedSession, newRecord, setNewRecord, expandedEx, setExpandedEx, showToast, rankTab, setRankTab, players}) {
+  const todayPlan = GYM_PLAN.sessions.lunes;
+  const PREV_1RM = {Sentadilla:140,"Hip Thrust":120,"Press Banca":110,"Pull-up":90,"Power Clean":95};
+
+  const logSet   = (exName,setIdx,field,val)=>setGymLog(prev=>{const key=`${exName}_${setIdx}`;return {...prev,[key]:{...(prev[key]||{}),[field]:val}};});
+  const getLog   = (exName,setIdx,field)=>{const key=`${exName}_${setIdx}`;return gymLog[key]?gymLog[key][field]:"";};
+  const calcVol  = (exName,sets)=>{let t=0;for(let i=0;i<sets;i++){const w=parseFloat(getLog(exName,i,"weight")||0);const r=parseFloat(getLog(exName,i,"reps")||0);t+=w*r;}return Math.round(t);};
+  const calc1RM  = (w,r)=>r?Math.round(w*(1+r/30)):0;
+  const exCompleted = (ex)=>{for(let i=0;i<ex.sets;i++){if(!getLog(ex.name,i,"weight")||!getLog(ex.name,i,"reps"))return false;}return true;};
+  const allDone  = todayPlan.exercises.every(ex=>exCompleted(ex));
+  const totalVol = todayPlan.exercises.reduce((s,ex)=>s+calcVol(ex.name,ex.sets),0);
+  const rpeColor = (v)=>v<=3?"#22C55E":v<=6?"#F59E0B":"#EF4444";
+
+  return (
+    <div>
+      {!completedSession&&(
+        <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",background:"linear-gradient(135deg,rgba(245,158,11,0.12),rgba(245,158,11,0.02))",border:"1px solid rgba(245,158,11,0.4)",display:"flex",alignItems:"center",gap:"12px",padding:"14px 16px"}}>
+          <motion.span animate={{rotate:[0,10,-10,0]}} transition={{duration:2,repeat:Infinity}} style={{fontSize:"22px"}}>💪</motion.span>
+          <div><div style={{fontSize:"13px",fontWeight:700,color:"#F59E0B"}}>Plan activo: {GYM_PLAN.week}</div><div style={{...ss.muted,fontSize:"11px"}}>Lunes — Fuerza inferior · Prof. Marcos Díaz</div></div>
+        </motion.div>
+      )}
+      {completedSession&&(
+        <motion.div {...scaleIn} style={{...ss.card,marginBottom:"20px",background:"linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.02))",border:"2px solid rgba(34,197,94,0.5)",boxShadow:"0 0 32px rgba(34,197,94,0.25)"}}>
+          <div style={{color:"#22C55E",fontWeight:700,fontSize:"15px",marginBottom:"10px",display:"flex",alignItems:"center",gap:"8px"}}>🎉 ¡Sesión completada! — Lunes 13 Mayo</div>
+          <div style={{display:"flex",gap:"20px",marginBottom:"12px"}}>
+            <div><div style={{fontSize:"26px",fontWeight:800,letterSpacing:"-0.02em"}}>{totalVol.toLocaleString()} kg</div><div style={ss.muted}>Volumen total</div></div>
+            <div><div style={{fontSize:"18px",fontWeight:700,color:"#22C55E"}}>↑ +340 kg</div><div style={ss.muted}>vs lunes pasado</div></div>
+          </div>
+          {newRecord&&<motion.div initial={{scale:0.9,opacity:0}} animate={{scale:1,opacity:1}} style={{display:"flex",alignItems:"center",gap:"8px",background:"linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.05))",border:"1px solid rgba(245,158,11,0.5)",borderRadius:"var(--r-md)",padding:"10px 14px",marginBottom:"8px",boxShadow:"0 0 16px rgba(245,158,11,0.3)"}}><span style={{fontSize:"22px"}}>🏆</span><span style={{color:"#F59E0B",fontWeight:700,fontSize:"13px"}}>NUEVO RÉCORD PERSONAL en Sentadilla — 148 kg</span></motion.div>}
+          <div style={{color:"var(--text-2)",fontSize:"12px"}}>🥇 Subiste al puesto #1 del ranking de fuerza</div>
+        </motion.div>
+      )}
+      {todayPlan.exercises.map((ex,ei)=>{
+        const prev1RM  = PREV_1RM[ex.name]||100;
+        const suggested = ex.pct?Math.round(prev1RM*(ex.pct/100)):null;
+        const vol  = calcVol(ex.name,ex.sets);
+        const done = exCompleted(ex);
+        const maxWeight = Math.max(0,...Array.from({length:ex.sets},(_,i)=>parseFloat(getLog(ex.name,i,"weight")||0)));
+        const maxReps   = Math.max(0,...Array.from({length:ex.sets},(_,i)=>parseFloat(getLog(ex.name,i,"reps")||0)));
+        const est1RM = calc1RM(maxWeight,maxReps);
+        const isRecord = est1RM>prev1RM&&maxWeight>0;
+        return (
+          <motion.div key={ei} {...fadeUp} transition={{duration:0.4,delay:ei*0.05}} style={{...ss.card,marginBottom:"14px",border:done?"2px solid #22C55E55":isRecord?"2px solid rgba(245,158,11,0.6)":"1px solid var(--border-soft)",boxShadow:isRecord?"0 0 20px rgba(245,158,11,0.25)":"none",transition:"all 0.3s",position:"relative"}}>
+            {isRecord&&<motion.div initial={{scale:0}} animate={{scale:1}} transition={{type:"spring",stiffness:300}} style={{position:"absolute",top:"-10px",right:"12px",background:"linear-gradient(135deg,#F59E0B,#D97706)",color:"#fff",fontSize:"11px",fontWeight:800,padding:"4px 12px",borderRadius:"99px",boxShadow:"0 4px 16px rgba(245,158,11,0.5)",zIndex:2}}>🏆 NUEVO RÉCORD</motion.div>}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px",cursor:"pointer"}} onClick={()=>setExpandedEx(expandedEx===ei?null:ei)}>
+              <div><div style={{fontWeight:700,fontSize:"14px",display:"flex",alignItems:"center",gap:"8px",letterSpacing:"-0.01em"}}>{done&&<span style={{color:"#22C55E",fontSize:"16px"}}>✓</span>}{ex.name}</div>{suggested&&<div style={{fontSize:"12px",color:"#3B82F6",marginTop:"4px"}}>{ex.sets} × {ex.reps} × {ex.pct}% 1RM ≈ <strong>{suggested} kg</strong> sugerido</div>}</div>
+              <motion.span animate={{rotate:expandedEx===ei?180:0}} transition={{duration:0.2}} style={{color:"var(--text-3)",fontSize:"12px"}}>▼</motion.span>
+            </div>
+            <AnimatePresence>
+              {expandedEx===ei&&(
+                <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} transition={{duration:0.3,ease:[0.16,1,0.3,1]}} style={{overflow:"hidden"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"50px 70px 70px 60px 1fr",gap:"8px",marginBottom:"8px",paddingTop:"8px",borderTop:"1px solid var(--border-soft)"}}>
+                    {["Serie","Sug.","Peso","Reps","RPE"].map(h=><div key={h} style={{...ss.label,fontSize:"10px",marginBottom:0}}>{h}</div>)}
+                  </div>
+                  {Array.from({length:ex.sets}).map((_,si)=>(
+                    <div key={si} style={{display:"grid",gridTemplateColumns:"50px 70px 70px 60px 1fr",gap:"8px",marginBottom:"8px",alignItems:"center"}}>
+                      <span style={{fontSize:"11px",fontWeight:700,color:sportColor}}>S{si+1}</span>
+                      <span style={{...ss.muted,fontSize:"11px"}}>{suggested||"—"}</span>
+                      <input type="number" placeholder={suggested||"kg"} value={getLog(ex.name,si,"weight")} onChange={e=>{logSet(ex.name,si,"weight",e.target.value);if(ex.name==="Sentadilla"&&e.target.value>140)setNewRecord(true);}} style={{...ss.input,padding:"5px 8px",fontSize:"12px"}}/>
+                      <input type="number" placeholder="reps" value={getLog(ex.name,si,"reps")} onChange={e=>logSet(ex.name,si,"reps",e.target.value)} style={{...ss.input,padding:"5px 8px",fontSize:"12px"}}/>
+                      <div style={{display:"flex",gap:"2px"}}>
+                        {[1,2,3,4,5,6,7,8,9,10].map(n=>(
+                          <motion.div key={n} whileHover={{scale:1.2}} whileTap={{scale:0.9}} onClick={()=>logSet(ex.name,si,"rpe",n)} style={{width:"18px",height:"18px",borderRadius:"4px",background:parseInt(getLog(ex.name,si,"rpe"))===n?rpeColor(n):"var(--bg-elev-2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"9px",fontWeight:700,color:parseInt(getLog(ex.name,si,"rpe"))===n?"#fff":"var(--text-3)",border:`1px solid ${parseInt(getLog(ex.name,si,"rpe"))===n?rpeColor(n):"var(--border-soft)"}`}}>{n}</motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {vol>0&&<motion.div initial={{opacity:0}} animate={{opacity:1}} style={{marginTop:"10px",padding:"10px 14px",background:"var(--bg-elev-2)",borderRadius:"var(--r-md)",fontSize:"12px",color:"var(--text-2)"}}>Volumen serie: <strong style={{color:"var(--text-1)"}}>{vol.toLocaleString()} kg</strong>{est1RM>0&&<> · 1RM estimado: <strong style={{color:isRecord?"#F59E0B":"#3B82F6"}}>{est1RM} kg</strong></>}</motion.div>}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        );
+      })}
+      {!completedSession&&allDone&&(
+        <motion.button whileHover={{scale:1.02,y:-2}} whileTap={{scale:0.98}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} onClick={()=>{setCompletedSession(true);showToast("🎉 Sesión completada! Ranking actualizado","success");}} style={{...ss.btn,background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",width:"100%",padding:"14px",fontSize:"14px",fontWeight:700,boxShadow:"0 8px 32px rgba(34,197,94,0.4)",marginBottom:"16px"}}>✅ Registrar sesión completada</motion.button>
+      )}
+      <RankingView tab={rankTab} setTab={setRankTab} sportColor={sportColor} players={players} compact/>
+    </div>
+  );
+}
+
+/* ── JugadorView ────────────────────────────────────────────── */
+export default function JugadorView({module, sport, sp, club, player, players, sportColor, countryData, convocado, setConvocado, setWhatsappModal, showToast, gymLog, setGymLog, completedSession, setCompletedSession, newRecord, setNewRecord, expandedEx, setExpandedEx, rankTab, setRankTab, payments, setPayments, userCats=[], isDemo=true, resultados=[]}) {
+  const camiseta = player.num;
+  const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
+
+  // El plantel del jugador es su primera categoría asignada (solo una)
+  const miPlantel = isDemo ? null : (userCats[0] || null);
+  // Filtra compañeros de su mismo plantel
+  const visiblePlayers = miPlantel ? players.filter(p=>p.cat===miPlantel) : players;
+
+  const PlantelBanner = () => miPlantel ? (
+    <motion.div {...fadeUp} style={{...ss.card, marginBottom:"14px", padding:"10px 14px", background:"linear-gradient(135deg,rgba(34,197,94,0.08),transparent)", border:"1px solid rgba(34,197,94,0.2)", display:"flex", alignItems:"center", gap:"8px"}}>
+      <span style={{fontSize:"11px",color:"var(--text-2)"}}>👤 Tu plantel:</span>
+      <span style={{fontSize:"11px",padding:"2px 10px",borderRadius:"99px",background:"rgba(34,197,94,0.12)",color:"#4ADE80",border:"1px solid rgba(34,197,94,0.25)",fontWeight:600}}>{miPlantel}</span>
+    </motion.div>
+  ) : null;
+
+  if(module==="midashboard") return (
+    <div>
+      <motion.div {...fadeUp} style={{...ss.card,marginBottom:"20px",border:`1px solid ${sportColor}44`,background:`linear-gradient(135deg,${sportColor}15,${sportColor}03)`,display:"flex",alignItems:"center",gap:"16px"}}>
+        <motion.div whileHover={{rotate:10,scale:1.05}} style={{width:"60px",height:"60px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",fontWeight:800,color:sportColor,border:`3px solid ${sportColor}88`,boxShadow:`0 0 24px ${sportColor}55`}}>{player.num}</motion.div>
+        <div><div style={{fontSize:"20px",fontWeight:700,letterSpacing:"-0.01em"}}>{player.name}</div><div style={{color:sportColor,fontSize:"13px",fontWeight:500}}>{player.pos} · {club.name}</div></div>
+      </motion.div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"16px"}}>
+        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.05}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center"}}><Semaforo status={player.med}/><div style={{...ss.muted,fontSize:"11px",marginTop:"8px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Estado médico</div><div style={{fontSize:"12px",fontWeight:600,marginTop:"4px"}}>{player.med==="verde"?"✓ Apto":player.med==="amarillo"?"⚠ Alerta":"✕ No apto"}</div></motion.div>
+        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.1}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center",border:"1px solid rgba(34,197,94,0.3)",background:"linear-gradient(135deg,rgba(34,197,94,0.06),transparent)"}}><div style={{fontSize:"22px",fontWeight:800,color:"#22C55E"}}>✓</div><div style={{...ss.muted,fontSize:"11px",marginTop:"6px"}}>Cuota {countryData.symbol}{club.cuota.toLocaleString()}</div><div style={{...ss.muted,fontSize:"11px",marginTop:"2px"}}>{countryData.payments[0]}</div></motion.div>
+        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.15}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center",border:`1px solid ${sportColor}44`,background:`linear-gradient(135deg,${sportColor}15,${sportColor}03)`}}><div style={{fontSize:"24px",fontWeight:800,color:sportColor,filter:`drop-shadow(0 0 8px ${sportColor}88)`}}>#{camiseta}</div><div style={{fontSize:"11px",color:sportColor,marginTop:"4px",fontWeight:600}}>⭐ Convocado</div></motion.div>
+      </div>
+      <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",border:`1px solid ${sportColor}33`}}>
+        <div style={{fontWeight:600,marginBottom:"12px",fontSize:"13px",display:"flex",alignItems:"center",gap:"6px"}}>⚽ Próximo partido</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px",borderRadius:"var(--r-md)",background:`linear-gradient(135deg,${sportColor}15,${sportColor}03)`}}>
+          <div><div style={{fontSize:"16px",fontWeight:700}}>vs {club.next.rival}</div><div style={{...ss.muted,fontSize:"12px",marginTop:"2px"}}>{club.next.dia} · {sp.matchDuration}</div></div>
+          <Badge color={sportColor} glow>{club.next.dia}</Badge>
+        </div>
+      </motion.div>
+      <motion.div {...fadeUp} style={ss.card}>
+        <div style={{fontWeight:600,marginBottom:"12px",fontSize:"13px",display:"flex",alignItems:"center",gap:"6px"}}>📰 Últimas noticias</div>
+        {MOCK_POSTS.slice(0,3).map((p,i)=>(
+          <motion.div key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:i*0.05}} style={{padding:"10px 0",borderBottom:i<2?"1px solid var(--border-soft)":"none"}}>
+            <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}}><Badge color={postColors[p.type]}>{p.type}</Badge><span style={ss.muted}>{p.time}</span></div>
+            <p style={{margin:0,fontSize:"12px",color:"var(--text-2)",lineHeight:1.5}}>{p.text.substring(0,90)}...</p>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  );
+
+  if(module==="noticias") {
+    const [catFiltro, setCatFiltro] = useState("todos");
+    const cats = ["todos", ...new Set(resultados.map(r=>r.cat))];
+    const feed = catFiltro==="todos" ? resultados : resultados.filter(r=>r.cat===catFiltro);
+    const resColors = {victoria:"#22C55E", empate:"#F59E0B", derrota:"#EF4444"};
+    const resIcons  = {victoria:"🏆", empate:"🤝", derrota:"💪"};
+
+    return (
+      <div>
+        <SectionTitle title="Noticias & Resultados" sub={`${club.name} · Todos los equipos`}/>
+
+        {/* Filtro por categoría */}
+        <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"20px"}}>
+          {cats.map(c=>(
+            <motion.button key={c} whileTap={{scale:0.96}} onClick={()=>setCatFiltro(c)}
+              style={{...ss.btn, fontSize:"11px", padding:"6px 14px", background:catFiltro===c?`linear-gradient(135deg,${sportColor}33,${sportColor}11)`:"var(--bg-elev-2)", color:catFiltro===c?sportColor:"var(--text-2)", border:`1px solid ${catFiltro===c?sportColor+"55":"var(--border-soft)"}`, boxShadow:catFiltro===c?`0 0 12px ${sportColor}22`:"none", textTransform:c==="todos"?"none":"none", fontWeight:catFiltro===c?700:400}}>
+              {c==="todos" ? "📋 Todos" : c}
+            </motion.button>
+          ))}
+        </div>
+
+        {feed.length===0 && (
+          <div style={{...ss.card, textAlign:"center", padding:"40px", color:"var(--text-3)"}}>
+            Sin resultados para esta categoría aún.
+          </div>
+        )}
+
+        {feed.map((r,i)=>(
+          <motion.div key={r.id} {...fadeUp} transition={{delay:i*0.06}} style={{...ss.card, marginBottom:"14px", border:`1px solid ${resColors[r.resultado]}33`, background:`linear-gradient(135deg,${resColors[r.resultado]}06,transparent)`}}>
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px",flexWrap:"wrap",gap:"8px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                <div style={{width:"38px",height:"38px",borderRadius:"50%",background:`${resColors[r.resultado]}18`,border:`1.5px solid ${resColors[r.resultado]}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"}}>
+                  {resIcons[r.resultado]}
+                </div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:"14px"}}>{club.name} vs {r.rival}</div>
+                  <div style={{...ss.muted,fontSize:"11px",marginTop:"2px"}}>{r.fecha} · {r.lugar}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
+                <span style={{fontSize:"10px",padding:"2px 9px",borderRadius:"99px",background:`${sportColor}18`,color:sportColor,border:`1px solid ${sportColor}33`,fontWeight:600}}>{r.cat}</span>
+                <span style={{fontSize:"10px",padding:"2px 9px",borderRadius:"99px",background:`${resColors[r.resultado]}18`,color:resColors[r.resultado],border:`1px solid ${resColors[r.resultado]}44`,fontWeight:700,textTransform:"uppercase"}}>{r.resultado}</span>
+              </div>
+            </div>
+
+            {/* Marcador */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"16px",padding:"14px",borderRadius:"var(--r-md)",background:"var(--bg-elev-1)",marginBottom:"12px",border:"1px solid var(--border-soft)"}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:"11px",color:"var(--text-3)",marginBottom:"4px",fontWeight:600}}>LOCAL</div>
+                <div style={{fontSize:"32px",fontWeight:900,color:r.lugar==="Local"?sportColor:"var(--text-1)",letterSpacing:"-0.03em"}}>{r.golesLocal}</div>
+                <div style={{fontSize:"11px",fontWeight:600,marginTop:"2px",color:"var(--text-2)"}}>{r.lugar==="Local"?club.name:r.rival}</div>
+              </div>
+              <div style={{fontSize:"22px",color:"var(--text-3)",fontWeight:300}}>—</div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:"11px",color:"var(--text-3)",marginBottom:"4px",fontWeight:600}}>VISITA</div>
+                <div style={{fontSize:"32px",fontWeight:900,color:r.lugar==="Visita"?sportColor:"var(--text-1)",letterSpacing:"-0.03em"}}>{r.golesVisita}</div>
+                <div style={{fontSize:"11px",fontWeight:600,marginTop:"2px",color:"var(--text-2)"}}>{r.lugar==="Visita"?club.name:r.rival}</div>
+              </div>
+            </div>
+
+            {/* Resumen del entrenador */}
+            <div style={{fontSize:"13px",color:"var(--text-2)",lineHeight:1.6,marginBottom:"10px"}}>"{r.resumen}"</div>
+            <div style={{...ss.muted,fontSize:"11px",marginBottom:"10px"}}>— {r.autor} ({r.autorRol})</div>
+
+            {/* Destacados */}
+            {r.destacados?.length > 0 && (
+              <div style={{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{fontSize:"10px",color:"var(--text-3)"}}>⭐ Destacados:</span>
+                {r.destacados.map(d=>(
+                  <span key={d} style={{fontSize:"11px",padding:"2px 9px",borderRadius:"99px",background:"rgba(245,158,11,0.12)",color:"#F59E0B",border:"1px solid rgba(245,158,11,0.3)",fontWeight:600}}>{d}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Placeholder análisis IA — se activará cuando el coach suba el video */}
+            {r.aiStatus === "procesando" && (
+              <div style={{marginTop:"12px",padding:"10px 14px",borderRadius:"var(--r-sm)",background:"rgba(168,85,247,0.08)",border:"1px solid rgba(168,85,247,0.25)",fontSize:"11px",color:"#C084FC",display:"flex",alignItems:"center",gap:"8px"}}>
+                <span style={{animation:"spin 1s linear infinite",display:"inline-block"}}>⏳</span> Agente IA analizando el video del partido...
+              </div>
+            )}
+            {r.aiStatus === "listo" && r.aiAnalysis && (
+              <div style={{marginTop:"12px",padding:"10px 14px",borderRadius:"var(--r-sm)",background:"rgba(168,85,247,0.08)",border:"1px solid rgba(168,85,247,0.3)"}}>
+                <div style={{fontSize:"11px",color:"#C084FC",fontWeight:700,marginBottom:"6px"}}>⚡ Análisis IA</div>
+                <div style={{fontSize:"12px",color:"var(--text-2)"}}>{r.aiAnalysis}</div>
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  if(module==="micuota") return <MiCuota player={player} club={club} countryData={countryData} sportColor={sportColor} showToast={showToast} payments={payments} setPayments={setPayments}/>;
+
+  if(module==="migym") return <GymJugador player={player} sportColor={sportColor} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} showToast={showToast} rankTab={rankTab} setRankTab={setRankTab} players={players}/>;
+
+  if(module==="nominasclub") {
+    const forms = FORMATIONS[sport];
+    const teamsToShow = miPlantel ? TEAMS.filter(t=>t.name===miPlantel) : TEAMS;
+    return (
+      <div>
+        <PlantelBanner/>
+        <SectionTitle title="Nóminas del Club" sub={miPlantel ? `Tu plantel: ${miPlantel} · ${sp.name}` : `Alineaciones publicadas de todos los equipos · ${sp.name}`}/>
+        {teamsToShow.map((t,ti)=>{
+          const formation = forms[ti%forms.length];
+          const size = formation.positions.length;
+          const rot = (ti*4)%visiblePlayers.length;
+          const avail = [...visiblePlayers.slice(rot),...visiblePlayers.slice(0,rot)].filter(p=>p.med!=="rojo"&&p.cuota!=="vencida");
+          const lineup = Array.from({length:size},(_,i)=>avail[i]||null);
+          const myIdx = lineup.findIndex(p=>p&&p.id===player.id);
+          return (
+            <motion.div key={t.id} {...fadeUp} transition={{duration:0.4,delay:ti*0.1}} style={{marginBottom:"20px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px",flexWrap:"wrap",gap:"8px"}}>
+                <div style={{fontWeight:700,fontSize:"14px"}}>{t.name}</div>
+                <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+                  <Badge color={sportColor}>{formation.label}</Badge>
+                  {myIdx>=0?<Badge color="#F59E0B" glow>⭐ Titular #{myIdx+1}</Badge>:<Badge color="#6B7896">No convocado</Badge>}
+                </div>
+              </div>
+              <Cancha type={sport} formation={formation} lineup={lineup} sportColor={sportColor} dragging={false} highlightId={player.id} onDrop={()=>{}} onSlotClick={()=>{}}/>
+            </motion.div>
+          );
+        })}
+        <div style={{...ss.card,padding:"10px 14px",fontSize:"11px",color:"var(--text-2)"}}>⭐ Tu posición aparece resaltada en dorado cuando estás convocado en la nómina de un equipo.</div>
+      </div>
+    );
+  }
+
+  if(module==="miconvocatoria") return (
+    <div>
+      <PlantelBanner/>
+      <SectionTitle title="Mi Convocatoria"/>
+      <motion.div {...scaleIn} style={{...ss.card,textAlign:"center",marginBottom:"20px",border:`2px solid ${sportColor}55`,background:`linear-gradient(135deg,${sportColor}22,${sportColor}05)`,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,transparent,${sportColor},transparent)`}}/>
+        <motion.div animate={{scale:[1,1.05,1]}} transition={{duration:2,repeat:Infinity,ease:"easeInOut"}} style={{fontSize:"72px",fontWeight:900,color:sportColor,margin:"20px 0",filter:`drop-shadow(0 0 24px ${sportColor}88)`,letterSpacing:"-0.04em"}}>{camiseta}</motion.div>
+        <div style={{fontSize:"16px",fontWeight:700,marginBottom:"4px"}}>Estás convocado #{camiseta}</div>
+        <div style={ss.muted}>vs {club.next.rival} · {club.next.dia}</div>
+      </motion.div>
+      <div style={{display:"flex",gap:"12px",marginBottom:"16px"}}>
+        <motion.button whileHover={{scale:1.02,y:-2}} whileTap={{scale:0.98}} onClick={()=>{setConvocado("confirmed");showToast("✅ Presencia confirmada","success");}} style={{...ss.btn,flex:1,background:convocado==="confirmed"?"linear-gradient(135deg,#22C55E,#16A34A)":"rgba(34,197,94,0.15)",color:convocado==="confirmed"?"#fff":"#22C55E",border:"1px solid #22C55E55",padding:"14px",fontSize:"13px",boxShadow:convocado==="confirmed"?"0 8px 24px rgba(34,197,94,0.35)":"none"}}>{convocado==="confirmed"?"✅ Confirmado":"✓ Confirmar presencia"}</motion.button>
+        <motion.button whileHover={{scale:1.02,y:-2}} whileTap={{scale:0.98}} onClick={()=>{setConvocado("rejected");showToast("Ausencia registrada","warning");}} style={{...ss.btn,flex:1,background:convocado==="rejected"?"linear-gradient(135deg,#EF4444,#DC2626)":"rgba(239,68,68,0.15)",color:convocado==="rejected"?"#fff":"#EF4444",border:"1px solid #EF444455",padding:"14px",fontSize:"13px",boxShadow:convocado==="rejected"?"0 8px 24px rgba(239,68,68,0.35)":"none"}}>{convocado==="rejected"?"✕ No asistirás":"✕ No puedo asistir"}</motion.button>
+      </div>
+      <motion.button whileHover={{scale:1.02,y:-2}} whileTap={{scale:0.98}} onClick={()=>setWhatsappModal(true)} style={{...ss.btn,background:"linear-gradient(135deg,#25D366,#128C7E)",color:"#fff",width:"100%",padding:"12px",fontSize:"13px",boxShadow:"0 8px 24px rgba(37,211,102,0.35)"}}>📱 Compartir convocatoria en WhatsApp</motion.button>
+    </div>
+  );
+
+  return null;
+}

@@ -1,0 +1,387 @@
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeUp, scaleIn } from "../styles/motion";
+import { ss } from "../styles/tokens";
+import { FORMATIONS, TEAMS } from "../data/sports";
+import { MOCK_POSTS } from "../data/mockData";
+import SectionTitle from "../components/SectionTitle";
+import Badge from "../components/Badge";
+import Semaforo from "../components/Semaforo";
+import ProgressBar from "../components/ProgressBar";
+import MedalBadge from "../components/MedalBadge";
+import Cancha from "../components/Cancha";
+import WhatsAppModal from "../components/WhatsAppModal";
+
+/* ── NominaDND ─────────────────────────────────────────────── */
+function NominaDND({sport, sp, club, players, sportColor, showToast}) {
+  const forms = FORMATIONS[sport];
+  const [fKey, setFKey] = useState(forms[0].key);
+  const [teamId, setTeamId] = useState(TEAMS[0].id);
+  const [store, setStore] = useState({});
+  const [benchStore, setBenchStore] = useState({});
+  const [dragged, setDragged] = useState(null);
+  const [wa, setWa] = useState(false);
+  useEffect(()=>{setFKey(FORMATIONS[sport][0].key);},[sport]);
+
+  const formation = forms.find(f=>f.key===fKey)||forms[0];
+  const size = formation.positions.length;
+  const sk = `${sport}|${teamId}|${fKey}`;
+  const bk = `${sport}|${teamId}`;
+  const lineup = store[sk]||Array(size).fill(null);
+  const bench  = benchStore[bk]||[];
+  const setLineup = (nl)=>setStore(p=>({...p,[sk]:nl}));
+  const setBench  = (nb)=>setBenchStore(p=>({...p,[bk]:nb}));
+
+  const blockReason = (p) => {
+    if(p.med==="rojo") return p.hiaReason?`no apto: ${p.hiaReason}`:"no apto médicamente";
+    if(p.cuota==="vencida") return "cuota vencida";
+    return null;
+  };
+  const placeInSlot = (idx,p) => {
+    if(!p) return;
+    const r = blockReason(p);
+    if(r){showToast(`${p.name} ${r}`,"warning");return;}
+    const nl = lineup.map(x=>x&&x.id===p.id?null:x);
+    nl[idx]=p; setLineup(nl);
+    setBench(bench.filter(x=>x.id!==p.id));
+    if(p.med==="amarillo") showToast(`⚠️ ${p.name} agregado con alerta médica`,"warning");
+  };
+  const addToBench = (p) => {
+    const r = blockReason(p);
+    if(r){showToast(`${p.name} ${r}`,"warning");return;}
+    if(bench.find(x=>x.id===p.id)||lineup.find(x=>x&&x.id===p.id)) return;
+    setBench([...bench,p]);
+  };
+  const tapPlayer = (p) => {
+    if(lineup.find(x=>x&&x.id===p.id)){setLineup(lineup.map(x=>x&&x.id===p.id?null:x));return;}
+    if(bench.find(x=>x.id===p.id)){setBench(bench.filter(x=>x.id!==p.id));return;}
+    const empty = lineup.findIndex(x=>!x);
+    if(empty===-1){addToBench(p);return;}
+    placeInSlot(empty,p);
+  };
+  const clearSlot = (idx)=>{const nl=[...lineup];nl[idx]=null;setLineup(nl);};
+  const starters = lineup.map((p,i)=>p?{name:p.name,pos:formation.positions[i]}:null).filter(Boolean);
+  const assignedIds = new Set([...lineup.filter(Boolean).map(p=>p.id),...bench.map(p=>p.id)]);
+
+  return (
+    <div onDragEnd={()=>setDragged(null)}>
+      <SectionTitle title={`Nómina — ${sp.name}`} sub={`${TEAMS.find(t=>t.id===teamId).name} · arrastra o toca jugadores`}
+        action={<div style={{display:"flex",gap:"8px"}}>
+          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>showToast("Push enviado al equipo","success")} style={{...ss.btn,background:"linear-gradient(135deg,#3B82F6,#2563EB)",color:"#fff",fontSize:"12px",boxShadow:"0 4px 12px rgba(59,130,246,0.35)"}}>🔔 Push</motion.button>
+          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>{if(starters.length>0)setWa(true);else showToast("Agrega al menos un titular","warning");}} style={{...ss.btn,background:"linear-gradient(135deg,#25D366,#128C7E)",color:"#fff",fontSize:"12px",boxShadow:"0 4px 12px rgba(37,211,102,0.35)"}}>📱 WhatsApp</motion.button>
+        </div>}
+      />
+      <div style={{display:"flex",gap:"10px",marginBottom:"16px",flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div>
+          <div style={ss.label}>Equipo del club</div>
+          <select value={teamId} onChange={e=>setTeamId(e.target.value)} style={{...ss.input,width:"180px",cursor:"pointer"}}>
+            {TEAMS.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        {forms.length>1&&<div style={{flex:1}}>
+          <div style={ss.label}>Formación ({forms.length} disponibles)</div>
+          <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+            {forms.map(f=><motion.button key={f.key} whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>setFKey(f.key)} style={{...ss.btn,background:fKey===f.key?`linear-gradient(135deg,${sportColor}33,${sportColor}11)`:"var(--bg-elev-2)",color:fKey===f.key?sportColor:"var(--text-2)",border:`1px solid ${fKey===f.key?sportColor+"55":"var(--border-soft)"}`,fontSize:"12px",padding:"8px 14px",boxShadow:fKey===f.key?`0 0 16px ${sportColor}33`:"none"}}>{f.key}</motion.button>)}
+          </div>
+        </div>}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 280px",gap:"16px",alignItems:"start"}}>
+        <div>
+          <Cancha type={sport} formation={formation} lineup={lineup} sportColor={sportColor} dragging={!!dragged} onDrop={(i)=>{if(dragged)placeInSlot(i,dragged);}} onSlotClick={(i)=>{if(lineup[i])clearSlot(i);}}/>
+          <motion.div {...fadeUp}
+            onDragOver={e=>e.preventDefault()} onDrop={()=>{if(dragged)addToBench(dragged);}}
+            animate={dragged?{borderColor:sportColor,boxShadow:`0 0 20px ${sportColor}44`}:{borderColor:"var(--border-soft)"}}
+            style={{...ss.card,marginTop:"12px",minHeight:"60px",border:`1px dashed ${dragged?sportColor:"var(--border-soft)"}`,borderStyle:"dashed"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+              <div style={{...ss.label,marginBottom:0}}>🪑 Banco / Suplentes</div>
+              <Badge color={sportColor}>{bench.length}</Badge>
+            </div>
+            <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+              {bench.length===0&&<span style={{...ss.muted,fontSize:"11px"}}>Arrastra jugadores aquí o se agregan al llenar los titulares</span>}
+              {bench.map(p=><motion.div key={p.id} initial={{scale:0,opacity:0}} animate={{scale:1,opacity:1}} whileHover={{scale:1.05}} onClick={()=>setBench(bench.filter(x=>x.id!==p.id))} style={{display:"flex",alignItems:"center",gap:"6px",background:"var(--bg-elev-2)",borderRadius:"99px",padding:"5px 10px",cursor:"pointer",fontSize:"11px",border:"1px solid var(--border-soft)"}}>
+                <Semaforo status={p.med}/>{p.name.split(" ").slice(-1)[0]} <span style={{color:"#EF4444",fontWeight:700}}>✕</span>
+              </motion.div>)}
+            </div>
+          </motion.div>
+        </div>
+        <motion.div {...fadeUp} style={ss.card}>
+          <div style={{fontWeight:600,fontSize:"13px",marginBottom:"10px",color:"var(--text-2)",textTransform:"uppercase",letterSpacing:"0.08em"}}>📋 Plantilla ({players.length})</div>
+          {players.map((p,i)=>{
+            const inUse = assignedIds.has(p.id);
+            const blocked = !!blockReason(p);
+            return <motion.div key={p.id} draggable={!blocked} onDragStart={()=>setDragged(p)} onClick={()=>tapPlayer(p)}
+              initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.25,delay:i*0.02}}
+              whileHover={!blocked?{x:3}:{}}
+              style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:"var(--r-sm)",marginBottom:"3px",cursor:blocked?"not-allowed":"grab",opacity:blocked?0.4:1,background:inUse?`${sportColor}15`:"transparent",border:`1px solid ${inUse?sportColor+"44":"transparent"}`,transition:"all 0.15s"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                <Semaforo status={p.med}/>
+                <span style={{fontSize:"12px",color:inUse?sportColor:"var(--text-1)",fontWeight:inUse?600:400}}>{p.name}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                {p.cuota==="vencida"&&<span style={{color:"#EF4444",fontSize:"10px",fontWeight:700}}>$</span>}
+                {inUse?<span style={{color:sportColor,fontSize:"12px",fontWeight:700}}>✓</span>:<span style={{color:"var(--text-4)",fontSize:"12px"}}>⠿</span>}
+              </div>
+            </motion.div>;
+          })}
+          <div style={{...ss.muted,fontSize:"10px",marginTop:"10px",lineHeight:1.5}}>💡 Arrastra a una posición de la cancha, o toca para autoubicar.</div>
+        </motion.div>
+      </div>
+      {wa&&<WhatsAppModal onClose={()=>setWa(false)} team={`${club.name} · ${TEAMS.find(t=>t.id===teamId).name}`} rival={club.next.rival} date={club.next.dia} starters={starters} bench={bench}/>}
+    </div>
+  );
+}
+
+/* ── AsistenciaGrid ─────────────────────────────────────────── */
+function AsistenciaGrid({players, sportColor, showToast}) {
+  const [present, setPresent] = useState({});
+  const toggle = (id)=>setPresent(p=>({...p,[id]:!p[id]}));
+  const count = Object.values(present).filter(Boolean).length;
+  return (
+    <div>
+      <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:"10px",alignItems:"center"}}>
+          <span style={{fontSize:"13px",fontWeight:600}}>Asistencia: {count}/{players.length}</span>
+          <span style={{color:sportColor,fontSize:"15px",fontWeight:800,filter:`drop-shadow(0 0 8px ${sportColor}88)`}}>{Math.round(count/players.length*100)}%</span>
+        </div>
+        <ProgressBar value={count} max={players.length} color={sportColor} height={8}/>
+      </motion.div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"8px"}}>
+        {players.map((p,i)=>(
+          <motion.div key={p.id} initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} transition={{duration:0.25,delay:i*0.02}} whileHover={{y:-2,scale:1.02}} whileTap={{scale:0.95}} onClick={()=>{toggle(p.id);if(!present[p.id])showToast(`${p.name} marcado presente`,"success");}} style={{...ss.card,padding:"12px",cursor:"pointer",border:`1px solid ${present[p.id]?sportColor+"66":"var(--border-soft)"}`,background:present[p.id]?`linear-gradient(135deg,${sportColor}22,${sportColor}05)`:"var(--bg-glass)",display:"flex",alignItems:"center",gap:"8px",boxShadow:present[p.id]?`0 0 16px ${sportColor}33`:"none"}}>
+            <span style={{fontSize:"18px"}}>{present[p.id]?"✅":"⬜"}</span>
+            <div style={{fontSize:"12px",fontWeight:600,color:present[p.id]?sportColor:"var(--text-1)"}}>{p.name.split(" ")[0]}</div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── EntrenadorView ─────────────────────────────────────────── */
+export default function EntrenadorView({module, sport, sp, club, players, postLikes, setPostLikes, showToast, sportColor, currentCategory, hiaModal, setHiaModal, userCats=[], isDemo=true, resultados=[], setResultados=()=>{}}) {
+  const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
+  const sv = (p,k)=>(p.stats&&p.stats[k]!=null)?p.stats[k]:((p.id*13+k.length*7)%18)+1;
+
+  // En modo real filtra jugadores por las categorías asignadas al entrenador
+  const visiblePlayers = isDemo ? players : players.filter(p => userCats.includes(p.cat));
+
+  const CatsBanner = () => !isDemo && userCats.length > 0 ? (
+    <motion.div {...fadeUp} style={{...ss.card, marginBottom:"14px", padding:"10px 14px", background:"linear-gradient(135deg,rgba(59,130,246,0.08),transparent)", border:"1px solid rgba(59,130,246,0.25)", display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap"}}>
+      <span style={{fontSize:"11px",color:"var(--text-2)"}}>📋 Tus categorías:</span>
+      {userCats.map(c=><span key={c} style={{fontSize:"11px",padding:"2px 10px",borderRadius:"99px",background:"rgba(59,130,246,0.15)",color:"#60A5FA",border:"1px solid rgba(59,130,246,0.3)",fontWeight:600}}>{c}</span>)}
+    </motion.div>
+  ) : null;
+
+  if(module==="muro") {
+    const [showResultForm, setShowResultForm] = useState(false);
+    const [resForm, setResForm] = useState({rival:"", golesLocal:"", golesVisita:"", lugar:"Local", resumen:"", destacados:""});
+    const myCats = isDemo ? sp.categories : userCats;
+
+    const publishResultado = () => {
+      if(!resForm.rival || resForm.golesLocal==="" || resForm.golesVisita==="") {
+        showToast("Completa rival y marcador antes de publicar","warning"); return;
+      }
+      const local = Number(resForm.golesLocal), visita = Number(resForm.golesVisita);
+      const resultado = local > visita ? "victoria" : local < visita ? "derrota" : "empate";
+      const nuevo = {
+        id: Date.now(),
+        cat: myCats[0] || currentCategory,
+        rival: resForm.rival,
+        fecha: new Date().toISOString().split("T")[0],
+        lugar: resForm.lugar,
+        golesLocal: local,
+        golesVisita: visita,
+        resultado,
+        autor: "Entrenador",
+        autorRol: "entrenador",
+        resumen: resForm.resumen || "Resultado registrado por el cuerpo técnico.",
+        destacados: resForm.destacados ? resForm.destacados.split(",").map(d=>d.trim()).filter(Boolean) : [],
+        videoUrl: null, aiAnalysis: null, aiStatus: null,
+      };
+      setResultados(prev=>[nuevo,...prev]);
+      setResForm({rival:"",golesLocal:"",golesVisita:"",lugar:"Local",resumen:"",destacados:""});
+      setShowResultForm(false);
+      showToast(`Resultado publicado — ${resultado.toUpperCase()} ✅`, resultado==="victoria"?"success":"warning");
+    };
+
+    return (
+      <div>
+        <SectionTitle title={`El Muro — ${sp.name} ${currentCategory}`}/>
+        <CatsBanner/>
+
+        {/* Publicar resultado de partido */}
+        <motion.div {...fadeUp} style={{...ss.card, marginBottom:"16px", border:`1px solid ${sportColor}33`, background:`linear-gradient(135deg,${sportColor}08,transparent)`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: showResultForm?"14px":"0"}}>
+            <div style={{fontWeight:600,fontSize:"13px",display:"flex",alignItems:"center",gap:"8px"}}>🏆 Cargar resultado de partido</div>
+            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>setShowResultForm(p=>!p)}
+              style={{...ss.btn, background:showResultForm?"rgba(239,68,68,0.12)":`linear-gradient(135deg,${sportColor},${sportColor}cc)`, color:showResultForm?"#EF4444":"#fff", fontSize:"12px", padding:"7px 16px", boxShadow:showResultForm?"none":`0 4px 14px ${sportColor}44`}}>
+              {showResultForm ? "✕ Cancelar" : "+ Nuevo resultado"}
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+          {showResultForm && (
+            <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"10px"}}>
+                <div>
+                  <div style={ss.label}>Rival</div>
+                  <input value={resForm.rival} onChange={e=>setResForm(p=>({...p,rival:e.target.value}))} placeholder="Ej: Universitario RC" style={ss.input}/>
+                </div>
+                <div>
+                  <div style={ss.label}>Lugar</div>
+                  <select value={resForm.lugar} onChange={e=>setResForm(p=>({...p,lugar:e.target.value}))} style={{...ss.input,cursor:"pointer"}}>
+                    <option>Local</option><option>Visita</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={ss.label}>Goles / Puntos — Nosotros</div>
+                  <input type="number" min="0" value={resForm.golesLocal} onChange={e=>setResForm(p=>({...p,golesLocal:e.target.value}))} placeholder="0" style={ss.input}/>
+                </div>
+                <div>
+                  <div style={ss.label}>Goles / Puntos — {resForm.rival||"Rival"}</div>
+                  <input type="number" min="0" value={resForm.golesVisita} onChange={e=>setResForm(p=>({...p,golesVisita:e.target.value}))} placeholder="0" style={ss.input}/>
+                </div>
+              </div>
+              <div style={{marginBottom:"10px"}}>
+                <div style={ss.label}>Resumen del partido</div>
+                <input value={resForm.resumen} onChange={e=>setResForm(p=>({...p,resumen:e.target.value}))} placeholder="Breve comentario del partido..." style={ss.input}/>
+              </div>
+              <div style={{marginBottom:"14px"}}>
+                <div style={ss.label}>Jugadores destacados <span style={{color:"var(--text-3)",fontWeight:400}}>(separados por coma)</span></div>
+                <input value={resForm.destacados} onChange={e=>setResForm(p=>({...p,destacados:e.target.value}))} placeholder="Ej: Andrés Castro, Felipe Morales" style={ss.input}/>
+              </div>
+
+              {/* Placeholder subida de video — futuro IA */}
+              <div style={{padding:"12px 14px",borderRadius:"var(--r-md)",background:"rgba(168,85,247,0.06)",border:"1px dashed rgba(168,85,247,0.3)",marginBottom:"14px",display:"flex",alignItems:"center",gap:"10px"}}>
+                <span style={{fontSize:"20px"}}>🎬</span>
+                <div>
+                  <div style={{fontSize:"12px",fontWeight:600,color:"#C084FC"}}>Video del partido — próximamente</div>
+                  <div style={{fontSize:"11px",color:"var(--text-3)",marginTop:"2px"}}>Podrás subir el video y un agente de IA extraerá estadísticas automáticamente.</div>
+                </div>
+              </div>
+
+              <motion.button whileHover={{scale:1.02,y:-1}} whileTap={{scale:0.98}} onClick={publishResultado}
+                style={{...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`, color:"#fff", width:"100%", padding:"13px", fontSize:"13px", fontWeight:700, boxShadow:`0 6px 20px ${sportColor}44`}}>
+                🏆 Publicar resultado
+              </motion.button>
+            </motion.div>
+          )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Feed de posts */}
+        <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",padding:"12px",display:"flex",gap:"10px",alignItems:"center"}}>
+          <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:800,color:sportColor,flexShrink:0,border:`1.5px solid ${sportColor}55`}}>E</div>
+          <input placeholder="Publicar actualización al equipo..." style={{...ss.input,flex:1}}/>
+          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>showToast("Post publicado","success")} style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}dd)`,color:"#fff",boxShadow:`0 4px 12px ${sportColor}55`}}>Publicar</motion.button>
+        </motion.div>
+        {MOCK_POSTS.map((post,i)=>(
+          <motion.div key={post.id} {...fadeUp} transition={{duration:0.4,delay:i*0.08}} whileHover={{y:-2}} style={{...ss.card,marginBottom:"12px",borderLeft:`3px solid ${postColors[post.type]}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px"}}><Badge color={postColors[post.type]}>{post.type}</Badge><span style={{fontWeight:600,fontSize:"13px"}}>{post.author}</span></div>
+              <span style={ss.muted}>{post.time}</span>
+            </div>
+            <p style={{margin:"0 0 12px",fontSize:"13px",lineHeight:1.6,color:"var(--text-1)"}}>{post.text}</p>
+            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.9}} onClick={()=>setPostLikes(prev=>({...prev,[post.id]:prev[post.id]+1}))} style={{...ss.btn,background:"transparent",color:"var(--text-2)",fontSize:"12px",padding:"5px 12px",border:"1px solid var(--border-soft)"}}>❤️ {postLikes[post.id]}</motion.button>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  if(module==="matchcenter") return (
+    <div>
+      <SectionTitle title={`Match Center — ${sp.name}`} sub={`Duración: ${sp.matchDuration}`}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginBottom:"20px"}}>
+        <motion.div {...fadeUp} whileHover={{y:-3}} style={{...ss.card,textAlign:"center",border:`1px solid ${club.prev.res==="Victoria"?"#22C55E55":club.prev.res==="Derrota"?"#EF444455":"#F59E0B55"}`,background:club.prev.res==="Victoria"?"linear-gradient(135deg,rgba(34,197,94,0.08),transparent)":club.prev.res==="Derrota"?"linear-gradient(135deg,rgba(239,68,68,0.08),transparent)":"linear-gradient(135deg,rgba(245,158,11,0.08),transparent)"}}>
+          <div style={{...ss.muted,fontSize:"11px",marginBottom:"8px",textTransform:"uppercase",letterSpacing:"0.08em"}}>Último partido</div>
+          <div style={{fontSize:"40px",fontWeight:800,color:club.prev.res==="Victoria"?"#22C55E":club.prev.res==="Derrota"?"#EF4444":"#F59E0B",letterSpacing:"-0.02em"}}>{club.prev.score}</div>
+          <div style={{fontSize:"13px",marginTop:"6px",color:"var(--text-2)"}}>vs {club.prev.rival}</div>
+          <div style={{marginTop:"10px"}}><Badge color={club.prev.res==="Victoria"?"#22C55E":club.prev.res==="Derrota"?"#EF4444":"#F59E0B"} glow>{club.prev.res}</Badge></div>
+        </motion.div>
+        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.1}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center",border:"1px solid rgba(59,130,246,0.35)",background:"linear-gradient(135deg,rgba(59,130,246,0.08),transparent)"}}>
+          <div style={{...ss.muted,fontSize:"11px",marginBottom:"8px",textTransform:"uppercase",letterSpacing:"0.08em"}}>Próximo partido</div>
+          <div style={{fontSize:"18px",fontWeight:700,marginBottom:"8px",letterSpacing:"-0.01em"}}>vs {club.next.rival}</div>
+          <div style={{fontSize:"32px",fontWeight:800,color:"#3B82F6",letterSpacing:"-0.02em",marginBottom:"6px",filter:"drop-shadow(0 0 12px rgba(59,130,246,0.4))"}}>{club.next.dia}</div>
+          <div style={ss.muted}>Temporada 2025</div>
+        </motion.div>
+      </div>
+      <motion.div {...fadeUp} style={ss.card}>
+        <div style={{fontWeight:600,marginBottom:"16px",fontSize:"14px"}}>📊 Stats de temporada</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"14px"}}>
+          <div style={{textAlign:"center"}}><div style={{fontSize:"28px",fontWeight:800,color:sportColor,filter:`drop-shadow(0 0 8px ${sportColor}88)`}}>{sport==="basketball"?"5":"3"} 🔥</div><div style={{...ss.muted,marginTop:"4px"}}>Racha victorias</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:"13px",fontWeight:700,marginTop:"6px"}}>{players[4].name}</div><div style={{...ss.muted,marginTop:"4px"}}>Goleador / Trymaker</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:"28px",fontWeight:800,color:"#22C55E"}}>78%</div><div style={{...ss.muted,marginTop:"4px"}}>Posesión promedio</div></div>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  if(module==="nomina") return <div><CatsBanner/><NominaDND sport={sport} sp={sp} club={club} players={visiblePlayers} sportColor={sportColor} showToast={showToast}/></div>;
+
+  if(module==="estadisticas") return (
+    <div>
+      <CatsBanner/>
+      <SectionTitle title={`Estadísticas — ${sp.name} ${currentCategory}`}/>
+      {sp.stats.map((stat,si)=>{
+        const sorted = [...visiblePlayers].sort((a,b)=>sv(b,stat.key)-sv(a,stat.key));
+        const max = sv(sorted[0],stat.key)||1;
+        return (
+          <motion.div key={stat.key} {...fadeUp} transition={{duration:0.4,delay:si*0.1}} style={{...ss.card,marginBottom:"16px"}}>
+            <div style={{fontWeight:600,marginBottom:"14px",fontSize:"13px",display:"flex",alignItems:"center",gap:"8px"}}>{stat.icon} {stat.label}</div>
+            {sorted.slice(0,6).map((p,i)=>(
+              <motion.div key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:si*0.05+i*0.05}} style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"10px"}}>
+                <MedalBadge rank={i+1}/>
+                <span style={{fontSize:"12px",minWidth:"130px",color:i<3?sportColor:"var(--text-1)",fontWeight:i<3?600:400}}>{p.name}</span>
+                <div style={{flex:1}}><ProgressBar value={sv(p,stat.key)} max={max} color={i===0?sportColor:i===1?"#94A3B8":i===2?"#CD7F32":"#4A5568"}/></div>
+                <span style={{fontSize:"13px",fontWeight:700,minWidth:"32px",textAlign:"right",color:i===0?sportColor:"var(--text-1)"}}>{sv(p,stat.key)}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+
+  if(module==="asistencia") return <div><CatsBanner/><SectionTitle title="Control de Asistencia"/><AsistenciaGrid players={visiblePlayers} sportColor={sportColor} showToast={showToast}/></div>;
+
+  if(module==="salud") return (
+    <div>
+      <SectionTitle title="Panel de Salud" sub={`${sp.name} · Temporada 2025`} action={sp.hasHIA&&<motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>setHiaModal(true)} style={{...ss.btn,background:"rgba(239,68,68,0.15)",color:"#EF4444",border:"1px solid #EF444455",fontSize:"12px",boxShadow:"0 0 16px rgba(239,68,68,0.25)"}}>⚠️ Protocolo HIA</motion.button>}/>
+      {hiaModal&&sp.hasHIA&&(
+        <motion.div {...scaleIn} style={{...ss.card,marginBottom:"20px",border:"2px solid #EF444455",background:"linear-gradient(135deg,rgba(239,68,68,0.08),transparent)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}>
+            <h3 style={{margin:0,color:"#EF4444",fontSize:"15px",display:"flex",alignItems:"center",gap:"8px"}}>🚨 Protocolo HIA — Cristóbal Vega #15</h3>
+            <motion.button whileHover={{scale:1.1,rotate:90}} whileTap={{scale:0.9}} onClick={()=>setHiaModal(false)} style={{...ss.btn,background:"transparent",color:"var(--text-2)",padding:"2px 8px"}}>✕</motion.button>
+          </div>
+          {[{step:1,label:"Evaluación inicial en cancha",status:"completado",color:"#22C55E"},{step:2,label:"Evaluación médica post-partido",status:"pendiente",color:"#F59E0B"},{step:3,label:"Clearance médico para volver",status:"pendiente",color:"#4A5568"}].map((s,i)=>(
+            <motion.div key={s.step} initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:i*0.1}} style={{display:"flex",gap:"12px",alignItems:"center",padding:"12px",borderRadius:"var(--r-sm)",marginBottom:"8px",background:"var(--bg-elev-2)"}}>
+              <div style={{width:"30px",height:"30px",borderRadius:"50%",background:`linear-gradient(135deg,${s.color},${s.color}dd)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:"#fff",boxShadow:`0 0 12px ${s.color}88`}}>{s.step}</div>
+              <div style={{flex:1,fontSize:"13px"}}>{s.label}</div>
+              <Badge color={s.color}>{s.status}</Badge>
+            </motion.div>
+          ))}
+          <div style={{...ss.muted,fontSize:"11px",marginTop:"10px"}}>🔒 Jugador bloqueado de nóminas hasta completar paso 3</div>
+        </motion.div>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"20px"}}>
+        {[["verde","Aptos","#22C55E"],["amarillo","Alerta","#F59E0B"],["rojo","No aptos","#EF4444"]].map(([k,l,c],i)=>(
+          <div key={k} style={{...ss.card,cursor:"default"}}>
+            <div style={ss.muted}>{l}</div>
+            <div style={{fontSize:"26px",fontWeight:800,color:c,letterSpacing:"-0.02em",lineHeight:1.1}}>{players.filter(p=>p.med===k).length}</div>
+            <div style={{...ss.muted,fontSize:"11px",marginTop:"4px"}}>{Math.round(players.filter(p=>p.med===k).length/players.length*100)}% del plantel</div>
+          </div>
+        ))}
+      </div>
+      {players.filter(p=>p.med!=="verde").map((p,i)=>(
+        <motion.div key={p.id} {...fadeUp} transition={{duration:0.3,delay:i*0.05}} style={{...ss.card,marginBottom:"10px",display:"flex",alignItems:"center",gap:"12px",border:`1px solid ${p.med==="rojo"?"rgba(239,68,68,0.3)":"rgba(245,158,11,0.3)"}`}}>
+          <Semaforo status={p.med}/>
+          <div style={{flex:1}}><div style={{fontSize:"13px",fontWeight:500}}>{p.name}</div><div style={{...ss.muted,fontSize:"11px"}}>{p.hiaReason||(p.med==="amarillo"?"Seguimiento preventivo":"No apto")}</div></div>
+          <Badge color={p.med==="rojo"?"#EF4444":"#F59E0B"}>{p.med==="rojo"?"Bloqueado":"Alerta"}</Badge>
+        </motion.div>
+      ))}
+    </div>
+  );
+
+  return null;
+}

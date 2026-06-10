@@ -1,0 +1,53 @@
+export const SPORTS_CONFIG = {
+  rugby: { name:"Rugby",icon:"🏉",color:"#22C55E",squadSize:23,teamSize:15,positions:["Prop Cerrado","Hooker","Prop Abierto","Lock","Lock","Flanker","Flanker Ala","Número 8","Scrum Half","Apertura","Ala Izq.","Centro","Centro","Ala Der.","Fullback"],stats:[{key:"tries",label:"Tries",icon:"🏉"},{key:"conversiones",label:"Conv.",icon:"⚡"},{key:"penales",label:"Pen.",icon:"🎯"},{key:"minutos",label:"Min.",icon:"⏱"},{key:"tackles",label:"Tackles",icon:"💪"}],categories:["M6","M8","M10","M12","M14","M16","M18","Superior"],hasGym:true,hasHIA:true,matchDuration:"80 min" },
+  futbol: { name:"Fútbol",icon:"⚽",color:"#06B6D4",squadSize:18,teamSize:11,positions:["Portero","Lateral Izq.","Central","Central","Lateral Der.","Volante Izq.","Mediocampista","Mediocampista","Volante Der.","Delantero","Delantero"],stats:[{key:"goles",label:"Goles",icon:"⚽"},{key:"asistencias",label:"Asist.",icon:"🅰️"},{key:"paradas",label:"Atajadas",icon:"🧤"},{key:"minutos",label:"Min.",icon:"⏱"},{key:"tarjetas",label:"Tarjetas",icon:"🟨"}],categories:["Sub-10","Sub-13","Sub-15","Sub-17","Sub-20","Primera"],hasGym:true,hasHIA:false,matchDuration:"90 min" },
+  handball: { name:"Handball",icon:"🤾",color:"#F59E0B",squadSize:14,teamSize:7,positions:["Portero","Lateral Izq.","Central","Lateral Der.","Extremo Izq.","Extremo Der.","Pivote"],stats:[{key:"goles",label:"Goles",icon:"🥅"},{key:"asistencias",label:"Asist.",icon:"👋"},{key:"paradas",label:"Paradas",icon:"🧤"},{key:"minutos",label:"Min.",icon:"⏱"},{key:"tarjetas",label:"Tarjetas",icon:"🟨"}],categories:["Infantil","Cadete","Juvenil","Junior","Senior"],hasGym:true,hasHIA:false,matchDuration:"60 min" },
+  basketball: { name:"Basketball",icon:"🏀",color:"#EF4444",squadSize:12,teamSize:5,positions:["Base","Escolta","Alero","Ala-Pívot","Pívot"],stats:[{key:"puntos",label:"Puntos",icon:"🏀"},{key:"rebotes",label:"Reb.",icon:"↕️"},{key:"asistencias",label:"Asist.",icon:"🤝"},{key:"tapones",label:"Tap.",icon:"✋"},{key:"robos",label:"Robos",icon:"⚡"},{key:"minutos",label:"Min.",icon:"⏱"}],categories:["Mini","Infantil","Cadete","Junior","Senior","Masters"],hasGym:true,hasHIA:false,matchDuration:"40 min" },
+  hockey: { name:"Hockey",icon:"🏑",color:"#A855F7",squadSize:16,teamSize:11,positions:["Arquero","Defensor","Defensor","Defensor","Mediocampista","Mediocampista","Mediocampista","Delantero","Delantero","Delantero","Delantero"],stats:[{key:"goles",label:"Goles",icon:"🏑"},{key:"asistencias",label:"Asist.",icon:"👆"},{key:"paradas",label:"Paradas",icon:"🧤"},{key:"minutos",label:"Min.",icon:"⏱"},{key:"tarjetas",label:"Tarjetas",icon:"🟨"}],categories:["Infantil","Cadete","Juvenil","Junior","Senior"],hasGym:true,hasHIA:false,matchDuration:"70 min" }
+};
+
+export const COUNTRIES = {
+  CL:{name:"Chile",flag:"🇨🇱",currency:"CLP",symbol:"$",payments:["Khipu","Transbank","Transferencia"],tax:"Boleta SII"}
+};
+
+export const CLUBS = {
+  rugby:{name:"Toros RC",country:"CL",cuota:45000,prev:{res:"Victoria",score:"24-17",rival:"Universitario"},next:{rival:"Cóndores Norte",dia:"Sábado"}},
+  futbol:{name:"Andes FC",country:"CL",cuota:40000,prev:{res:"Victoria",score:"2-0",rival:"Colo-Colo B"},next:{rival:"U. de Chile B",dia:"Domingo"}},
+  handball:{name:"Club Atlético",country:"CL",cuota:35000,prev:{res:"Derrota",score:"18-22",rival:"Defensores"},next:{rival:"Español",dia:"Jueves"}},
+  basketball:{name:"Halcones BC",country:"CL",cuota:38000,prev:{res:"Victoria",score:"78-65",rival:"Panteras"},next:{rival:"Diablos",dia:"Viernes"}},
+  hockey:{name:"Las Leonas",country:"CL",cuota:42000,prev:{res:"Empate",score:"2-2",rival:"Manquehue"},next:{rival:"Stade Français",dia:"Sábado"}}
+};
+
+export const TEAMS = [
+  {id:"primer",name:"Primer Equipo"},
+  {id:"reserva",name:"Reserva"},
+  {id:"sub20",name:"Equipo Sub-20"}
+];
+
+export const FORMATIONS = {
+  rugby:[{key:"XV",label:"XV Clásico",positions:SPORTS_CONFIG.rugby.positions,coords:[
+    {x:38,y:80},{x:50,y:82},{x:62,y:80},{x:43,y:70},{x:57,y:70},{x:30,y:64},{x:70,y:64},{x:50,y:60},
+    {x:40,y:50},{x:55,y:44},{x:15,y:28},{x:45,y:38},{x:33,y:31},{x:80,y:30},{x:50,y:14}]}],
+  handball:[{key:"3-2-1",label:"Ataque 3-2-1",positions:SPORTS_CONFIG.handball.positions,coords:[
+    {x:50,y:88},{x:33,y:44},{x:50,y:48},{x:67,y:44},{x:13,y:32},{x:87,y:32},{x:50,y:25}]}],
+  basketball:[{key:"quinteto",label:"Quinteto base",positions:SPORTS_CONFIG.basketball.positions,coords:[
+    {x:50,y:70},{x:20,y:56},{x:80,y:56},{x:30,y:32},{x:62,y:26}]}],
+  hockey:[
+    {key:"3-3-4",label:"3-3-4 Ofensivo",positions:["Arquero","Defensor","Defensor","Defensor","Mediocampista","Mediocampista","Mediocampista","Delantero","Delantero","Delantero","Delantero"],coords:[
+      {x:50,y:90},{x:27,y:72},{x:50,y:75},{x:73,y:72},{x:27,y:50},{x:50,y:52},{x:73,y:50},{x:17,y:27},{x:40,y:22},{x:60,y:22},{x:83,y:27}]},
+    {key:"4-3-3",label:"4-3-3 Equilibrado",positions:["Arquero","Defensor","Defensor","Defensor","Defensor","Mediocampista","Mediocampista","Mediocampista","Delantero","Delantero","Delantero"],coords:[
+      {x:50,y:90},{x:18,y:73},{x:40,y:75},{x:60,y:75},{x:82,y:73},{x:30,y:50},{x:50,y:53},{x:70,y:50},{x:18,y:24},{x:50,y:20},{x:82,y:24}]},
+    {key:"3-4-3",label:"3-4-3 Presión",positions:["Arquero","Defensor","Defensor","Defensor","Mediocampista","Mediocampista","Mediocampista","Mediocampista","Delantero","Delantero","Delantero"],coords:[
+      {x:50,y:90},{x:30,y:74},{x:50,y:76},{x:70,y:74},{x:16,y:50},{x:40,y:53},{x:60,y:53},{x:84,y:50},{x:18,y:24},{x:50,y:20},{x:82,y:24}]}
+  ],
+  futbol:[
+    {key:"4-4-2",label:"4-4-2 Clásico",positions:["Portero","Lateral Izq.","Central","Central","Lateral Der.","Volante Izq.","Mediocampista","Mediocampista","Volante Der.","Delantero","Delantero"],coords:[
+      {x:50,y:90},{x:18,y:72},{x:40,y:75},{x:60,y:75},{x:82,y:72},{x:18,y:48},{x:40,y:52},{x:60,y:52},{x:82,y:48},{x:38,y:22},{x:62,y:22}]},
+    {key:"4-3-3",label:"4-3-3 Ofensivo",positions:["Portero","Lateral Izq.","Central","Central","Lateral Der.","Mediocampista","Mediocampista","Mediocampista","Extremo Izq.","Delantero","Extremo Der."],coords:[
+      {x:50,y:90},{x:18,y:72},{x:40,y:75},{x:60,y:75},{x:82,y:72},{x:32,y:50},{x:50,y:54},{x:68,y:50},{x:16,y:24},{x:50,y:18},{x:84,y:24}]},
+    {key:"3-5-2",label:"3-5-2 Carrileros",positions:["Portero","Central","Central","Central","Carrilero Izq.","Mediocampista","Mediocampista","Mediocampista","Carrilero Der.","Delantero","Delantero"],coords:[
+      {x:50,y:90},{x:30,y:74},{x:50,y:76},{x:70,y:74},{x:12,y:50},{x:35,y:52},{x:50,y:55},{x:65,y:52},{x:88,y:50},{x:38,y:22},{x:62,y:22}]},
+    {key:"3-4-3",label:"3-4-3 Presión",positions:["Portero","Central","Central","Central","Volante Izq.","Mediocampista","Mediocampista","Volante Der.","Extremo Izq.","Delantero","Extremo Der."],coords:[
+      {x:50,y:90},{x:30,y:74},{x:50,y:76},{x:70,y:74},{x:16,y:50},{x:40,y:53},{x:60,y:53},{x:84,y:50},{x:18,y:18},{x:50,y:14},{x:82,y:18}]}
+  ]
+};
