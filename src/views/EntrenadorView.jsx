@@ -158,7 +158,7 @@ function AsistenciaGrid({players, sportColor, showToast}) {
 }
 
 /* ── EntrenadorView ─────────────────────────────────────────── */
-export default function EntrenadorView({module, sport, sp, club, players, postLikes, setPostLikes, showToast, sportColor, currentCategory, hiaModal, setHiaModal, userCats=[], isDemo=true, resultados=[], setResultados=()=>{}}) {
+export default function EntrenadorView({module, sport, sp, club, players, postLikes, setPostLikes, showToast, sportColor, currentCategory, hiaModal, setHiaModal, userCats=[], isDemo=true, partidos=[], setPartidos=()=>{}}) {
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
   const sv = (p,k)=>(p.stats&&p.stats[k]!=null)?p.stats[k]:((p.id*13+k.length*7)%18)+1;
 
@@ -186,19 +186,21 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
       const nuevo = {
         id: Date.now(),
         cat: myCats[0] || currentCategory,
+        equipo: "A",
         rival: resForm.rival,
         fecha: new Date().toISOString().split("T")[0],
+        hora: "00:00",
         lugar: resForm.lugar,
+        estado: "jugado",
         golesLocal: local,
         golesVisita: visita,
         resultado,
         autor: "Entrenador",
-        autorRol: "entrenador",
         resumen: resForm.resumen || "Resultado registrado por el cuerpo técnico.",
         destacados: resForm.destacados ? resForm.destacados.split(",").map(d=>d.trim()).filter(Boolean) : [],
         videoUrl: null, aiAnalysis: null, aiStatus: null,
       };
-      setResultados(prev=>[nuevo,...prev]);
+      setPartidos(prev=>[nuevo,...prev]);
       setResForm({rival:"",golesLocal:"",golesVisita:"",lugar:"Local",resumen:"",destacados:""});
       setShowResultForm(false);
       showToast(`Resultado publicado — ${resultado.toUpperCase()} ✅`, resultado==="victoria"?"success":"warning");
@@ -285,6 +287,238 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
             <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.9}} onClick={()=>setPostLikes(prev=>({...prev,[post.id]:prev[post.id]+1}))} style={{...ss.btn,background:"transparent",color:"var(--text-2)",fontSize:"12px",padding:"5px 12px",border:"1px solid var(--border-soft)"}}>❤️ {postLikes[post.id]}</motion.button>
           </motion.div>
         ))}
+      </div>
+    );
+  }
+
+  if(module==="calendario") {
+    const hoy = new Date().toISOString().split("T")[0];
+    const myCats = isDemo ? sp.categories : userCats;
+    const equiposOpts = ["A","B","C"];
+    const resColors = {victoria:"#22C55E", empate:"#F59E0B", derrota:"#EF4444"};
+
+    // filtros
+    const [filtroCat,  setFiltroCat]  = useState("todos");
+    const [filtroEq,   setFiltroEq]   = useState("todos");
+    const [filtroEst,  setFiltroEst]  = useState("todos"); // todos | programado | jugado
+
+    // nuevo partido (fila vacía)
+    const partidoVacio = () => ({_key:Date.now(), cat:myCats[0]||"Primer Equipo", equipo:"A", rival:"", fecha:"", hora:"", lugar:"Local", estado:"programado", golesLocal:"", golesVisita:"", resumen:"", destacados:""});
+    const [nuevos, setNuevos] = useState([]);
+
+    const addFila = () => setNuevos(prev=>[...prev, partidoVacio()]);
+    const updateFila = (key, field, val) => setNuevos(prev=>prev.map(p=>p._key===key?{...p,[field]:val}:p));
+    const removeFila = (key) => setNuevos(prev=>prev.filter(p=>p._key!==key));
+
+    const guardarTodos = () => {
+      const validos = nuevos.filter(p=>p.rival.trim() && p.fecha);
+      if(!validos.length){ showToast("Completa al menos rival y fecha","warning"); return; }
+      const guardados = validos.map(p=>({
+        id: Date.now() + Math.random(),
+        cat: p.cat, equipo: p.equipo, rival: p.rival.trim(),
+        fecha: p.fecha, hora: p.hora||"00:00", lugar: p.lugar, estado: p.estado,
+        golesLocal: p.estado==="jugado"&&p.golesLocal!==""?Number(p.golesLocal):null,
+        golesVisita: p.estado==="jugado"&&p.golesVisita!==""?Number(p.golesVisita):null,
+        resultado: p.estado==="jugado" ? (Number(p.golesLocal)>Number(p.golesVisita)?"victoria":Number(p.golesLocal)<Number(p.golesVisita)?"derrota":"empate") : null,
+        autor:"Entrenador", resumen:p.resumen||null,
+        destacados: p.destacados?p.destacados.split(",").map(d=>d.trim()).filter(Boolean):[],
+        videoUrl:null, aiAnalysis:null, aiStatus:null,
+      }));
+      setPartidos(prev=>[...guardados,...prev]);
+      setNuevos([]);
+      showToast(`${guardados.length} partido${guardados.length>1?"s":""} guardado${guardados.length>1?"s":""} ✅`,"success");
+    };
+
+    const partidosFiltrados = partidos
+      .filter(p=> myCats.includes(p.cat) || isDemo)
+      .filter(p=> filtroCat==="todos" || p.cat===filtroCat)
+      .filter(p=> filtroEq==="todos"  || p.equipo===filtroEq)
+      .filter(p=> filtroEst==="todos" || p.estado===filtroEst)
+      .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+    const proximosCount = partidosFiltrados.filter(p=>p.estado==="programado"&&p.fecha>=hoy).length;
+    const jugadosCount  = partidosFiltrados.filter(p=>p.estado==="jugado").length;
+    const victorias     = partidosFiltrados.filter(p=>p.resultado==="victoria").length;
+
+    return (
+      <div>
+        <SectionTitle title="Calendario de Temporada" sub={`${club.name} · ${sp.name}`}
+          action={
+            <motion.button whileHover={{scale:1.05,y:-1}} whileTap={{scale:0.95}} onClick={addFila}
+              style={{...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`, color:"#fff", fontSize:"12px", padding:"8px 18px", boxShadow:`0 4px 14px ${sportColor}44`, fontWeight:700}}>
+              + Agregar partido
+            </motion.button>
+          }
+        />
+
+        {/* Stats rápidos */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"20px"}}>
+          <div style={{...ss.card,textAlign:"center"}}><div style={{fontSize:"26px",fontWeight:800,color:sportColor}}>{proximosCount}</div><div style={ss.muted}>Próximos</div></div>
+          <div style={{...ss.card,textAlign:"center"}}><div style={{fontSize:"26px",fontWeight:800,color:"var(--text-1)"}}>{jugadosCount}</div><div style={ss.muted}>Jugados</div></div>
+          <div style={{...ss.card,textAlign:"center"}}><div style={{fontSize:"26px",fontWeight:800,color:"#22C55E"}}>{victorias}</div><div style={ss.muted}>Victorias</div></div>
+        </div>
+
+        {/* Formulario carga múltiple */}
+        <AnimatePresence>
+        {nuevos.length>0 && (
+          <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} style={{...ss.card, marginBottom:"20px", border:`1px solid ${sportColor}33`, background:`linear-gradient(135deg,${sportColor}08,transparent)`}}>
+            <div style={{fontWeight:700,fontSize:"14px",marginBottom:"14px",display:"flex",justify:"space-between",alignItems:"center",gap:"8px"}}>
+              📅 Nuevos partidos <span style={{fontSize:"11px",color:"var(--text-3)",fontWeight:400}}>— completa y guarda todos juntos</span>
+            </div>
+
+            {nuevos.map((p,i)=>(
+              <motion.div key={p._key} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.04}}
+                style={{borderTop:i>0?"1px solid var(--border-soft)":"none", paddingTop:i>0?"14px":"0", marginBottom:"14px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 80px 90px 90px 90px auto",gap:"8px",alignItems:"end",flexWrap:"wrap"}}>
+                  {/* Rival */}
+                  <div>
+                    {i===0&&<div style={ss.label}>Rival</div>}
+                    <input value={p.rival} onChange={e=>updateFila(p._key,"rival",e.target.value)} placeholder="Nombre rival" style={ss.input}/>
+                  </div>
+                  {/* Fecha */}
+                  <div>
+                    {i===0&&<div style={ss.label}>Fecha</div>}
+                    <input type="date" value={p.fecha} onChange={e=>updateFila(p._key,"fecha",e.target.value)} style={ss.input}/>
+                  </div>
+                  {/* Hora */}
+                  <div>
+                    {i===0&&<div style={ss.label}>Hora</div>}
+                    <input type="time" value={p.hora} onChange={e=>updateFila(p._key,"hora",e.target.value)} style={ss.input}/>
+                  </div>
+                  {/* Categoría */}
+                  <div>
+                    {i===0&&<div style={ss.label}>Categoría</div>}
+                    <select value={p.cat} onChange={e=>updateFila(p._key,"cat",e.target.value)} style={{...ss.input,cursor:"pointer"}}>
+                      {myCats.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  {/* Equipo */}
+                  <div>
+                    {i===0&&<div style={ss.label}>Equipo</div>}
+                    <select value={p.equipo} onChange={e=>updateFila(p._key,"equipo",e.target.value)} style={{...ss.input,cursor:"pointer"}}>
+                      {equiposOpts.map(eq=><option key={eq}>Equipo {eq}</option>)}
+                    </select>
+                  </div>
+                  {/* Lugar */}
+                  <div>
+                    {i===0&&<div style={ss.label}>Lugar</div>}
+                    <select value={p.lugar} onChange={e=>updateFila(p._key,"lugar",e.target.value)} style={{...ss.input,cursor:"pointer"}}>
+                      <option>Local</option><option>Visita</option>
+                    </select>
+                  </div>
+                  {/* Eliminar fila */}
+                  <div style={{paddingTop:i===0?"18px":"0"}}>
+                    <motion.button whileTap={{scale:0.9}} onClick={()=>removeFila(p._key)}
+                      style={{...ss.btn,background:"rgba(239,68,68,0.1)",color:"#EF4444",border:"1px solid rgba(239,68,68,0.25)",padding:"8px 10px",fontSize:"12px"}}>✕</motion.button>
+                  </div>
+                </div>
+                {/* Resultado inline si ya se jugó */}
+                <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"8px",flexWrap:"wrap"}}>
+                  <label style={{display:"flex",alignItems:"center",gap:"6px",cursor:"pointer",fontSize:"12px",color:"var(--text-2)"}}>
+                    <input type="checkbox" checked={p.estado==="jugado"} onChange={e=>updateFila(p._key,"estado",e.target.checked?"jugado":"programado")} style={{accentColor:sportColor}}/>
+                    Ya se jugó
+                  </label>
+                  {p.estado==="jugado" && <>
+                    <input type="number" min="0" value={p.golesLocal} onChange={e=>updateFila(p._key,"golesLocal",e.target.value)} placeholder="Nos." style={{...ss.input,width:"60px",textAlign:"center"}}/>
+                    <span style={{color:"var(--text-3)"}}>:</span>
+                    <input type="number" min="0" value={p.golesVisita} onChange={e=>updateFila(p._key,"golesVisita",e.target.value)} placeholder="Rival" style={{...ss.input,width:"60px",textAlign:"center"}}/>
+                    <input value={p.resumen} onChange={e=>updateFila(p._key,"resumen",e.target.value)} placeholder="Resumen breve..." style={{...ss.input,flex:1,minWidth:"140px"}}/>
+                  </>}
+                </div>
+              </motion.div>
+            ))}
+
+            <div style={{display:"flex",gap:"8px",borderTop:"1px solid var(--border-soft)",paddingTop:"14px",flexWrap:"wrap"}}>
+              <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}} onClick={addFila}
+                style={{...ss.btn,background:"transparent",color:sportColor,border:`1px dashed ${sportColor}55`,fontSize:"12px",padding:"9px 16px"}}>
+                + Otro partido
+              </motion.button>
+              <motion.button whileHover={{scale:1.02,y:-1}} whileTap={{scale:0.97}} onClick={guardarTodos}
+                style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,color:"#fff",fontSize:"13px",padding:"9px 22px",fontWeight:700,boxShadow:`0 6px 18px ${sportColor}44`}}>
+                💾 Guardar {nuevos.length} partido{nuevos.length!==1?"s":""}
+              </motion.button>
+              <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}} onClick={()=>setNuevos([])}
+                style={{...ss.btn,background:"transparent",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"12px",padding:"9px 14px"}}>
+                Cancelar
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+
+        {/* Filtros */}
+        <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"16px",alignItems:"center"}}>
+          <div style={{display:"flex",gap:"4px"}}>
+            {["todos","programado","jugado"].map(e=>(
+              <motion.button key={e} whileTap={{scale:0.96}} onClick={()=>setFiltroEst(e)}
+                style={{...ss.btn,fontSize:"11px",padding:"5px 12px",background:filtroEst===e?`${sportColor}22`:"var(--bg-elev-2)",color:filtroEst===e?sportColor:"var(--text-2)",border:`1px solid ${filtroEst===e?sportColor+"44":"var(--border-soft)"}`,fontWeight:filtroEst===e?700:400}}>
+                {e==="todos"?"Todos":e==="programado"?"📅 Próximos":"✅ Jugados"}
+              </motion.button>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:"4px"}}>
+            {["todos",...myCats].map(c=>(
+              <motion.button key={c} whileTap={{scale:0.96}} onClick={()=>setFiltroCat(c)}
+                style={{...ss.btn,fontSize:"11px",padding:"5px 12px",background:filtroCat===c?`${sportColor}22`:"var(--bg-elev-2)",color:filtroCat===c?sportColor:"var(--text-2)",border:`1px solid ${filtroCat===c?sportColor+"44":"var(--border-soft)"}`,fontWeight:filtroCat===c?700:400}}>
+                {c==="todos"?"Todas":c}
+              </motion.button>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:"4px"}}>
+            {["todos","A","B","C"].map(eq=>(
+              <motion.button key={eq} whileTap={{scale:0.96}} onClick={()=>setFiltroEq(eq)}
+                style={{...ss.btn,fontSize:"11px",padding:"5px 12px",background:filtroEq===eq?`${sportColor}22`:"var(--bg-elev-2)",color:filtroEq===eq?sportColor:"var(--text-2)",border:`1px solid ${filtroEq===eq?sportColor+"44":"var(--border-soft)"}`,fontWeight:filtroEq===eq?700:400}}>
+                {eq==="todos"?"Equipos":`Eq. ${eq}`}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabla de partidos */}
+        <motion.div {...fadeUp} style={{...ss.card,padding:0,overflow:"hidden"}}>
+          {partidosFiltrados.length===0 && (
+            <div style={{padding:"32px",textAlign:"center",color:"var(--text-3)",fontSize:"13px"}}>No hay partidos para este filtro.</div>
+          )}
+          {partidosFiltrados.map((p,i)=>{
+            const esHoy = p.fecha===hoy;
+            const esPasado = p.fecha<hoy;
+            return (
+              <motion.div key={p.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{delay:i*0.03}}
+                style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",borderBottom:i<partidosFiltrados.length-1?"1px solid var(--border-soft)":"none",background:esHoy?`${sportColor}08`:"transparent",flexWrap:"wrap"}}>
+
+                {/* Fecha y hora */}
+                <div style={{minWidth:"72px",flexShrink:0}}>
+                  <div style={{fontSize:"12px",fontWeight:700,color:esHoy?sportColor:"var(--text-1)"}}>{p.fecha.slice(5).replace("-","/")}</div>
+                  <div style={{fontSize:"10px",color:"var(--text-3)",marginTop:"1px"}}>{p.hora}</div>
+                </div>
+
+                {/* Cat + Equipo */}
+                <div style={{display:"flex",gap:"4px",flexShrink:0}}>
+                  <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"99px",background:`${sportColor}15`,color:sportColor,border:`1px solid ${sportColor}33`,fontWeight:600}}>{p.cat}</span>
+                  <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"99px",background:"var(--bg-elev-2)",color:"var(--text-2)",border:"1px solid var(--border-soft)",fontWeight:600}}>Eq.{p.equipo}</span>
+                </div>
+
+                {/* Rival */}
+                <div style={{flex:1,minWidth:"120px"}}>
+                  <div style={{fontSize:"13px",fontWeight:600}}>vs {p.rival}</div>
+                  <div style={{fontSize:"10px",color:"var(--text-3)",marginTop:"1px"}}>{p.lugar}{esHoy?" · HOY":""}</div>
+                </div>
+
+                {/* Resultado o estado */}
+                {p.estado==="jugado" && p.resultado ? (
+                  <div style={{display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
+                    <span style={{fontSize:"17px",fontWeight:900,letterSpacing:"-0.02em",color:resColors[p.resultado]}}>{p.golesLocal}:{p.golesVisita}</span>
+                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"99px",background:`${resColors[p.resultado]}18`,color:resColors[p.resultado],border:`1px solid ${resColors[p.resultado]}44`,fontWeight:700,textTransform:"uppercase"}}>{p.resultado.slice(0,3)}</span>
+                  </div>
+                ) : (
+                  <span style={{fontSize:"10px",padding:"2px 9px",borderRadius:"99px",background:esPasado?"rgba(239,68,68,0.1)":"rgba(59,130,246,0.1)",color:esPasado?"#EF4444":"#60A5FA",border:`1px solid ${esPasado?"rgba(239,68,68,0.25)":"rgba(59,130,246,0.25)"}`,fontWeight:600,flexShrink:0}}>
+                    {esPasado?"Sin resultado":"Programado"}
+                  </span>
+                )}
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </div>
     );
   }

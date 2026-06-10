@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { SPORTS_CONFIG, COUNTRIES, CLUBS } from "./data/sports";
 import { PLAYERS_RUGBY } from "./data/players";
-import { COMMISSION_DATA, CLUB_LIST, COUNTRY_COUNTS, MOCK_PAYMENTS, MOCK_RESULTADOS } from "./data/mockData";
+import { COMMISSION_DATA, CLUB_LIST, COUNTRY_COUNTS, MOCK_PAYMENTS, MOCK_PARTIDOS } from "./data/mockData";
+import { usePlayers } from "./lib/usePlayers";
 
 import { fadeUp } from "./styles/motion";
 import { ss } from "./styles/tokens";
@@ -14,6 +15,7 @@ import WhatsAppModal from "./components/WhatsAppModal";
 
 import OnboardingScreen from "./views/OnboardingScreen";
 import InvitationScreen from "./views/InvitationScreen";
+import LoginScreen from "./views/LoginScreen";
 import SuperAdminView from "./views/SuperAdminView";
 import AdminView from "./views/AdminView";
 import EntrenadorView from "./views/EntrenadorView";
@@ -31,7 +33,7 @@ const ROLES = [
 const MODULE_MAP = {
   superadmin:[{id:"dashboard",label:"Dashboard Global"},{id:"clubes",label:"Clubes"},{id:"comisiones",label:"Comisiones"},{id:"comparativa",label:"vs SportEasy"}],
   admin:[{id:"miclub",label:"Mi Club"},{id:"jugadores",label:"Jugadores"},{id:"finanzas",label:"Finanzas"}],
-  entrenador:[{id:"muro",label:"El Muro"},{id:"matchcenter",label:"Match Center"},{id:"nomina",label:"Nómina"},{id:"estadisticas",label:"Estadísticas"},{id:"asistencia",label:"Asistencia"},{id:"salud",label:"Salud"}],
+  entrenador:[{id:"muro",label:"El Muro"},{id:"calendario",label:"Calendario"},{id:"matchcenter",label:"Match Center"},{id:"nomina",label:"Nómina"},{id:"estadisticas",label:"Estadísticas"},{id:"asistencia",label:"Asistencia"},{id:"salud",label:"Salud"}],
   preparador:[{id:"microciclo",label:"Microciclo"},{id:"estadoplantel",label:"Estado Plantel"},{id:"rankingfuerza",label:"Ranking Fuerza"}],
   jugador:[{id:"midashboard",label:"Mi Dashboard"},{id:"noticias",label:"Noticias & Resultados"},{id:"micuota",label:"Mi Cuota"},{id:"migym",label:"Mi Gym"},{id:"nominasclub",label:"Nóminas Club"},{id:"miconvocatoria",label:"Mi Convocatoria"}],
 };
@@ -39,7 +41,7 @@ const MODULE_MAP = {
 const ROL_ICONS = {superadmin:"⚡",admin:"🏢",entrenador:"📋",preparador:"💪",jugador:"👤"};
 
 export default function SportOS() {
-  const [screen,setScreen]               = useState("onboarding");
+  const [screen,setScreen]               = useState("login");
   const [sport,setSport]                 = useState("rugby");
   const [country,setCountry]             = useState("CL");
   const [role,setRole]                   = useState("entrenador");
@@ -63,10 +65,14 @@ export default function SportOS() {
   const [newEx,setNewEx]                 = useState({name:"",sets:3,reps:8,pct:70,rest:120,notes:"",muscles:""});
   const [publishedPlan,setPublishedPlan] = useState(false);
   const [payments,setPayments]           = useState(MOCK_PAYMENTS);
-  const [resultados,setResultados]       = useState(MOCK_RESULTADOS);
+  const [partidos,setPartidos]           = useState(MOCK_PARTIDOS);
 
-  // null = modo demo | { nombre, email, rol, club, cats[] } = usuario real
+  // null = modo demo | { nombre, email, rol, club, cats[], club_id } = usuario real
   const [currentUser,setCurrentUser]     = useState(null);
+
+  // Jugadores: datos reales de Supabase si hay club_id, mock si no
+  const clubId = currentUser?.club_id ?? null;
+  const { players, addPlayer, updatePlayer, removePlayer } = usePlayers(clubId);
   const isDemo = currentUser === null;
   // En demo ve todo; en modo real filtra por sus categorías asignadas
   const userCats = isDemo ? [] : (currentUser.cats || []);
@@ -98,6 +104,18 @@ export default function SportOS() {
     />
   );
 
+  if(screen==="login") return (
+    <LoginScreen
+      onLogin={(user)=>{
+        setCurrentUser({nombre:user.nombre, email:user.email, rol:user.rol, club:user.club, cats:user.cats});
+        setRole(user.rol);
+        setSport(user.sport||"rugby");
+        setScreen("app");
+      }}
+      onDemo={()=>setScreen("onboarding")}
+    />
+  );
+
   if(screen==="onboarding") return <OnboardingScreen onSelect={(s,c)=>{setSport(s);setCountry(c);setScreen("app");}}/>;
 
   const rolActual = ROLES.find(r=>r.id===role);
@@ -107,7 +125,7 @@ export default function SportOS() {
       <AuroraBg/>
       {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
       {whatsappModal&&<WhatsAppModal onClose={()=>setWhatsappModal(false)} team={club.name} rival={club.next.rival} date={club.next.dia}
-        starters={SPORTS_CONFIG[sport].positions.slice(0,sp.teamSize).map((pos,i)=>({name:PLAYERS_RUGBY[i]?PLAYERS_RUGBY[i].name:"Jugador "+(i+1),pos}))}
+        starters={SPORTS_CONFIG[sport].positions.slice(0,sp.teamSize).map((pos,i)=>({name:players[i]?players[i].name:"Jugador "+(i+1),pos}))}
         bench={[]}/>}
 
       {/* ── Banner: Demo o Usuario real ── */}
@@ -136,7 +154,7 @@ export default function SportOS() {
           <span style={{color:"var(--text-3)"}}>·</span>
           <span style={{color:"var(--text-3)"}}>{currentUser.club}</span>
           <div style={{flex:1}}/>
-          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>{ setCurrentUser(null); setRole("entrenador"); }}
+          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>{ setCurrentUser(null); setRole("entrenador"); setScreen("login"); }}
             style={{...ss.btn,background:"transparent",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"10px",padding:"3px 10px"}}>
             Cerrar sesión
           </motion.button>
@@ -240,10 +258,10 @@ export default function SportOS() {
           <AnimatePresence mode="wait">
             <motion.div key={role+module} {...fadeUp} transition={{duration:0.4}}>
               {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
-              {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={PLAYERS_RUGBY} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments}/>}
-              {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={PLAYERS_RUGBY} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} userCats={userCats} isDemo={isDemo} resultados={resultados} setResultados={setResultados}/>}
+              {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={players} addPlayer={addPlayer} updatePlayer={updatePlayer} removePlayer={removePlayer} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments}/>}
+              {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={players} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} userCats={userCats} isDemo={isDemo} partidos={partidos} setPartidos={setPartidos}/>}
               {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} userCats={userCats} isDemo={isDemo}/>}
-              {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={PLAYERS_RUGBY[0]} players={PLAYERS_RUGBY} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} payments={payments} setPayments={setPayments} userCats={userCats} isDemo={isDemo} resultados={resultados}/>}
+              {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={players[0]} players={players} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} payments={payments} setPayments={setPayments} userCats={userCats} isDemo={isDemo} partidos={partidos}/>}
             </motion.div>
           </AnimatePresence>
         </div>

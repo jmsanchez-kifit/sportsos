@@ -16,3 +16,18 @@
 - Git push a GitHub (commit 9f43910)
 - Deploy producción Vercel: https://sportsos-iota.vercel.app
 - Proyecto 100% independiente — fuera de Lovable, en repo propio + Vercel
+
+## 2026-06-10 (Supabase + datos reales)
+- Supabase integrado como backend real
+  - src/lib/supabase.js — cliente Supabase
+  - src/lib/auth.js — signIn/signUp/signOut/getProfile
+  - src/lib/useAuth.jsx — AuthProvider + useAuth hook
+  - src/lib/db.js — funciones CRUD para todas las tablas
+  - supabase/schema.sql — schema completo con RLS
+- Hooks de datos creados:
+  - src/lib/usePlayers.js — jugadores con fallback mock
+  - src/lib/usePosts.js — El Muro con realtime Supabase
+  - src/lib/useAttendance.js — asistencia con guardado en BD
+- App.jsx actualizado: usa usePlayers() en lugar de PLAYERS_RUGBY hardcodeado
+- Login tiene modo dual: Supabase real + fallback mock usuarios demo
+- Variables de entorno configuradas en Vercel (no en git)

@@ -217,7 +217,7 @@ function GymJugador({player, sportColor, gymLog, setGymLog, completedSession, se
 }
 
 /* ── JugadorView ────────────────────────────────────────────── */
-export default function JugadorView({module, sport, sp, club, player, players, sportColor, countryData, convocado, setConvocado, setWhatsappModal, showToast, gymLog, setGymLog, completedSession, setCompletedSession, newRecord, setNewRecord, expandedEx, setExpandedEx, rankTab, setRankTab, payments, setPayments, userCats=[], isDemo=true, resultados=[]}) {
+export default function JugadorView({module, sport, sp, club, player, players, sportColor, countryData, convocado, setConvocado, setWhatsappModal, showToast, gymLog, setGymLog, completedSession, setCompletedSession, newRecord, setNewRecord, expandedEx, setExpandedEx, rankTab, setRankTab, payments, setPayments, userCats=[], isDemo=true, partidos=[]}) {
   const camiseta = player.num;
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
 
@@ -233,38 +233,165 @@ export default function JugadorView({module, sport, sp, club, player, players, s
     </motion.div>
   ) : null;
 
-  if(module==="midashboard") return (
-    <div>
-      <motion.div {...fadeUp} style={{...ss.card,marginBottom:"20px",border:`1px solid ${sportColor}44`,background:`linear-gradient(135deg,${sportColor}15,${sportColor}03)`,display:"flex",alignItems:"center",gap:"16px"}}>
-        <motion.div whileHover={{rotate:10,scale:1.05}} style={{width:"60px",height:"60px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",fontWeight:800,color:sportColor,border:`3px solid ${sportColor}88`,boxShadow:`0 0 24px ${sportColor}55`}}>{player.num}</motion.div>
-        <div><div style={{fontSize:"20px",fontWeight:700,letterSpacing:"-0.01em"}}>{player.name}</div><div style={{color:sportColor,fontSize:"13px",fontWeight:500}}>{player.pos} · {club.name}</div></div>
-      </motion.div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"16px"}}>
-        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.05}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center"}}><Semaforo status={player.med}/><div style={{...ss.muted,fontSize:"11px",marginTop:"8px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Estado médico</div><div style={{fontSize:"12px",fontWeight:600,marginTop:"4px"}}>{player.med==="verde"?"✓ Apto":player.med==="amarillo"?"⚠ Alerta":"✕ No apto"}</div></motion.div>
-        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.1}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center",border:"1px solid rgba(34,197,94,0.3)",background:"linear-gradient(135deg,rgba(34,197,94,0.06),transparent)"}}><div style={{fontSize:"22px",fontWeight:800,color:"#22C55E"}}>✓</div><div style={{...ss.muted,fontSize:"11px",marginTop:"6px"}}>Cuota {countryData.symbol}{club.cuota.toLocaleString()}</div><div style={{...ss.muted,fontSize:"11px",marginTop:"2px"}}>{countryData.payments[0]}</div></motion.div>
-        <motion.div {...fadeUp} transition={{duration:0.4,delay:0.15}} whileHover={{y:-3}} style={{...ss.card,textAlign:"center",border:`1px solid ${sportColor}44`,background:`linear-gradient(135deg,${sportColor}15,${sportColor}03)`}}><div style={{fontSize:"24px",fontWeight:800,color:sportColor,filter:`drop-shadow(0 0 8px ${sportColor}88)`}}>#{camiseta}</div><div style={{fontSize:"11px",color:sportColor,marginTop:"4px",fontWeight:600}}>⭐ Convocado</div></motion.div>
-      </div>
-      <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",border:`1px solid ${sportColor}33`}}>
-        <div style={{fontWeight:600,marginBottom:"12px",fontSize:"13px",display:"flex",alignItems:"center",gap:"6px"}}>⚽ Próximo partido</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px",borderRadius:"var(--r-md)",background:`linear-gradient(135deg,${sportColor}15,${sportColor}03)`}}>
-          <div><div style={{fontSize:"16px",fontWeight:700}}>vs {club.next.rival}</div><div style={{...ss.muted,fontSize:"12px",marginTop:"2px"}}>{club.next.dia} · {sp.matchDuration}</div></div>
-          <Badge color={sportColor} glow>{club.next.dia}</Badge>
-        </div>
-      </motion.div>
-      <motion.div {...fadeUp} style={ss.card}>
-        <div style={{fontWeight:600,marginBottom:"12px",fontSize:"13px",display:"flex",alignItems:"center",gap:"6px"}}>📰 Últimas noticias</div>
-        {MOCK_POSTS.slice(0,3).map((p,i)=>(
-          <motion.div key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:i*0.05}} style={{padding:"10px 0",borderBottom:i<2?"1px solid var(--border-soft)":"none"}}>
-            <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"6px"}}><Badge color={postColors[p.type]}>{p.type}</Badge><span style={ss.muted}>{p.time}</span></div>
-            <p style={{margin:0,fontSize:"12px",color:"var(--text-2)",lineHeight:1.5}}>{p.text.substring(0,90)}...</p>
+  if(module==="midashboard") {
+    const hoy = new Date().toISOString().split("T")[0];
+    const resColors = {victoria:"#22C55E", empate:"#F59E0B", derrota:"#EF4444"};
+    const resIcons  = {victoria:"🏆", empate:"🤝", derrota:"💪"};
+
+    // Filtra partidos por el plantel del jugador (en modo real)
+    const misPartidos = miPlantel
+      ? partidos.filter(p=>p.cat===miPlantel)
+      : partidos;
+
+    // Próximo partido: el más cercano en el futuro (o hoy)
+    const proximoPartido = misPartidos
+      .filter(p=>p.estado==="programado" && p.fecha>=hoy)
+      .sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.hora.localeCompare(b.hora))[0] || null;
+
+    // Último resultado jugado
+    const ultimoRes = misPartidos
+      .filter(p=>p.estado==="jugado")
+      .sort((a,b)=>b.fecha.localeCompare(a.fecha))[0] || null;
+
+    // Feed cronológico: mezcla resultados + noticias del club
+    const feedItems = [
+      ...misPartidos.filter(p=>p.estado==="jugado").map(r=>({...r, _tipo:"resultado", _fecha:r.fecha})),
+      ...MOCK_POSTS.map(p=>({...p, _tipo:"noticia", _fecha:"2025-06-08"})),
+    ].sort((a,b)=> new Date(b._fecha) - new Date(a._fecha));
+
+    return (
+      <div>
+        {/* ── Cabecera jugador ── */}
+        <motion.div {...fadeUp} style={{...ss.card, marginBottom:"16px", border:`1px solid ${sportColor}33`, background:`linear-gradient(135deg,${sportColor}12,${sportColor}03)`, display:"flex", alignItems:"center", gap:"14px", padding:"14px 16px"}}>
+          <motion.div whileHover={{rotate:8,scale:1.05}} style={{width:"52px",height:"52px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",fontWeight:900,color:sportColor,border:`2.5px solid ${sportColor}77`,boxShadow:`0 0 20px ${sportColor}44`,flexShrink:0}}>{player.num}</motion.div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:"17px",fontWeight:800,letterSpacing:"-0.01em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{player.name}</div>
+            <div style={{color:sportColor,fontSize:"12px",fontWeight:500,marginTop:"2px"}}>{player.pos} · {club.name}</div>
+          </div>
+          <div style={{display:"flex",gap:"8px",flexShrink:0}}>
+            <div style={{textAlign:"center",padding:"6px 12px",borderRadius:"var(--r-sm)",background:"var(--bg-elev-1)",border:"1px solid var(--border-soft)"}}>
+              <Semaforo status={player.med}/>
+              <div style={{fontSize:"9px",color:"var(--text-3)",marginTop:"4px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Salud</div>
+            </div>
+            <div style={{textAlign:"center",padding:"6px 12px",borderRadius:"var(--r-sm)",background:player.cuota==="ok"?"rgba(34,197,94,0.1)":"rgba(239,68,68,0.1)",border:`1px solid ${player.cuota==="ok"?"rgba(34,197,94,0.3)":"rgba(239,68,68,0.3)"}`}}>
+              <div style={{fontSize:"16px",fontWeight:800,color:player.cuota==="ok"?"#22C55E":"#EF4444"}}>{player.cuota==="ok"?"✓":"!"}</div>
+              <div style={{fontSize:"9px",color:"var(--text-3)",marginTop:"2px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Cuota</div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Próximo partido — PROTAGONISTA ── */}
+        {proximoPartido ? (
+          <motion.div {...fadeUp} transition={{delay:0.05}} style={{...ss.card, marginBottom:"16px", border:`2px solid ${sportColor}55`, background:`linear-gradient(135deg,${sportColor}18,${sportColor}05)`, overflow:"hidden", position:"relative"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,transparent,${sportColor},transparent)`}}/>
+            <div style={{fontSize:"10px",color:sportColor,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:"12px",display:"flex",alignItems:"center",gap:"6px"}}>
+              <span style={{width:"6px",height:"6px",borderRadius:"50%",background:sportColor,boxShadow:`0 0 8px ${sportColor}`,display:"inline-block"}}/>
+              Próximo partido · {proximoPartido.cat} Eq.{proximoPartido.equipo}
+            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"12px"}}>
+              <div>
+                <div style={{fontSize:"22px",fontWeight:900,letterSpacing:"-0.02em",marginBottom:"4px"}}>
+                  {club.name} <span style={{color:"var(--text-3)",fontWeight:300,fontSize:"18px"}}>vs</span> {proximoPartido.rival}
+                </div>
+                <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
+                  <span style={{...ss.muted,fontSize:"12px"}}>📅 {proximoPartido.fecha}</span>
+                  <span style={{...ss.muted,fontSize:"12px"}}>🕐 {proximoPartido.hora}</span>
+                  <span style={{fontSize:"11px",padding:"2px 9px",borderRadius:"99px",background:`${sportColor}22`,color:sportColor,border:`1px solid ${sportColor}44`,fontWeight:600}}>{proximoPartido.lugar}</span>
+                </div>
+              </div>
+              <motion.div animate={{scale:[1,1.04,1]}} transition={{duration:2.5,repeat:Infinity,ease:"easeInOut"}}
+                style={{fontSize:"42px",fontWeight:900,color:sportColor,letterSpacing:"-0.04em",filter:`drop-shadow(0 0 16px ${sportColor}88)`}}>
+                #{camiseta}
+              </motion.div>
+            </div>
           </motion.div>
-        ))}
-      </motion.div>
-    </div>
-  );
+        ) : (
+          <motion.div {...fadeUp} transition={{delay:0.05}} style={{...ss.card, marginBottom:"16px", border:"1px solid var(--border-soft)", padding:"16px", textAlign:"center", color:"var(--text-3)", fontSize:"13px"}}>
+            📅 Sin partidos programados próximamente
+          </motion.div>
+        )}
+
+        {/* ── Último resultado — PROTAGONISTA ── */}
+        {ultimoRes && (
+          <motion.div {...fadeUp} transition={{delay:0.1}} style={{...ss.card, marginBottom:"16px", border:`2px solid ${resColors[ultimoRes.resultado]}44`, background:`linear-gradient(135deg,${resColors[ultimoRes.resultado]}10,${resColors[ultimoRes.resultado]}03)`, overflow:"hidden", position:"relative"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,transparent,${resColors[ultimoRes.resultado]},transparent)`}}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}}>
+              <div>
+                <div style={{fontSize:"10px",color:"var(--text-3)",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:600,marginBottom:"4px"}}>Último resultado · {ultimoRes.cat}</div>
+                <div style={{fontSize:"16px",fontWeight:800}}>{club.name} vs {ultimoRes.rival}</div>
+                <div style={{...ss.muted,fontSize:"11px",marginTop:"2px"}}>{ultimoRes.fecha} · {ultimoRes.lugar}</div>
+              </div>
+              <span style={{fontSize:"11px",padding:"4px 12px",borderRadius:"99px",background:`${resColors[ultimoRes.resultado]}20`,color:resColors[ultimoRes.resultado],border:`1.5px solid ${resColors[ultimoRes.resultado]}55`,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                {resIcons[ultimoRes.resultado]} {ultimoRes.resultado}
+              </span>
+            </div>
+
+            {/* Marcador grande */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"20px",padding:"18px 0",borderTop:"1px solid var(--border-soft)",borderBottom:"1px solid var(--border-soft)",marginBottom:"12px"}}>
+              <div style={{textAlign:"center",flex:1}}>
+                <div style={{fontSize:"11px",color:"var(--text-3)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:"6px"}}>{ultimoRes.lugar==="Local"?club.name:ultimoRes.rival}</div>
+                <div style={{fontSize:"52px",fontWeight:900,letterSpacing:"-0.04em",lineHeight:1,color:ultimoRes.lugar==="Local"?resColors[ultimoRes.resultado]:"var(--text-1)"}}>{ultimoRes.golesLocal}</div>
+              </div>
+              <div style={{fontSize:"20px",color:"var(--text-3)",fontWeight:300,flexShrink:0}}>:</div>
+              <div style={{textAlign:"center",flex:1}}>
+                <div style={{fontSize:"11px",color:"var(--text-3)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:"6px"}}>{ultimoRes.lugar==="Visita"?club.name:ultimoRes.rival}</div>
+                <div style={{fontSize:"52px",fontWeight:900,letterSpacing:"-0.04em",lineHeight:1,color:ultimoRes.lugar==="Visita"?resColors[ultimoRes.resultado]:"var(--text-1)"}}>{ultimoRes.golesVisita}</div>
+              </div>
+            </div>
+
+            <p style={{margin:"0 0 8px",fontSize:"13px",color:"var(--text-2)",lineHeight:1.6,fontStyle:"italic"}}>"{ultimoRes.resumen}"</p>
+            <div style={{...ss.muted,fontSize:"11px"}}>— {ultimoRes.autor}</div>
+            {ultimoRes.destacados?.length>0 && (
+              <div style={{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap",marginTop:"10px"}}>
+                <span style={{fontSize:"10px",color:"var(--text-3)"}}>⭐</span>
+                {ultimoRes.destacados.map(d=><span key={d} style={{fontSize:"11px",padding:"2px 9px",borderRadius:"99px",background:"rgba(245,158,11,0.12)",color:"#F59E0B",border:"1px solid rgba(245,158,11,0.3)",fontWeight:600}}>{d}</span>)}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── Feed cronológico: resultados + noticias mezclados ── */}
+        <div style={{fontSize:"10px",color:"var(--text-3)",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:600,marginBottom:"10px",paddingLeft:"4px"}}>Actividad del club</div>
+
+        {feedItems.slice(0,8).map((item,i)=>{
+          if(item._tipo==="resultado") return (
+            <motion.div key={`r-${item.id}`} {...fadeUp} transition={{delay:i*0.04}} style={{...ss.card, marginBottom:"10px", display:"flex", alignItems:"center", gap:"12px", padding:"12px 14px", border:`1px solid ${resColors[item.resultado]}22`}}>
+              <div style={{width:"42px",height:"42px",borderRadius:"var(--r-sm)",background:`${resColors[item.resultado]}15`,border:`1.5px solid ${resColors[item.resultado]}33`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <div style={{fontSize:"15px",fontWeight:900,color:resColors[item.resultado],lineHeight:1}}>{item.golesLocal}:{item.golesVisita}</div>
+                <div style={{fontSize:"8px",color:resColors[item.resultado],fontWeight:700,textTransform:"uppercase",marginTop:"1px"}}>{item.resultado.slice(0,3)}</div>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>vs {item.rival}</div>
+                <div style={{display:"flex",gap:"8px",marginTop:"3px",flexWrap:"wrap"}}>
+                  <span style={{fontSize:"10px",color:"var(--text-3)"}}>{item.fecha}</span>
+                  <span style={{fontSize:"10px",padding:"1px 7px",borderRadius:"99px",background:`${sportColor}12`,color:sportColor,border:`1px solid ${sportColor}22`,fontWeight:600}}>{item.cat}</span>
+                </div>
+              </div>
+              {item.destacados?.includes(player.name) && (
+                <span style={{fontSize:"18px",flexShrink:0}} title="Fuiste destacado">⭐</span>
+              )}
+            </motion.div>
+          );
+          return (
+            <motion.div key={`n-${item.id}`} {...fadeUp} transition={{delay:i*0.04}} style={{...ss.card, marginBottom:"10px", padding:"12px 14px", borderLeft:`3px solid ${postColors[item.type]||"#6B7280"}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:"7px"}}>
+                  <Badge color={postColors[item.type]}>{item.type}</Badge>
+                  <span style={{fontSize:"12px",fontWeight:600}}>{item.author}</span>
+                </div>
+                <span style={{...ss.muted,fontSize:"10px"}}>{item.time}</span>
+              </div>
+              <p style={{margin:0,fontSize:"12px",color:"var(--text-2)",lineHeight:1.5}}>{item.text}</p>
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  }
 
   if(module==="noticias") {
     const [catFiltro, setCatFiltro] = useState("todos");
+    const resultados = partidos.filter(p=>p.estado==="jugado");
     const cats = ["todos", ...new Set(resultados.map(r=>r.cat))];
     const feed = catFiltro==="todos" ? resultados : resultados.filter(r=>r.cat===catFiltro);
     const resColors = {victoria:"#22C55E", empate:"#F59E0B", derrota:"#EF4444"};

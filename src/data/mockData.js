@@ -21,45 +21,73 @@ export const CLUB_LIST = [
 
 export const COUNTRY_COUNTS = { CL: 65 };
 
-// Estructura preparada para análisis de video con IA en el futuro.
-// Campos aiAnalysis y videoUrl serán completados por el agente de IA cuando el coach suba el video.
-export const MOCK_RESULTADOS = [
+// Modelo unificado de partidos: programados + jugados en la misma estructura.
+// estado: "programado" | "jugado"
+// equipo: "A" | "B" | "C" (dentro de cada categoría un plantel puede tener varios equipos)
+// Campos aiAnalysis/videoUrl preparados para agente de IA que analizará video en el futuro.
+export const MOCK_PARTIDOS = [
+  // ── Jugados ──
   {
-    id:1, cat:"Primer Equipo", rival:"Universitario RC", fecha:"2025-06-07", lugar:"Local",
+    id:1, cat:"Primer Equipo", equipo:"A", rival:"Universitario RC",
+    fecha:"2025-06-07", hora:"15:30", lugar:"Local", estado:"jugado",
     golesLocal:3, golesVisita:1, resultado:"victoria",
-    autor:"Eduardo Ramírez", autorRol:"entrenador",
-    resumen:"Partido dominado desde el inicio. Excelente defensa en el segundo tiempo.",
+    autor:"Eduardo Ramírez", resumen:"Partido dominado desde el inicio. Excelente defensa en el segundo tiempo.",
     destacados:["Andrés Castro","Felipe Morales"],
-    // ── Futuro: IA completa estos campos al analizar el video ──
-    videoUrl: null,
-    aiAnalysis: null,   // { posesion, tackles, lineBreaks, heatmap, eventos[] }
-    aiStatus: null,     // null | "procesando" | "listo"
+    videoUrl:null, aiAnalysis:null, aiStatus:null,
   },
   {
-    id:2, cat:"Reserva", rival:"Santiago RC", fecha:"2025-06-07", lugar:"Visita",
+    id:2, cat:"Primer Equipo", equipo:"B", rival:"Santiago RC",
+    fecha:"2025-06-07", hora:"13:00", lugar:"Visita", estado:"jugado",
     golesLocal:2, golesVisita:0, resultado:"victoria",
-    autor:"Carlos Vidal", autorRol:"entrenador",
-    resumen:"Sólida actuación del equipo. Dos tries en los primeros 20 minutos.",
+    autor:"Carlos Vidal", resumen:"Sólida actuación. Dos tries en los primeros 20 minutos.",
     destacados:["Diego Saavedra","Matías Herrera"],
-    videoUrl: null, aiAnalysis: null, aiStatus: null,
+    videoUrl:null, aiAnalysis:null, aiStatus:null,
   },
   {
-    id:3, cat:"Sub-20", rival:"Cóndores RC", fecha:"2025-06-06", lugar:"Local",
+    id:3, cat:"Reserva", equipo:"A", rival:"Cóndores RC",
+    fecha:"2025-06-06", hora:"11:00", lugar:"Local", estado:"jugado",
     golesLocal:1, golesVisita:1, resultado:"empate",
-    autor:"Rodrigo Muñoz", autorRol:"entrenador",
-    resumen:"Empate justo. El equipo creció en la segunda mitad. A mejorar la melé.",
+    autor:"Rodrigo Muñoz", resumen:"Empate justo. El equipo creció en la segunda mitad.",
     destacados:["Pablo Rodríguez"],
-    videoUrl: null, aiAnalysis: null, aiStatus: null,
+    videoUrl:null, aiAnalysis:null, aiStatus:null,
   },
   {
-    id:4, cat:"Primer Equipo", rival:"Stade Français RC", fecha:"2025-05-31", lugar:"Local",
+    id:4, cat:"Primer Equipo", equipo:"A", rival:"Stade Français RC",
+    fecha:"2025-05-31", hora:"16:00", lugar:"Local", estado:"jugado",
     golesLocal:2, golesVisita:4, resultado:"derrota",
-    autor:"Eduardo Ramírez", autorRol:"entrenador",
-    resumen:"Resultado duro. Rival muy intenso en los rucks. Semana de análisis táctico.",
+    autor:"Eduardo Ramírez", resumen:"Resultado duro. Rival muy intenso en los rucks.",
     destacados:["Cristóbal Vega"],
-    videoUrl: null, aiAnalysis: null, aiStatus: null,
+    videoUrl:null, aiAnalysis:null, aiStatus:null,
+  },
+  // ── Programados ──
+  {
+    id:5, cat:"Primer Equipo", equipo:"A", rival:"Toros RC",
+    fecha:"2025-06-14", hora:"15:30", lugar:"Visita", estado:"programado",
+    golesLocal:null, golesVisita:null, resultado:null,
+    autor:null, resumen:null, destacados:[], videoUrl:null, aiAnalysis:null, aiStatus:null,
+  },
+  {
+    id:6, cat:"Primer Equipo", equipo:"B", rival:"Halcones RC",
+    fecha:"2025-06-14", hora:"11:00", lugar:"Local", estado:"programado",
+    golesLocal:null, golesVisita:null, resultado:null,
+    autor:null, resumen:null, destacados:[], videoUrl:null, aiAnalysis:null, aiStatus:null,
+  },
+  {
+    id:7, cat:"Reserva", equipo:"A", rival:"Andes RC",
+    fecha:"2025-06-15", hora:"10:00", lugar:"Local", estado:"programado",
+    golesLocal:null, golesVisita:null, resultado:null,
+    autor:null, resumen:null, destacados:[], videoUrl:null, aiAnalysis:null, aiStatus:null,
+  },
+  {
+    id:8, cat:"Sub-20", equipo:"A", rival:"Cóndores Juvenil",
+    fecha:"2025-06-21", hora:"09:30", lugar:"Visita", estado:"programado",
+    golesLocal:null, golesVisita:null, resultado:null,
+    autor:null, resumen:null, destacados:[], videoUrl:null, aiAnalysis:null, aiStatus:null,
   },
 ];
+
+// Alias para retrocompatibilidad con código que use MOCK_RESULTADOS
+export const MOCK_RESULTADOS = MOCK_PARTIDOS.filter(p=>p.estado==="jugado");
 
 export const MOCK_PAYMENTS = [
   {id:1,playerId:6,playerName:"Pablo Rodríguez",amount:45000,method:"Khipu",date:"2025-05-28",status:"pagado"},

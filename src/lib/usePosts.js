@@ -1,0 +1,89 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "./supabase";
+import { MOCK_POSTS } from "../data/mockData";
+
+/**
+ * Hook para El Muro — carga posts desde Supabase.
+ * Fallback a mock data en modo demo.
+ */
+export function usePosts(clubId) {
+  const [posts,   setPosts]   = useState(MOCK_POSTS);
+  const [loading, setLoading] = useState(false);
+  const isReal = !!clubId;
+
+  const load = useCallback(async () => {
+    if (!isReal) { setPosts(MOCK_POSTS); return; }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*, profiles(nombre, rol)")
+        .eq("club_id", clubId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      // Normalizar al mismo formato que los mock posts
+      const normalized = data.map(p => ({
+        id:     p.id,
+        type:   p.type,
+        author: p.profiles?.nombre || "Usuario",
+        time:   timeAgo(p.created_at),
+        text:   p.text,
+        likes:  0,
+      }));
+      setPosts(normalized.length > 0 ? normalized : MOCK_POSTS);
+    } catch {
+      setPosts(MOCK_POSTS);
+    } finally {
+      setLoading(false);
+    }
+  }, [clubId, isReal]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Suscripción en tiempo real
+  useEffect(() => {
+    if (!isReal) return;
+    const channel = supabase
+      .channel(`posts:${clubId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "posts",
+        filter: `club_id=eq.${clubId}`,
+      }, (payload) => {
+        const p = payload.new;
+        setPosts(prev => [{
+          id: p.id, type: p.type, author: "Nuevo post",
+          time: "Ahora", text: p.text, likes: 0,
+        }, ...prev]);
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [clubId, isReal]);
+
+  const createPost = async ({ authorId, text, type = "general" }) => {
+    if (!isReal) {
+      const mock = { id: Date.now(), type, author: "Yo", time: "Ahora", text, likes: 0 };
+      setPosts(p => [mock, ...p]);
+      return mock;
+    }
+    const { data, error } = await supabase
+      .from("posts")
+      .insert({ club_id: clubId, author_id: authorId, text, type })
+      .select().single();
+    if (error) throw error;
+    await load();
+    return data;
+  };
+
+  return { posts, loading, createPost, reload: load };
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "Ahora";
+  if (m < 60) return `Hace ${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `Hace ${h}h`;
+  return `Hace ${Math.floor(h / 24)}d`;
+}

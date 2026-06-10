@@ -178,6 +178,19 @@ returns uuid language sql stable as $$
   select club_id from profiles where id = auth.uid()
 $$;
 
+-- Eliminar políticas si ya existen (para poder re-ejecutar el script)
+drop policy if exists "club members see their club"   on clubs;
+drop policy if exists "own profile"                   on profiles;
+drop policy if exists "club players"                  on players;
+drop policy if exists "club teams"                    on teams;
+drop policy if exists "club matches"                  on matches;
+drop policy if exists "club attendance"               on attendance;
+drop policy if exists "own gym logs"                  on gym_logs;
+drop policy if exists "club payments"                 on payments;
+drop policy if exists "club posts"                    on posts;
+drop policy if exists "club post likes"               on post_likes;
+drop policy if exists "club lineups"                  on lineups;
+
 -- Políticas: solo ver/editar registros de tu club
 create policy "club members see their club"   on clubs      for select using (id = my_club_id());
 create policy "own profile"                   on profiles   for all    using (id = auth.uid());
