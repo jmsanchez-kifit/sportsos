@@ -1,3 +1,4 @@
+import { useState as useLocalState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeUp, scaleIn } from "../styles/motion";
 import { ss } from "../styles/tokens";
@@ -7,6 +8,284 @@ import SectionTitle from "../components/SectionTitle";
 import Stat from "../components/Stat";
 import Badge from "../components/Badge";
 import RankingView from "../components/RankingView";
+
+// ── Wellness data (Hooper Index estándar) ─────────────────────────────────
+// Cada campo: 1=muy malo/alto  5=excelente/bajo
+// Score total /25 — < 13: alerta  ≤ 9: lesionado candidato
+const WELLNESS_MOCK = [
+  { name:"Andrés Castro",   num:1,  pos:"Prop",         cat:"Primer Equipo", filled24h:true,  filled48h:true,
+    w24:{ sueño:4, fatiga:4, dolor:3, estres:4, animo:4 },
+    w48:{ sueño:5, fatiga:4, dolor:4, estres:4, animo:5 },
+    lesion:null },
+  { name:"Felipe Morales",  num:4,  pos:"Lock",         cat:"Primer Equipo", filled24h:true,  filled48h:true,
+    w24:{ sueño:2, fatiga:2, dolor:2, estres:3, animo:2 },
+    w48:{ sueño:2, fatiga:2, dolor:1, estres:3, animo:2 },
+    lesion:"Dolor isquiotibial derecho" },
+  { name:"Diego Saavedra",  num:7,  pos:"Flanker",      cat:"Primer Equipo", filled24h:true,  filled48h:false,
+    w24:{ sueño:3, fatiga:2, dolor:2, estres:2, animo:3 },
+    w48:null,
+    lesion:null },
+  { name:"Cristóbal Vega",  num:10, pos:"Apertura",     cat:"Primer Equipo", filled24h:false, filled48h:false,
+    w24:null, w48:null, lesion:null },
+  { name:"Matías Herrera",  num:2,  pos:"Hooker",       cat:"Primer Equipo", filled24h:true,  filled48h:true,
+    w24:{ sueño:5, fatiga:5, dolor:5, estres:5, animo:5 },
+    w48:{ sueño:5, fatiga:5, dolor:5, estres:5, animo:5 },
+    lesion:null },
+  { name:"Pablo Rodríguez", num:9,  pos:"Scrum Half",   cat:"Primer Equipo", filled24h:true,  filled48h:true,
+    w24:{ sueño:3, fatiga:3, dolor:3, estres:4, animo:3 },
+    w48:{ sueño:4, fatiga:3, dolor:3, estres:4, animo:4 },
+    lesion:null },
+  { name:"Luis Pérez",      num:15, pos:"Fullback",     cat:"Primer Equipo", filled24h:true,  filled48h:true,
+    w24:{ sueño:2, fatiga:1, dolor:2, estres:2, animo:2 },
+    w48:{ sueño:2, fatiga:1, dolor:1, estres:2, animo:2 },
+    lesion:"Esguince tobillo izquierdo — no entrena" },
+  { name:"Carlos Núñez",    num:11, pos:"Ala",          cat:"Reserva",       filled24h:true,  filled48h:true,
+    w24:{ sueño:3, fatiga:3, dolor:4, estres:3, animo:4 },
+    w48:{ sueño:4, fatiga:3, dolor:4, estres:3, animo:4 },
+    lesion:null },
+  { name:"Jorge Fuentes",   num:6,  pos:"Flanker",      cat:"Reserva",       filled24h:false, filled48h:false,
+    w24:null, w48:null, lesion:null },
+  { name:"Ricardo Álvarez", num:3,  pos:"Prop Abierto", cat:"Reserva",       filled24h:true,  filled48h:true,
+    w24:{ sueño:4, fatiga:4, dolor:4, estres:5, animo:4 },
+    w48:{ sueño:4, fatiga:5, dolor:4, estres:5, animo:5 },
+    lesion:null },
+];
+
+function scoreOf(w) {
+  if (!w) return null;
+  return w.sueño + w.fatiga + w.dolor + w.estres + w.animo;
+}
+function alertLevel(player) {
+  if (player.lesion) return "lesionado";
+  const s = scoreOf(player.w48) ?? scoreOf(player.w24);
+  if (s === null) return "pendiente";
+  if (s <= 10) return "alerta-roja";
+  if (s <= 14) return "alerta";
+  return "ok";
+}
+const ALERT_COLOR   = { ok:"#1FA04A", alerta:"#C98408", "alerta-roja":"#C0392B", lesionado:"#C0392B", pendiente:"#6B5A5A" };
+const ALERT_LABEL   = { ok:"OK", alerta:"Alerta", "alerta-roja":"Alerta roja", lesionado:"Lesionado", pendiente:"Sin datos" };
+const ALERT_ICON    = { ok:"🟢", alerta:"🟡", "alerta-roja":"🔴", lesionado:"🚑", pendiente:"⏳" };
+
+const W_LABELS = [
+  { key:"sueño",  icon:"😴", label:"Sueño",          lo:"Muy malo", hi:"Excelente" },
+  { key:"fatiga", icon:"⚡", label:"Fatiga",          lo:"Extrema",  hi:"Ninguna" },
+  { key:"dolor",  icon:"💢", label:"Dolor muscular",  lo:"Intenso",  hi:"Ninguno" },
+  { key:"estres", icon:"🧠", label:"Estrés",          lo:"Muy alto", hi:"Ninguno" },
+  { key:"animo",  icon:"😊", label:"Ánimo",           lo:"Muy bajo", hi:"Excelente" },
+];
+
+function WellnessModal({ onClose, sportColor }) {
+  const [demoValues, setDemoValues] = useLocalState({ sueño:3, fatiga:3, dolor:3, estres:3, animo:3 });
+  const [lesionText, setLesionText] = useLocalState("");
+  const score = Object.values(demoValues).reduce((a,b)=>a+b,0);
+  const status = score <= 10 ? "alerta-roja" : score <= 14 ? "alerta" : "ok";
+  const color  = ALERT_COLOR[status];
+
+  return (
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+      <motion.div initial={{opacity:0,y:24,scale:0.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:24,scale:0.97}}
+        transition={{type:"spring",stiffness:280,damping:26}}
+        style={{background:"var(--bg-glass-strong)",backdropFilter:"blur(28px)",WebkitBackdropFilter:"blur(28px)",border:"1px solid var(--border-mid)",borderRadius:"var(--r-xl)",padding:"28px",maxWidth:"440px",width:"100%",boxShadow:"var(--shadow-lg)",maxHeight:"90vh",overflowY:"auto"}}>
+
+        {/* Encabezado */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"20px"}}>
+          <div>
+            <div style={{fontWeight:800,fontSize:"16px",marginBottom:"4px"}}>📋 Cuestionario de Wellness</div>
+            <div style={{fontSize:"11px",color:"var(--text-3)"}}>Post partido · Indíca cómo te sentiste en las últimas 24 horas</div>
+          </div>
+          <button onClick={onClose} style={{background:"var(--bg-elev-2)",border:"1px solid var(--border-soft)",color:"var(--text-2)",borderRadius:"var(--r-sm)",padding:"4px 10px",cursor:"pointer",fontSize:"12px"}}>✕</button>
+        </div>
+
+        {/* Aviso de contexto */}
+        <div style={{background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.2)",borderRadius:"var(--r-md)",padding:"10px 14px",marginBottom:"20px",fontSize:"11px",color:"var(--text-2)",display:"flex",alignItems:"center",gap:"8px"}}>
+          <span>📣</span>
+          <span>Este cuestionario fue enviado <strong style={{color:"var(--text-1)"}}>automáticamente 24 h después</strong> del partido vs Cóndores Norte del sábado.</span>
+        </div>
+
+        {/* Sliders */}
+        {W_LABELS.map(wl => (
+          <div key={wl.key} style={{marginBottom:"20px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+              <div style={{fontWeight:600,fontSize:"13px"}}>{wl.icon} {wl.label}</div>
+              <div style={{fontWeight:800,fontSize:"15px",color:sportColor}}>{demoValues[wl.key]}<span style={{fontSize:"10px",color:"var(--text-3)",fontWeight:400}}>/5</span></div>
+            </div>
+            <input type="range" min={1} max={5} value={demoValues[wl.key]}
+              onChange={e=>setDemoValues(p=>({...p,[wl.key]:Number(e.target.value)}))}
+              style={{width:"100%",accentColor:sportColor,cursor:"pointer"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:"9px",color:"var(--text-4)",marginTop:"3px"}}>
+              <span>1 — {wl.lo}</span><span>5 — {wl.hi}</span>
+            </div>
+          </div>
+        ))}
+
+        {/* Molestia/lesión */}
+        <div style={{marginBottom:"20px"}}>
+          <div style={{fontWeight:600,fontSize:"13px",marginBottom:"8px"}}>🩹 ¿Tienes alguna molestia o dolor?</div>
+          <input value={lesionText} onChange={e=>setLesionText(e.target.value)} placeholder="Ej: Dolor en isquiotibial derecho... (opcional)"
+            style={{...ss.input,fontSize:"12px"}}/>
+        </div>
+
+        {/* Score resultado */}
+        <div style={{background:`${color}12`,border:`1px solid ${color}33`,borderRadius:"var(--r-md)",padding:"14px",marginBottom:"16px",display:"flex",alignItems:"center",gap:"12px"}}>
+          <div style={{width:"42px",height:"42px",borderRadius:"50%",background:`${color}22`,border:`2px solid ${color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>{ALERT_ICON[status]}</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:"14px",color}}>{ALERT_LABEL[status]}</div>
+            <div style={{fontSize:"11px",color:"var(--text-3)"}}>Score: {score}/25 — {score<=10?"Carga alta, revisar con médico":score<=14?"Monitorear en entrenamiento":"Apto para entrenar normalmente"}</div>
+          </div>
+        </div>
+
+        <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}}
+          style={{...ss.btn,width:"100%",background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,color:"#fff",padding:"12px",fontSize:"13px",fontWeight:700,boxShadow:`0 4px 14px ${sportColor}44`}}>
+          Enviar respuesta
+        </motion.button>
+        <div style={{textAlign:"center",fontSize:"10px",color:"var(--text-4)",marginTop:"8px"}}>Vista previa — en la app real lo llena el jugador desde su celular</div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function EstadoPlantelView({ sportColor }) {
+  const [showModal, setShowModal] = useLocalState(false);
+  const [selected, setSelected]   = useLocalState(null);
+
+  const withLevel = WELLNESS_MOCK.map(p => ({ ...p, level: alertLevel(p), score: scoreOf(p.w48) ?? scoreOf(p.w24) }));
+  const lesionados = withLevel.filter(p => p.level === "lesionado");
+  const alertaRoja = withLevel.filter(p => p.level === "alerta-roja");
+  const alertas    = withLevel.filter(p => p.level === "alerta");
+  const ok         = withLevel.filter(p => p.level === "ok");
+  const pendientes = withLevel.filter(p => p.level === "pendiente");
+
+  const totalFilled = withLevel.filter(p => p.filled24h || p.filled48h).length;
+  const avgScore    = (() => {
+    const scored = withLevel.filter(p => p.score !== null);
+    if (!scored.length) return 0;
+    return Math.round(scored.reduce((a,b)=>a+b.score,0)/scored.length);
+  })();
+  const teamStatus  = avgScore >= 19 ? "ok" : avgScore >= 14 ? "alerta" : "alerta-roja";
+
+  const PlayerCard = ({ p }) => (
+    <motion.div whileHover={{y:-2}} onClick={()=>setSelected(p===selected?null:p)} key={p.name}
+      style={{...ss.card,padding:"14px 16px",cursor:"pointer",border:`1px solid ${ALERT_COLOR[p.level]}33`,background:`${ALERT_COLOR[p.level]}08`,marginBottom:"8px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+        <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`${ALERT_COLOR[p.level]}22`,border:`2px solid ${ALERT_COLOR[p.level]}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:"12px",color:ALERT_COLOR[p.level],flexShrink:0}}>{p.num}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:"13px"}}>{p.name}</div>
+          <div style={{fontSize:"11px",color:"var(--text-3)"}}>{p.pos} · {p.cat}</div>
+          {p.lesion && <div style={{fontSize:"10px",color:ALERT_COLOR.lesionado,marginTop:"2px",fontWeight:600}}>🩹 {p.lesion}</div>}
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          <div style={{fontWeight:800,fontSize:"13px",color:ALERT_COLOR[p.level]}}>{ALERT_ICON[p.level]} {ALERT_LABEL[p.level]}</div>
+          {p.score!==null && <div style={{fontSize:"10px",color:"var(--text-3)"}}>{p.score}/25</div>}
+        </div>
+      </div>
+
+      {/* Detalle expandible */}
+      <AnimatePresence>
+        {selected===p && p.score!==null && (
+          <motion.div initial={{height:0,opacity:0}} animate={{height:"auto",opacity:1}} exit={{height:0,opacity:0}}
+            transition={{duration:0.25}} style={{overflow:"hidden"}}>
+            <div style={{marginTop:"14px",paddingTop:"12px",borderTop:"1px solid var(--border-soft)"}}>
+              <div style={{fontSize:"10px",color:"var(--text-3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:"10px"}}>Última respuesta ({p.filled48h?"48h":"24h"} post partido)</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"8px"}}>
+                {W_LABELS.map(wl=>{
+                  const val = (p.filled48h?p.w48:p.w24)?.[wl.key] ?? 0;
+                  const c   = val>=4?"#1FA04A":val>=3?"#C98408":"#C0392B";
+                  return (
+                    <div key={wl.key} style={{textAlign:"center"}}>
+                      <div style={{fontSize:"16px"}}>{wl.icon}</div>
+                      <div style={{fontWeight:800,fontSize:"14px",color:c}}>{val}</div>
+                      <div style={{fontSize:"9px",color:"var(--text-4)"}}>{wl.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+
+  return (
+    <div>
+      {/* ── Notificación automática ── */}
+      <motion.div {...fadeUp} style={{...ss.card,marginBottom:"20px",padding:"12px 16px",background:"rgba(192,57,43,0.06)",border:"1px solid rgba(192,57,43,0.2)",display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap"}}>
+        <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"rgba(192,57,43,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",flexShrink:0}}>📣</div>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontWeight:700,fontSize:"12px",marginBottom:"2px"}}>Cuestionario wellness enviado automáticamente</div>
+          <div style={{fontSize:"11px",color:"var(--text-3)"}}>Notificación push + WhatsApp enviada a 10 jugadores · <strong>Partido vs Cóndores Norte</strong> · sábado hace 2 días</div>
+        </div>
+        <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+          <div style={{textAlign:"center",padding:"6px 12px",borderRadius:"var(--r-sm)",background:"rgba(31,160,74,0.12)",border:"1px solid rgba(31,160,74,0.25)"}}>
+            <div style={{fontWeight:800,fontSize:"16px",color:"#1FA04A"}}>{totalFilled}</div>
+            <div style={{fontSize:"9px",color:"var(--text-3)"}}>respondieron</div>
+          </div>
+          <div style={{textAlign:"center",padding:"6px 12px",borderRadius:"var(--r-sm)",background:"rgba(201,132,8,0.12)",border:"1px solid rgba(201,132,8,0.25)"}}>
+            <div style={{fontWeight:800,fontSize:"16px",color:"#C98408"}}>{pendientes.length}</div>
+            <div style={{fontSize:"9px",color:"var(--text-3)"}}>pendientes</div>
+          </div>
+          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>setShowModal(true)}
+            style={{...ss.btn,background:"rgba(192,57,43,0.15)",color:"#C0392B",border:"1px solid rgba(192,57,43,0.3)",fontSize:"11px",padding:"6px 12px"}}>
+            Ver cuestionario
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* ── Estado general del equipo ── */}
+      <SectionTitle title="Estado del plantel" sub={`Post partido · ${withLevel.length} jugadores · Hooper Index`}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"10px",marginBottom:"24px"}}>
+        <Stat label="Estado general" value={avgScore+"/25"} sub={ALERT_LABEL[teamStatus]} color={ALERT_COLOR[teamStatus]} icon={ALERT_ICON[teamStatus]} delay={0}/>
+        <Stat label="Lesionados" value={lesionados.length} sub="No entrenan" color="#C0392B" icon="🚑" delay={0.05}/>
+        <Stat label="En alerta" value={alertaRoja.length+alertas.length} sub="Monitorear" color="#C98408" icon="⚠️" delay={0.1}/>
+        <Stat label="Aptos" value={ok.length} sub="Pueden entrenar" color="#1FA04A" icon="✅" delay={0.15}/>
+      </div>
+
+      {/* ── Zona de prioridad: lesionados + alertas ── */}
+      {(lesionados.length > 0 || alertaRoja.length > 0 || alertas.length > 0) && (
+        <motion.div {...fadeUp} style={{marginBottom:"24px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
+            <span style={{fontSize:"13px"}}>🚨</span>
+            <div style={{fontWeight:700,fontSize:"13px",color:"#C0392B"}}>Requieren atención</div>
+            <div style={{flex:1,height:"1px",background:"rgba(192,57,43,0.2)"}}/>
+          </div>
+          {[...lesionados,...alertaRoja,...alertas].map(p=><PlayerCard key={p.name} p={p}/>)}
+        </motion.div>
+      )}
+
+      {/* ── Pendientes de responder ── */}
+      {pendientes.length > 0 && (
+        <motion.div {...fadeUp} style={{marginBottom:"24px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
+            <span style={{fontSize:"13px"}}>⏳</span>
+            <div style={{fontWeight:700,fontSize:"13px",color:"var(--text-3)"}}>Sin respuesta ({pendientes.length})</div>
+            <div style={{flex:1,height:"1px",background:"var(--border-soft)"}}/>
+          </div>
+          {pendientes.map(p=><PlayerCard key={p.name} p={p}/>)}
+        </motion.div>
+      )}
+
+      {/* ── OK / Aptos ── */}
+      {ok.length > 0 && (
+        <motion.div {...fadeUp}>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
+            <span style={{fontSize:"13px"}}>✅</span>
+            <div style={{fontWeight:700,fontSize:"13px",color:"#1FA04A"}}>Aptos ({ok.length})</div>
+            <div style={{flex:1,height:"1px",background:"rgba(31,160,74,0.2)"}}/>
+          </div>
+          {ok.map(p=><PlayerCard key={p.name} p={p}/>)}
+        </motion.div>
+      )}
+
+      {/* Modal cuestionario */}
+      <AnimatePresence>
+        {showModal && <WellnessModal onClose={()=>setShowModal(false)} sportColor={sportColor}/>}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function PreparadorView({module, sp, showToast, sportColor, publishedPlan, setPublishedPlan, newExForm, setNewExForm, newEx, setNewEx, gymPlanExercises, setGymPlanExercises, rankTab, setRankTab, expandedDay, setExpandedDay, userCats=[], isDemo=true}) {
   const days = ["lunes","miercoles","viernes"];
@@ -101,19 +380,7 @@ export default function PreparadorView({module, sp, showToast, sportColor, publi
   if(module==="estadoplantel") return (
     <div>
       <CatsBanner/>
-      <SectionTitle title={`Estado del plantel — Semana ${GYM_PLAN.week}`} sub="Cumplimiento de sesiones prescritas"/>
-      <motion.div {...fadeUp} style={{...ss.card,padding:0,overflow:"hidden"}}>
-        <table style={{width:"100%",fontSize:"12px",borderCollapse:"collapse"}}>
-          <thead><tr>{["Jugador","Lunes","Miércoles","Viernes","Cumplimiento"].map(h=><th key={h} style={{textAlign:"left",color:"var(--text-3)",padding:"14px 12px",fontWeight:600,borderBottom:"1px solid var(--border-soft)",textTransform:"uppercase",letterSpacing:"0.05em",fontSize:"10px"}}>{h}</th>)}</tr></thead>
-          <tbody>{compliance.map((p,i)=>(
-            <motion.tr key={i} initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.3,delay:i*0.05}} style={{borderBottom:"1px solid var(--border-soft)"}}>
-              <td style={{padding:"12px",fontWeight:500}}>{p.name}</td>
-              {p.d.map((s,j)=><td key={j} style={{padding:"12px",textAlign:"center",fontSize:"18px"}}>{statusIcon(s)}</td>)}
-              <td style={{padding:"12px"}}><span style={{color:p.pct===100?"#22C55E":p.pct>=67?"#F59E0B":"#EF4444",fontWeight:700}}>{p.pct}% {p.pct===100?"🔥":p.pct>=67?"⚠️":"⏳"}</span></td>
-            </motion.tr>
-          ))}</tbody>
-        </table>
-      </motion.div>
+      <EstadoPlantelView sportColor={sportColor}/>
     </div>
   );
 
