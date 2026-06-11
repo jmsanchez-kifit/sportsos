@@ -168,7 +168,12 @@ export default function SportOS() {
       <AnimatePresence>
         {searchOpen&&<GlobalSearch players={players} posts={[]} sportColor={sportColor} role={role} modules={sportModules} onNavigate={(id)=>setModule(id)} onClose={()=>setSearchOpen(false)}/>}
       </AnimatePresence>
-      {screen==="app"&&<OnboardingTip sportColor={sportColor} onGoToMuro={()=>{setRole("entrenador");setModule("muro");}}/>}
+      {screen==="app"&&<OnboardingTip
+        sportColor={sportColor}
+        role={role}
+        userKey={currentUser?.email || "demo"}
+        onNavigate={(moduleId)=>setModule(moduleId)}
+      />}
       {whatsappModal&&<WhatsAppModal onClose={()=>setWhatsappModal(false)} team={club.name} rival={club.next.rival} date={club.next.dia}
         starters={SPORTS_CONFIG[sport].positions.slice(0,sp.teamSize).map((pos,i)=>({name:players[i]?players[i].name:"Jugador "+(i+1),pos}))}
         bench={[]}/>}
