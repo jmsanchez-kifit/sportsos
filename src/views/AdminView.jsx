@@ -8,9 +8,17 @@ import Stat from "../components/Stat";
 import Badge from "../components/Badge";
 import Semaforo from "../components/Semaforo";
 
-export default function AdminView({module, sport, sp, club, activeClubs, setActiveClubs, countryData, players, showToast, sportColor, payments=[], setPayments}) {
+const EMPTY_PLAYER = {name:"", number:"", cat:"", position:"", age:"", med:"verde", cuota:"ok"};
+
+export default function AdminView({module, sport, sp, club, activeClubs, setActiveClubs, countryData, players, addPlayer, updatePlayer, removePlayer, showToast, sportColor, payments=[], setPayments}) {
   const [primaryColor, setPrimaryColor] = useState("#1B4332");
   const [secondaryColor, setSecondaryColor] = useState("#FFD700");
+
+  // Estado para gestión de jugadores
+  const [playerForm, setPlayerForm] = useState(null); // null = cerrado | EMPTY_PLAYER = nuevo | {id,...} = editando
+  const [playerSaving, setPlayerSaving] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null); // id del jugador a borrar
   const [invRol, setInvRol] = useState("jugador");
   const [invLink, setInvLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -187,30 +195,167 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
     </div>
   );
 
-  if(module==="jugadores") return (
-    <div>
-      <SectionTitle title={`Plantel — ${sp.name} · ${players.length} jugadores`}/>
-      <motion.div {...fadeUp} style={{...ss.card,padding:0,overflow:"hidden"}}>
-        <table style={{width:"100%",fontSize:"12px",borderCollapse:"collapse"}}>
-          <thead><tr>{["Jugador","Cat.","Salud","Cuota","Edad"].map(h=><th key={h} style={{textAlign:"left",color:"var(--text-3)",padding:"14px 12px",fontWeight:600,borderBottom:"1px solid var(--border-soft)",textTransform:"uppercase",letterSpacing:"0.05em",fontSize:"10px"}}>{h}</th>)}</tr></thead>
-          <tbody>{players.slice(0,12).map((p,i)=>(
-            <motion.tr key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:i*0.04}} whileHover={{background:"var(--bg-elev-2)"}} style={{borderBottom:"1px solid var(--border-soft)"}}>
-              <td style={{padding:"12px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                  <div style={{width:"32px",height:"32px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}55`}}>{p.name.split(" ").map(n=>n[0]).join("")}</div>
-                  <span style={{fontWeight:500}}>{p.name}</span>
-                </div>
-              </td>
-              <td>{p.cat}</td>
-              <td><Semaforo status={p.med}/></td>
-              <td><Badge color={p.cuota==="ok"?"#22C55E":"#EF4444"}>{p.cuota==="ok"?"Al día":"Vencida"}</Badge></td>
-              <td>{p.age}</td>
-            </motion.tr>
-          ))}</tbody>
-        </table>
-      </motion.div>
-    </div>
-  );
+  if(module==="jugadores") {
+    const filtered = players.filter(p => !playerSearch || p.name?.toLowerCase().includes(playerSearch.toLowerCase()));
+
+    const savePlayer = async () => {
+      if (!playerForm?.name?.trim()) { showToast("El nombre es obligatorio","warning"); return; }
+      setPlayerSaving(true);
+      try {
+        if (playerForm.id) {
+          await updatePlayer(playerForm.id, playerForm);
+          showToast("Jugador actualizado ✅","success");
+        } else {
+          await addPlayer(playerForm);
+          showToast("Jugador agregado ✅","success");
+        }
+        setPlayerForm(null);
+      } catch(e) { showToast("Error al guardar: "+e.message,"error"); }
+      finally { setPlayerSaving(false); }
+    };
+
+    const doDelete = async (id) => {
+      try {
+        await removePlayer(id);
+        showToast("Jugador eliminado","success");
+      } catch(e) { showToast("Error: "+e.message,"error"); }
+      setConfirmDelete(null);
+    };
+
+    return (
+      <div>
+        <SectionTitle
+          title={`Plantel — ${sp.name} · ${players.length} jugadores`}
+          action={
+            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+              onClick={()=>setPlayerForm({...EMPTY_PLAYER})}
+              style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,color:"#fff",fontSize:"12px",boxShadow:`0 4px 14px ${sportColor}44`}}>
+              + Agregar jugador
+            </motion.button>
+          }
+        />
+
+        {/* Formulario agregar/editar */}
+        {playerForm && (
+          <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} style={{...ss.card,marginBottom:"20px",border:`1px solid ${sportColor}44`,background:`linear-gradient(135deg,${sportColor}08,transparent)`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
+              <div style={{fontWeight:700,fontSize:"14px"}}>{playerForm.id ? "✏️ Editar jugador" : "➕ Nuevo jugador"}</div>
+              <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}} onClick={()=>setPlayerForm(null)}
+                style={{...ss.btn,background:"transparent",color:"var(--text-3)",padding:"2px 8px",fontSize:"16px"}}>✕</motion.button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"12px"}}>
+              <div>
+                <div style={ss.label}>Nombre completo *</div>
+                <input value={playerForm.name||""} onChange={e=>setPlayerForm(p=>({...p,name:e.target.value}))} placeholder="Ej: Carlos Rodríguez" style={ss.input}/>
+              </div>
+              <div>
+                <div style={ss.label}>Número</div>
+                <input type="number" min="1" max="99" value={playerForm.number||""} onChange={e=>setPlayerForm(p=>({...p,number:e.target.value}))} placeholder="Ej: 10" style={ss.input}/>
+              </div>
+              <div>
+                <div style={ss.label}>Categoría</div>
+                <select value={playerForm.cat||""} onChange={e=>setPlayerForm(p=>({...p,cat:e.target.value}))} style={{...ss.input,cursor:"pointer"}}>
+                  <option value="">Sin categoría</option>
+                  {sp.categories.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={ss.label}>Posición</div>
+                <select value={playerForm.position||""} onChange={e=>setPlayerForm(p=>({...p,position:e.target.value}))} style={{...ss.input,cursor:"pointer"}}>
+                  <option value="">Sin posición</option>
+                  {(sp.positions||[]).map(pos=><option key={pos} value={pos}>{pos}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={ss.label}>Edad</div>
+                <input type="number" min="10" max="60" value={playerForm.age||""} onChange={e=>setPlayerForm(p=>({...p,age:e.target.value}))} placeholder="Ej: 24" style={ss.input}/>
+              </div>
+              <div>
+                <div style={ss.label}>Estado médico</div>
+                <select value={playerForm.med||"verde"} onChange={e=>setPlayerForm(p=>({...p,med:e.target.value}))} style={{...ss.input,cursor:"pointer"}}>
+                  <option value="verde">🟢 Apto</option>
+                  <option value="amarillo">🟡 Alerta</option>
+                  <option value="rojo">🔴 No apto</option>
+                </select>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:"10px",justifyContent:"flex-end"}}>
+              <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={()=>setPlayerForm(null)}
+                style={{...ss.btn,background:"var(--bg-elev-2)",color:"var(--text-2)",border:"1px solid var(--border-soft)"}}>
+                Cancelar
+              </motion.button>
+              <motion.button disabled={playerSaving} whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={savePlayer}
+                style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,color:"#fff",boxShadow:`0 4px 14px ${sportColor}44`,opacity:playerSaving?0.6:1}}>
+                {playerSaving ? "Guardando..." : (playerForm.id ? "Guardar cambios" : "Agregar al plantel")}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Modal confirmar borrado */}
+        {confirmDelete && (
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
+            <motion.div initial={{scale:0.9}} animate={{scale:1}} style={{...ss.card,maxWidth:"340px",width:"90%",textAlign:"center"}}>
+              <div style={{fontSize:"32px",marginBottom:"12px"}}>⚠️</div>
+              <div style={{fontWeight:700,fontSize:"15px",marginBottom:"8px"}}>¿Eliminar jugador?</div>
+              <div style={{color:"var(--text-2)",fontSize:"13px",marginBottom:"20px"}}>Esta acción no se puede deshacer.</div>
+              <div style={{display:"flex",gap:"10px",justifyContent:"center"}}>
+                <motion.button whileTap={{scale:0.95}} onClick={()=>setConfirmDelete(null)}
+                  style={{...ss.btn,background:"var(--bg-elev-2)",color:"var(--text-2)",border:"1px solid var(--border-soft)"}}>Cancelar</motion.button>
+                <motion.button whileTap={{scale:0.95}} onClick={()=>doDelete(confirmDelete)}
+                  style={{...ss.btn,background:"linear-gradient(135deg,#EF4444,#DC2626)",color:"#fff",boxShadow:"0 4px 14px rgba(239,68,68,0.4)"}}>Eliminar</motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Buscador */}
+        <div style={{marginBottom:"14px"}}>
+          <input value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)} placeholder="🔍 Buscar jugador..." style={{...ss.input,width:"100%"}}/>
+        </div>
+
+        {/* Tabla de jugadores */}
+        <motion.div {...fadeUp} style={{...ss.card,padding:0,overflow:"hidden"}}>
+          <table style={{width:"100%",fontSize:"12px",borderCollapse:"collapse"}}>
+            <thead><tr>{["Jugador","Cat.","Pos.","Salud","Cuota","Edad",""].map(h=><th key={h} style={{textAlign:"left",color:"var(--text-3)",padding:"14px 12px",fontWeight:600,borderBottom:"1px solid var(--border-soft)",textTransform:"uppercase",letterSpacing:"0.05em",fontSize:"10px"}}>{h}</th>)}</tr></thead>
+            <tbody>{filtered.map((p,i)=>(
+              <motion.tr key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:i*0.03}} whileHover={{background:"var(--bg-elev-2)"}} style={{borderBottom:"1px solid var(--border-soft)"}}>
+                <td style={{padding:"12px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                    <div style={{width:"32px",height:"32px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}55`}}>{(p.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2)}</div>
+                    <div>
+                      <div style={{fontWeight:600}}>{p.name}</div>
+                      {p.number && <div style={{fontSize:"10px",color:"var(--text-3)"}}>#{p.number}</div>}
+                    </div>
+                  </div>
+                </td>
+                <td style={{color:"var(--text-2)"}}>{p.cat||"—"}</td>
+                <td style={{color:"var(--text-2)",fontSize:"11px"}}>{p.position||"—"}</td>
+                <td><Semaforo status={p.med}/></td>
+                <td><Badge color={p.cuota==="ok"?"#22C55E":"#EF4444"}>{p.cuota==="ok"?"Al día":"Vencida"}</Badge></td>
+                <td style={{color:"var(--text-2)"}}>{p.age||"—"}</td>
+                <td style={{padding:"12px"}}>
+                  <div style={{display:"flex",gap:"6px"}}>
+                    <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}}
+                      onClick={()=>setPlayerForm({...p})}
+                      style={{...ss.btn,background:"transparent",color:sportColor,border:`1px solid ${sportColor}44`,padding:"4px 10px",fontSize:"11px"}}>✏️</motion.button>
+                    <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}}
+                      onClick={()=>setConfirmDelete(p.id)}
+                      style={{...ss.btn,background:"transparent",color:"#EF4444",border:"1px solid #EF444444",padding:"4px 10px",fontSize:"11px"}}>🗑️</motion.button>
+                  </div>
+                </td>
+              </motion.tr>
+            ))}</tbody>
+          </table>
+          {filtered.length === 0 && (
+            <div style={{textAlign:"center",padding:"30px",color:"var(--text-3)",fontSize:"13px"}}>
+              {playerSearch ? `Sin resultados para "${playerSearch}"` : "No hay jugadores aún"}
+            </div>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
 
   if(module==="finanzas") {
     const totalRecaudado = payments.reduce((s,p)=>s+p.amount,0);
