@@ -14,7 +14,7 @@ const ROL_INFO = {
   jugador:     { label:"Jugador",           icon:"👤", color:"#22C55E" },
 };
 
-export default function LoginScreen({ onLogin, onDemo }) {
+export default function LoginScreen({ onLogin, onDemo, onRegister }) {
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -180,7 +180,13 @@ export default function LoginScreen({ onLogin, onDemo }) {
               {loading ? "⏳ Verificando..." : "Entrar →"}
             </motion.button>
 
-            <div style={{textAlign:"center"}}>
+            <div style={{display:"flex",gap:"8px",flexDirection:"column"}}>
+              {onRegister && (
+                <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}} onClick={onRegister}
+                  style={{...ss.btn,background:"linear-gradient(135deg,rgba(168,85,247,0.15),rgba(59,130,246,0.1))",color:"#C084FC",border:"1px solid rgba(168,85,247,0.3)",fontSize:"12px",padding:"9px 20px",width:"100%"}}>
+                  🏆 Crear mi club gratis
+                </motion.button>
+              )}
               <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}} onClick={onDemo}
                 style={{...ss.btn,background:"transparent",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"12px",padding:"9px 20px",width:"100%"}}>
                 🎮 Entrar en Modo Demo (sin cuenta)

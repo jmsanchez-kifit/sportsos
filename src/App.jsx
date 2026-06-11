@@ -16,6 +16,8 @@ import WhatsAppModal from "./components/WhatsAppModal";
 import OnboardingScreen from "./views/OnboardingScreen";
 import InvitationScreen from "./views/InvitationScreen";
 import LoginScreen from "./views/LoginScreen";
+import LandingPage from "./views/LandingPage";
+import ClubOnboarding from "./views/ClubOnboarding";
 import SuperAdminView from "./views/SuperAdminView";
 import AdminView from "./views/AdminView";
 import EntrenadorView from "./views/EntrenadorView";
@@ -41,7 +43,7 @@ const MODULE_MAP = {
 const ROL_ICONS = {superadmin:"⚡",admin:"🏢",entrenador:"📋",preparador:"💪",jugador:"👤"};
 
 export default function SportOS() {
-  const [screen,setScreen]               = useState("login");
+  const [screen,setScreen]               = useState("landing");
   const [sport,setSport]                 = useState("rugby");
   const [country,setCountry]             = useState("CL");
   const [role,setRole]                   = useState("entrenador");
@@ -92,6 +94,27 @@ export default function SportOS() {
   const urlParams = new URLSearchParams(window.location.search);
   const isInvitation = urlParams.has("token") && urlParams.has("rol");
 
+  // Landing pública
+  if(screen==="landing") return (
+    <LandingPage
+      onLogin={()=>setScreen("login")}
+      onDemo={()=>setScreen("onboarding")}
+    />
+  );
+
+  // Onboarding nuevo club
+  if(screen==="club-onboarding") return (
+    <ClubOnboarding
+      onComplete={(usuario)=>{
+        if(!usuario) { setScreen("login"); return; }
+        setCurrentUser({nombre:usuario.nombre, email:usuario.email, rol:usuario.rol, club:usuario.club, club_id:usuario.club_id, cats:usuario.cats});
+        setRole(usuario.rol);
+        setSport(usuario.sport||"rugby");
+        setScreen("app");
+      }}
+    />
+  );
+
   if(isInvitation) return (
     <InvitationScreen
       params={urlParams}
@@ -107,12 +130,13 @@ export default function SportOS() {
   if(screen==="login") return (
     <LoginScreen
       onLogin={(user)=>{
-        setCurrentUser({nombre:user.nombre, email:user.email, rol:user.rol, club:user.club, cats:user.cats});
+        setCurrentUser({nombre:user.nombre, email:user.email, rol:user.rol, club:user.club, club_id:user.club_id||null, cats:user.cats});
         setRole(user.rol);
         setSport(user.sport||"rugby");
         setScreen("app");
       }}
       onDemo={()=>setScreen("onboarding")}
+      onRegister={()=>setScreen("club-onboarding")}
     />
   );
 
