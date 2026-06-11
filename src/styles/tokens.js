@@ -3,6 +3,8 @@ export const ss = {
   topbar:{display:"flex",alignItems:"center",gap:"10px",padding:"0 18px",height:"60px",background:"var(--bg-glass)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid var(--border-soft)",flexShrink:0,position:"sticky",top:0,zIndex:50},
   sidebar:{width:"220px",background:"var(--bg-glass)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderRight:"1px solid var(--border-soft)",display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto",position:"relative",zIndex:10},
   main:{flex:1,overflowY:"auto",padding:"28px 32px",scrollbarWidth:"thin",scrollbarColor:"var(--border-mid) transparent",position:"relative",zIndex:1},
+  // Clases de ayuda para responsive (se usan como className)
+  tableScroll:{overflowX:"auto",WebkitOverflowScrolling:"touch"},
   card:{background:"var(--bg-glass)",backdropFilter:"blur(16px) saturate(140%)",WebkitBackdropFilter:"blur(16px) saturate(140%)",border:"1px solid var(--border-soft)",borderRadius:"var(--r-lg)",padding:"18px",transition:"all 0.25s var(--ease-out)",position:"relative",overflow:"hidden"},
   cardHover:{transition:"all 0.3s var(--ease-out)"},
   muted:{color:"var(--text-2)",fontSize:"12px",letterSpacing:"0.01em"},

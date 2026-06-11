@@ -315,7 +315,7 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
         </div>
 
         {/* Tabla de jugadores */}
-        <motion.div {...fadeUp} style={{...ss.card,padding:0,overflow:"hidden"}}>
+        <motion.div {...fadeUp} className="table-scroll" style={{...ss.card,padding:0,overflow:"hidden"}}>
           <table style={{width:"100%",fontSize:"12px",borderCollapse:"collapse"}}>
             <thead><tr>{["Jugador","Cat.","Pos.","Salud","Cuota","Edad",""].map(h=><th key={h} style={{textAlign:"left",color:"var(--text-3)",padding:"14px 12px",fontWeight:600,borderBottom:"1px solid var(--border-soft)",textTransform:"uppercase",letterSpacing:"0.05em",fontSize:"10px"}}>{h}</th>)}</tr></thead>
             <tbody>{filtered.map((p,i)=>(

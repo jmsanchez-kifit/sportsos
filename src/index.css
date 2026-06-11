@@ -289,3 +289,103 @@ body {
   }
   .aurora-blob { animation: none !important; }
 }
+
+/* ══════════════ RESPONSIVE MOBILE ══════════════ */
+
+/* Sidebar se oculta en mobile — navegación va abajo */
+@media (max-width: 768px) {
+  body { overflow: auto; }
+  #root { overflow: auto; }
+
+  /* Layout principal */
+  .sportos-wrap {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  /* Topbar compacto */
+  .sportos-topbar {
+    padding: 0 12px !important;
+    height: 52px !important;
+    gap: 6px !important;
+  }
+  /* Ocultar selector de categoría y bandera en mobile */
+  .sportos-topbar .hide-mobile { display: none !important; }
+
+  /* Sidebar se convierte en nav inferior */
+  .sportos-sidebar {
+    width: 100% !important;
+    height: 60px !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border-soft) !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 8px !important;
+    order: 99 !important;
+    align-items: center !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 50 !important;
+    flex-shrink: 0 !important;
+  }
+  /* Ocultar bloques extra del sidebar en mobile */
+  .sportos-sidebar .sidebar-profile,
+  .sportos-sidebar .sidebar-plan,
+  .sportos-sidebar .sidebar-roles { display: none !important; }
+  /* Módulos en fila horizontal */
+  .sportos-sidebar .sidebar-modules {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    flex: 1 !important;
+    overflow-x: auto !important;
+    gap: 2px !important;
+    scrollbar-width: none !important;
+  }
+  .sportos-sidebar .sidebar-modules::-webkit-scrollbar { display: none; }
+  .sportos-sidebar .sidebar-modules button {
+    flex-shrink: 0 !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 6px 10px !important;
+    font-size: 9px !important;
+    min-width: 56px !important;
+    height: 52px !important;
+    border-radius: var(--r-sm) !important;
+    white-space: nowrap !important;
+  }
+
+  /* Body flex: column para que la nav inferior quede al fondo */
+  .sportos-body {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  /* Main area */
+  .sportos-main {
+    padding: 16px 14px !important;
+    overflow-y: visible !important;
+  }
+
+  /* Tablas con scroll horizontal */
+  table { min-width: 480px; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Grids adaptables */
+  .grid-3 { grid-template-columns: 1fr 1fr !important; }
+  .grid-2 { grid-template-columns: 1fr !important; }
+
+  /* Banner demo */
+  .sportos-demo-banner { flex-direction: column !important; gap: 6px !important; padding: 8px 12px !important; }
+  .sportos-demo-banner .roles-row { flex-wrap: wrap !important; gap: 4px !important; }
+}
+
+@media (max-width: 480px) {
+  .sportos-topbar { padding: 0 8px !important; }
+  .sportos-main   { padding: 12px 10px !important; }
+  .grid-3         { grid-template-columns: 1fr !important; }
+}
