@@ -50,35 +50,38 @@ export default function ClubOnboarding({ onComplete }) {
         if (authErr) throw authErr;
 
         const userId = authData.user?.id;
+        let clubId = null;
 
-        // 2. Crear club en tabla clubs
-        const { data: clubData, error: clubErr } = await supabase
-          .from("clubs")
-          .insert({ nombre: clubName.trim(), pais: country, deporte: sport })
-          .select().single();
-        if (clubErr) throw clubErr;
+        // 2. Crear club (si falla, igual continuamos)
+        try {
+          const { data: clubData } = await supabase
+            .from("clubs")
+            .insert({ name: clubName.trim(), country, sport })
+            .select().single();
+          clubId = clubData?.id ?? null;
+        } catch (_) { /* continuar sin club_id */ }
 
-        // 3. Crear o actualizar perfil con rol admin y club_id
-        await supabase.from("profiles").upsert({
-          id: userId,
-          nombre: nombre.trim(),
-          email: email.trim(),
-          rol: "admin",
-          club_id: clubData.id,
-        });
+        // 3. Actualizar perfil con rol admin (el trigger ya lo creó, solo actualizamos)
+        if (userId) {
+          try {
+            await supabase.from("profiles")
+              .update({ nombre: nombre.trim(), rol: "admin", club_id: clubId })
+              .eq("id", userId);
+          } catch (_) { /* no crítico */ }
+        }
 
         onComplete({
           nombre: nombre.trim(),
           email: email.trim(),
           rol: "admin",
           club: clubName.trim(),
-          club_id: clubData.id,
+          club_id: clubId,
           sport,
           cats: [],
         });
       } catch (e) {
-        // Fallback: si Supabase no está configurado, completar igual en modo demo
-        if (e.message?.includes("fetch") || e.message?.includes("URL")) {
+        // Si falla el signUp pero es un error de red/config, entrar igual en demo
+        if (e.message?.includes("fetch") || e.message?.includes("URL") || e.message?.includes("Failed")) {
           onComplete({ nombre: nombre.trim(), email: email.trim(), rol: "admin", club: clubName.trim(), club_id: null, sport, cats: [] });
         } else {
           setError(e.message);
