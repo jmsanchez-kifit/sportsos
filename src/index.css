@@ -4,42 +4,42 @@
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* Surfaces */
-  --bg-base:        #040712;
-  --bg-elev-1:      rgba(255, 255, 255, 0.025);
-  --bg-elev-2:      rgba(255, 255, 255, 0.045);
-  --bg-elev-3:      rgba(255, 255, 255, 0.07);
-  --bg-glass:       rgba(13, 18, 33, 0.55);
-  --bg-glass-strong:rgba(13, 18, 33, 0.78);
+  /* Surfaces — base negro cálido, sin azul */
+  --bg-base:        #0A0808;
+  --bg-elev-1:      rgba(255, 255, 255, 0.020);
+  --bg-elev-2:      rgba(255, 255, 255, 0.038);
+  --bg-elev-3:      rgba(255, 255, 255, 0.062);
+  --bg-glass:       rgba(20, 12, 12, 0.62);
+  --bg-glass-strong:rgba(20, 12, 12, 0.84);
 
-  /* Borders */
-  --border-soft:    rgba(255, 255, 255, 0.06);
-  --border-mid:     rgba(255, 255, 255, 0.10);
-  --border-strong:  rgba(255, 255, 255, 0.18);
+  /* Borders — tinte cálido sutil */
+  --border-soft:    rgba(255, 200, 200, 0.055);
+  --border-mid:     rgba(255, 200, 200, 0.095);
+  --border-strong:  rgba(255, 200, 200, 0.16);
 
-  /* Text */
-  --text-1:         #F1F5FF;
-  --text-2:         #A8B3CF;
-  --text-3:         #6B7896;
-  --text-4:         #455069;
+  /* Text — blanco cálido, no azulado */
+  --text-1:         #F0EDED;
+  --text-2:         #A89898;
+  --text-3:         #6B5A5A;
+  --text-4:         #433535;
 
-  /* Sport palette (semantic) */
-  --sport-rugby:        #22C55E;
-  --sport-rugby-soft:   rgba(34, 197, 94, 0.18);
-  --sport-futbol:       #06B6D4;
-  --sport-futbol-soft:  rgba(6, 182, 212, 0.18);
-  --sport-handball:     #F59E0B;
-  --sport-handball-soft:rgba(245, 158, 11, 0.18);
-  --sport-basketball:   #EF4444;
-  --sport-basketball-soft:rgba(239, 68, 68, 0.18);
-  --sport-hockey:       #A855F7;
-  --sport-hockey-soft:  rgba(168, 85, 247, 0.18);
+  /* Sport palette — más apagados/mate */
+  --sport-rugby:        #1FA04A;
+  --sport-rugby-soft:   rgba(31, 160, 74, 0.16);
+  --sport-futbol:       #0896B0;
+  --sport-futbol-soft:  rgba(8, 150, 176, 0.16);
+  --sport-handball:     #C98408;
+  --sport-handball-soft:rgba(201, 132, 8, 0.16);
+  --sport-basketball:   #C0392B;
+  --sport-basketball-soft:rgba(192, 57, 43, 0.16);
+  --sport-hockey:       #8040CC;
+  --sport-hockey-soft:  rgba(128, 64, 204, 0.16);
 
-  /* Aurora accents */
-  --aurora-1: #6E5BFF;
-  --aurora-2: #21D4FD;
-  --aurora-3: #B967FF;
-  --aurora-4: #FF6BD9;
+  /* Aurora — tonos rojo y granate apagados */
+  --aurora-1: #8B1A1A;
+  --aurora-2: #C0392B;
+  --aurora-3: #4A0808;
+  --aurora-4: #9B2335;
 
   /* Radius & shadows */
   --r-sm: 8px;
@@ -100,8 +100,8 @@ body {
 .aurora-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.45;
+  filter: blur(110px);
+  opacity: 0.28;
   mix-blend-mode: screen;
   will-change: transform, opacity;
 }
@@ -175,7 +175,7 @@ body {
 
 /* ══════════════ SELECTION ══════════════ */
 ::selection {
-  background: rgba(110,91,255,0.4);
+  background: rgba(192,57,43,0.45);
   color: #fff;
 }
 
@@ -274,11 +274,11 @@ body {
 }
 
 /* Sport accent: applies glow + border tint to descendants */
-[data-sport="rugby"]      { --sport-current:#22C55E; --sport-current-soft:rgba(34,197,94,0.18);  --sport-current-2:#4ADE80; }
-[data-sport="futbol"]     { --sport-current:#06B6D4; --sport-current-soft:rgba(6,182,212,0.18);  --sport-current-2:#22D3EE; }
-[data-sport="handball"]   { --sport-current:#F59E0B; --sport-current-soft:rgba(245,158,11,0.18); --sport-current-2:#FBBF24; }
-[data-sport="basketball"] { --sport-current:#EF4444; --sport-current-soft:rgba(239,68,68,0.18);  --sport-current-2:#F87171; }
-[data-sport="hockey"]     { --sport-current:#A855F7; --sport-current-soft:rgba(168,85,247,0.18); --sport-current-2:#C084FC; }
+[data-sport="rugby"]      { --sport-current:#1FA04A; --sport-current-soft:rgba(31,160,74,0.16);   --sport-current-2:#2DC05A; }
+[data-sport="futbol"]     { --sport-current:#0896B0; --sport-current-soft:rgba(8,150,176,0.16);   --sport-current-2:#10AEC8; }
+[data-sport="handball"]   { --sport-current:#C98408; --sport-current-soft:rgba(201,132,8,0.16);   --sport-current-2:#E09A10; }
+[data-sport="basketball"] { --sport-current:#C0392B; --sport-current-soft:rgba(192,57,43,0.16);   --sport-current-2:#D94035; }
+[data-sport="hockey"]     { --sport-current:#8040CC; --sport-current-soft:rgba(128,64,204,0.16);  --sport-current-2:#9B55E0; }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
