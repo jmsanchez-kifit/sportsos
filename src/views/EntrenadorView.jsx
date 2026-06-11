@@ -132,25 +132,201 @@ function NominaDND({sport, sp, club, players, sportColor, showToast}) {
   );
 }
 
+/* ── Constantes del Muro ─────────────────────────────────────── */
+const REACTIONS = ["🔥","💪","👏","😅","❤️","🏆"];
+const POST_TYPES = [
+  {id:"general",   icon:"💬", label:"Mensaje",  color:"#6B7896"},
+  {id:"resultado", icon:"🏆", label:"Resultado", color:"#22C55E"},
+  {id:"insignia",  icon:"🎖️", label:"Insignia",  color:"#F59E0B"},
+  {id:"reto",      icon:"⚡", label:"Reto",      color:"#A855F7"},
+  {id:"admin",     icon:"📢", label:"Aviso",     color:"#3B82F6"},
+];
+
 /* ── MuroInput ─────────────────────────────────────────── */
-function MuroInput({sportColor, onPublish}) {
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+function MuroInput({sportColor, onPublish, players=[]}) {
+  const [text, setText]       = useState("");
+  const [type, setType]       = useState("general");
+  const [expanded, setExpanded] = useState(false);
+  // campos extra según tipo
+  const [honorado, setHonorado] = useState(""); // para insignia
+  const [meta, setMeta]         = useState("");  // para reto
+  const [busy, setBusy]         = useState(false);
+
+  const pt = POST_TYPES.find(p=>p.id===type);
+
   const submit = async () => {
     if (!text.trim()) return;
+    let fullText = text.trim();
+    if (type==="insignia" && honorado) fullText = `🎖️ ${honorado}: ${fullText}`;
+    if (type==="reto" && meta) fullText = `⚡ META: ${meta} — ${fullText}`;
     setBusy(true);
-    await onPublish(text.trim());
-    setText("");
+    await onPublish(fullText, type);
+    setText(""); setHonorado(""); setMeta(""); setExpanded(false);
     setBusy(false);
   };
+
   return (
-    <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",padding:"12px",display:"flex",gap:"10px",alignItems:"center"}}>
-      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:800,color:sportColor,flexShrink:0,border:`1.5px solid ${sportColor}55`}}>E</div>
-      <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Publicar actualización al equipo..." style={{...ss.input,flex:1}}/>
-      <motion.button disabled={busy||!text.trim()} whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={submit}
-        style={{...ss.btn,background:`linear-gradient(135deg,${sportColor},${sportColor}dd)`,color:"#fff",boxShadow:`0 4px 12px ${sportColor}55`,opacity:busy||!text.trim()?0.5:1}}>
-        {busy?"...":"Publicar"}
-      </motion.button>
+    <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px",border:`1px solid ${pt.color}33`,background:`linear-gradient(135deg,${pt.color}06,var(--bg-glass))`}}>
+      {/* Selector de tipo */}
+      <div style={{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"}}>
+        {POST_TYPES.map(p=>(
+          <motion.button key={p.id} whileTap={{scale:0.93}} onClick={()=>setType(p.id)}
+            style={{padding:"4px 10px",borderRadius:"99px",border:`1px solid ${type===p.id?p.color+"66":"var(--border-soft)"}`,background:type===p.id?`${p.color}18`:"transparent",color:type===p.id?p.color:"var(--text-3)",fontSize:"11px",fontWeight:type===p.id?700:400,cursor:"pointer",display:"flex",alignItems:"center",gap:"4px",transition:"all 0.15s"}}>
+            {p.icon} {p.label}
+          </motion.button>
+        ))}
+      </div>
+
+      <div style={{display:"flex",gap:"10px",alignItems:"flex-start"}}>
+        <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${pt.color}44,${pt.color}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",flexShrink:0,border:`1.5px solid ${pt.color}55`}}>{pt.icon}</div>
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:"8px"}}>
+          {/* Campo jugador para insignia */}
+          {type==="insignia" && (
+            <select value={honorado} onChange={e=>setHonorado(e.target.value)} style={{...ss.input,fontSize:"12px"}}>
+              <option value="">¿A quién le das la insignia?</option>
+              {players.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          )}
+          {/* Meta para reto */}
+          {type==="reto" && (
+            <input value={meta} onChange={e=>setMeta(e.target.value)} placeholder="Meta del reto (ej: 100kg press banca)" style={{...ss.input,fontSize:"12px"}}/>
+          )}
+          <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}
+            placeholder={{general:"Escribe un mensaje al equipo...",resultado:"Cuenta cómo salió el partido...",insignia:"Describe por qué merece esta insignia...",reto:"Describe el reto...",admin:"Aviso importante para el club..."}[type]}
+            style={{...ss.input}}/>
+        </div>
+        <motion.button disabled={busy||!text.trim()} whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={submit}
+          style={{...ss.btn,background:`linear-gradient(135deg,${pt.color},${pt.color}cc)`,color:"#fff",boxShadow:`0 4px 12px ${pt.color}44`,opacity:busy||!text.trim()?0.5:1,flexShrink:0}}>
+          {busy?"...":"Publicar"}
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── PostCard ─────────────────────────────────────────── */
+function PostCard({post, sportColor, onReact, reactions={}, postLikes, setPostLikes}) {
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments]         = useState(post.comments||[]);
+  const [newComment, setNewComment]     = useState("");
+
+  const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#3B82F6","advertencia":"#EF4444","insignia":"#F59E0B","reto":"#A855F7","general":"#6B7896"};
+  const color = postColors[post.type] || "#6B7280";
+
+  const addComment = () => {
+    if (!newComment.trim()) return;
+    const c = {id:Date.now(), author:"Yo", text:newComment.trim(), time:"Ahora"};
+    setComments(prev=>[...prev,c]);
+    setNewComment("");
+  };
+
+  const myReactions = reactions[post.id] || {};
+  const totalLikes  = postLikes[post.id] || post.likes || 0;
+
+  // Detectar si es insignia o reto para render especial
+  const isInsignia = post.type==="insignia";
+  const isReto     = post.type==="reto";
+
+  return (
+    <motion.div {...fadeUp} whileHover={{y:-2}} style={{...ss.card,marginBottom:"12px",borderLeft:`3px solid ${color}`,overflow:"visible"}}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+          <div style={{width:"30px",height:"30px",borderRadius:"50%",background:`linear-gradient(135deg,${color}44,${color}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:800,color,border:`1.5px solid ${color}44`}}>
+            {(post.author||"?")[0].toUpperCase()}
+          </div>
+          <div>
+            <span style={{fontWeight:600,fontSize:"13px"}}>{post.author}</span>
+            <div style={{display:"flex",alignItems:"center",gap:"6px",marginTop:"2px"}}>
+              <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"99px",background:`${color}18`,color,fontWeight:600,border:`1px solid ${color}33`}}>
+                {POST_TYPES.find(p=>p.id===post.type)?.icon} {POST_TYPES.find(p=>p.id===post.type)?.label||post.type}
+              </span>
+            </div>
+          </div>
+        </div>
+        <span style={{fontSize:"11px",color:"var(--text-3)"}}>{post.time}</span>
+      </div>
+
+      {/* Contenido especial: insignia */}
+      {isInsignia && (
+        <motion.div initial={{scale:0.9}} animate={{scale:1}} style={{textAlign:"center",padding:"16px",marginBottom:"10px",borderRadius:"var(--r-md)",background:"linear-gradient(135deg,rgba(245,158,11,0.12),transparent)",border:"1px solid rgba(245,158,11,0.3)"}}>
+          <div style={{fontSize:"36px",marginBottom:"6px"}}>🎖️</div>
+          <div style={{fontWeight:700,fontSize:"14px",color:"#F59E0B"}}>{post.text.split(":")[0].replace("🎖️","").trim()}</div>
+          {post.text.includes(":") && <div style={{fontSize:"13px",color:"var(--text-2)",marginTop:"4px"}}>{post.text.split(":").slice(1).join(":").trim()}</div>}
+        </motion.div>
+      )}
+
+      {/* Contenido especial: reto */}
+      {isReto && (
+        <motion.div style={{padding:"14px",marginBottom:"10px",borderRadius:"var(--r-md)",background:"linear-gradient(135deg,rgba(168,85,247,0.1),transparent)",border:"1px solid rgba(168,85,247,0.3)"}}>
+          {post.text.includes("META:") ? (
+            <>
+              <div style={{fontSize:"11px",color:"#A855F7",fontWeight:700,letterSpacing:"0.08em",marginBottom:"4px"}}>⚡ RETO</div>
+              <div style={{fontWeight:700,fontSize:"14px",color:"var(--text-1)",marginBottom:"4px"}}>{post.text.split("—")[0].replace("⚡ META:","").trim()}</div>
+              {post.text.includes("—") && <div style={{fontSize:"13px",color:"var(--text-2)"}}>{post.text.split("—").slice(1).join("—").trim()}</div>}
+            </>
+          ) : <p style={{margin:0,fontSize:"13px",lineHeight:1.6}}>{post.text}</p>}
+        </motion.div>
+      )}
+
+      {/* Texto normal */}
+      {!isInsignia && !isReto && (
+        <p style={{margin:"0 0 12px",fontSize:"13px",lineHeight:1.6,color:"var(--text-1)"}}>{post.text}</p>
+      )}
+
+      {/* Reacciones */}
+      <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"10px"}}>
+        {REACTIONS.map(emoji=>{
+          const count = myReactions[emoji]||0;
+          return (
+            <motion.button key={emoji} whileHover={{scale:1.15}} whileTap={{scale:0.85}}
+              onClick={()=>onReact(post.id, emoji)}
+              style={{padding:"4px 9px",borderRadius:"99px",border:`1px solid ${count>0?sportColor+"55":"var(--border-soft)"}`,background:count>0?`${sportColor}18`:"transparent",cursor:"pointer",fontSize:"13px",display:"flex",alignItems:"center",gap:"4px",transition:"all 0.15s",color:count>0?sportColor:"var(--text-2)"}}>
+              {emoji}{count>0&&<span style={{fontSize:"10px",fontWeight:700}}>{count}</span>}
+            </motion.button>
+          );
+        })}
+        <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.9}}
+          onClick={()=>setPostLikes(prev=>({...prev,[post.id]:(prev[post.id]||0)+1}))}
+          style={{...ss.btn,background:"transparent",color:"var(--text-2)",fontSize:"11px",padding:"4px 10px",border:"1px solid var(--border-soft)",marginLeft:"auto"}}>
+          ❤️ {totalLikes}
+        </motion.button>
+      </div>
+
+      {/* Botón comentarios */}
+      <div style={{borderTop:"1px solid var(--border-soft)",paddingTop:"10px"}}>
+        <motion.button whileTap={{scale:0.97}} onClick={()=>setShowComments(p=>!p)}
+          style={{...ss.btn,background:"transparent",color:"var(--text-3)",fontSize:"12px",padding:"4px 8px",gap:"6px"}}>
+          💬 {comments.length>0?`${comments.length} comentario${comments.length>1?"s":""}`:"Comentar"}
+        </motion.button>
+
+        <AnimatePresence>
+        {showComments && (
+          <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} style={{overflow:"hidden"}}>
+            <div style={{marginTop:"10px",display:"flex",flexDirection:"column",gap:"8px"}}>
+              {comments.map(c=>(
+                <div key={c.id} style={{display:"flex",gap:"8px",alignItems:"flex-start"}}>
+                  <div style={{width:"24px",height:"24px",borderRadius:"50%",background:`${sportColor}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",fontWeight:700,color:sportColor,flexShrink:0}}>{c.author[0]}</div>
+                  <div style={{background:"var(--bg-elev-2)",borderRadius:"var(--r-sm)",padding:"7px 10px",flex:1}}>
+                    <span style={{fontSize:"11px",fontWeight:700,color:sportColor}}>{c.author} </span>
+                    <span style={{fontSize:"12px",color:"var(--text-1)"}}>{c.text}</span>
+                  </div>
+                </div>
+              ))}
+              <div style={{display:"flex",gap:"8px",marginTop:"4px"}}>
+                <input value={newComment} onChange={e=>setNewComment(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&addComment()}
+                  placeholder="Escribe un comentario..." style={{...ss.input,fontSize:"12px",padding:"7px 10px"}}/>
+                <motion.button disabled={!newComment.trim()} whileTap={{scale:0.95}} onClick={addComment}
+                  style={{...ss.btn,background:`${sportColor}22`,color:sportColor,border:`1px solid ${sportColor}44`,padding:"7px 14px",opacity:!newComment.trim()?0.4:1}}>
+                  →
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
@@ -182,8 +358,15 @@ function AsistenciaGrid({players, sportColor, showToast, present={}, saving={}, 
 
 /* ── EntrenadorView ─────────────────────────────────────────── */
 export default function EntrenadorView({module, sport, sp, club, players, postLikes, setPostLikes, showToast, sportColor, currentCategory, hiaModal, setHiaModal, userCats=[], isDemo=true, partidos=[], setPartidos=()=>{}, clubId=null, currentUserId=null}) {
-  const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
+  const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#3B82F6","advertencia":"#EF4444","insignia":"#F59E0B","reto":"#A855F7"};
   const sv = (p,k)=>(p.stats&&p.stats[k]!=null)?p.stats[k]:((p.id*13+k.length*7)%18)+1;
+  const [reactions, setReactions] = useState({});
+  const handleReact = (postId, emoji) => {
+    setReactions(prev=>{
+      const cur = prev[postId]||{};
+      return {...prev,[postId]:{...cur,[emoji]:(cur[emoji]||0)+1}};
+    });
+  };
 
   // Datos reales desde Supabase (con fallback a mock)
   const { posts, createPost } = usePosts(clubId);
@@ -300,21 +483,16 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
         </motion.div>
 
         {/* Feed de posts */}
-        <MuroInput sportColor={sportColor} onPublish={async (text) => {
+        <MuroInput sportColor={sportColor} players={visiblePlayers} onPublish={async (text, type="general") => {
           try {
-            await createPost({ authorId: currentUserId, text, type: "general" });
+            await createPost({ authorId: currentUserId, text, type });
             showToast("Post publicado", "success");
           } catch { showToast("Error al publicar","error"); }
         }}/>
         {posts.map((post,i)=>(
-          <motion.div key={post.id} {...fadeUp} transition={{duration:0.4,delay:i*0.08}} whileHover={{y:-2}} style={{...ss.card,marginBottom:"12px",borderLeft:`3px solid ${postColors[post.type]||"#6B7280"}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"10px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px"}}><Badge color={postColors[post.type]||"#6B7280"}>{post.type}</Badge><span style={{fontWeight:600,fontSize:"13px"}}>{post.author}</span></div>
-              <span style={ss.muted}>{post.time}</span>
-            </div>
-            <p style={{margin:"0 0 12px",fontSize:"13px",lineHeight:1.6,color:"var(--text-1)"}}>{post.text}</p>
-            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.9}} onClick={()=>setPostLikes(prev=>({...prev,[post.id]:(prev[post.id]||0)+1}))} style={{...ss.btn,background:"transparent",color:"var(--text-2)",fontSize:"12px",padding:"5px 12px",border:"1px solid var(--border-soft)"}}>❤️ {postLikes[post.id]||post.likes||0}</motion.button>
-          </motion.div>
+          <PostCard key={post.id} post={post} sportColor={sportColor}
+            reactions={reactions} onReact={handleReact}
+            postLikes={postLikes} setPostLikes={setPostLikes}/>
         ))}
       </div>
     );
