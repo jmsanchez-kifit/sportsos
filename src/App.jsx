@@ -12,6 +12,8 @@ import { ss } from "./styles/tokens";
 import AuroraBg from "./components/AuroraBg";
 import Toast from "./components/Toast";
 import WhatsAppModal from "./components/WhatsAppModal";
+import GlobalSearch from "./components/GlobalSearch";
+import OnboardingTip from "./components/OnboardingTip";
 
 import OnboardingScreen from "./views/OnboardingScreen";
 import InvitationScreen from "./views/InvitationScreen";
@@ -71,6 +73,7 @@ export default function SportOS() {
 
   // null = modo demo | { nombre, email, rol, club, cats[], club_id } = usuario real
   const [currentUser,setCurrentUser]     = useState(null);
+  const [searchOpen,setSearchOpen]       = useState(false);
 
   // Jugadores: datos reales de Supabase si hay club_id, mock si no
   const clubId = currentUser?.club_id ?? null;
@@ -85,7 +88,19 @@ export default function SportOS() {
   const sportColor   = sp.color;
   const currentCategory = sp.categories[category]||sp.categories[0];
   const sportModules = MODULE_MAP[role]||[];
-  const showToast    = (msg, type="success") => setToast({msg,type});
+
+  // Toast con soporte undo
+  const showToast = (msg, type="success", onUndo=null) => setToast({msg, type, onUndo});
+
+  // Atajo de teclado para búsqueda global
+  useEffect(()=>{
+    const handler = (e) => {
+      if ((e.metaKey||e.ctrlKey) && e.key==="k") { e.preventDefault(); setSearchOpen(p=>!p); }
+      if (e.key==="Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return ()=>window.removeEventListener("keydown", handler);
+  },[]);
 
   useEffect(()=>{const mods=MODULE_MAP[role]||[];if(mods.length>0)setModule(mods[0].id);},[role]);
   useEffect(()=>{setCategory(0);},[sport]);
@@ -147,7 +162,13 @@ export default function SportOS() {
   return (
     <div style={ss.wrap} className="sportos-wrap" data-sport={sport}>
       <AuroraBg/>
-      {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
+      <AnimatePresence>
+        {toast&&<Toast msg={toast.msg} type={toast.type} onUndo={toast.onUndo||null} onClose={()=>setToast(null)}/>}
+      </AnimatePresence>
+      <AnimatePresence>
+        {searchOpen&&<GlobalSearch players={players} posts={[]} sportColor={sportColor} role={role} modules={sportModules} onNavigate={(id)=>setModule(id)} onClose={()=>setSearchOpen(false)}/>}
+      </AnimatePresence>
+      {screen==="app"&&<OnboardingTip sportColor={sportColor} onGoToMuro={()=>{setRole("entrenador");setModule("muro");}}/>}
       {whatsappModal&&<WhatsAppModal onClose={()=>setWhatsappModal(false)} team={club.name} rival={club.next.rival} date={club.next.dia}
         starters={SPORTS_CONFIG[sport].positions.slice(0,sp.teamSize).map((pos,i)=>({name:players[i]?players[i].name:"Jugador "+(i+1),pos}))}
         bench={[]}/>}
@@ -206,6 +227,12 @@ export default function SportOS() {
           </select>
         </>}
         <div style={{flex:1}}/>
+        {/* Búsqueda global */}
+        <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>setSearchOpen(true)}
+          style={{...ss.btn,background:"var(--bg-elev-2)",color:"var(--text-3)",border:"1px solid var(--border-soft)",padding:"6px 12px",gap:"8px",fontSize:"12px"}}>
+          🔍 <span className="hide-mobile">Buscar</span>
+          <span className="hide-mobile" style={{fontSize:"10px",padding:"1px 6px",borderRadius:"4px",background:"var(--bg-elev-3)",color:"var(--text-4)"}}>⌘K</span>
+        </motion.button>
         <div className="hide-mobile" style={{fontSize:"11px",color:"var(--text-2)",display:"flex",alignItems:"center",gap:"4px",padding:"5px 10px",background:"var(--bg-elev-2)",borderRadius:"99px",whiteSpace:"nowrap"}}>🇨🇱 CLP</div>
         <motion.div whileHover={{scale:1.1,rotate:5}} style={{width:"34px",height:"34px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`2px solid ${sportColor}55`,flexShrink:0,boxShadow:`0 0 12px ${sportColor}44`,cursor:"pointer"}}>
           {isDemo ? "AC" : currentUser.nombre.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}

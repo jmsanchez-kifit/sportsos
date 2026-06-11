@@ -7,6 +7,7 @@ import SectionTitle from "../components/SectionTitle";
 import Stat from "../components/Stat";
 import Badge from "../components/Badge";
 import Semaforo from "../components/Semaforo";
+import EmptyState from "../components/EmptyState";
 
 const EMPTY_PLAYER = {name:"", number:"", cat:"", position:"", age:"", med:"verde", cuota:"ok"};
 
@@ -18,7 +19,7 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
   const [playerForm, setPlayerForm] = useState(null); // null = cerrado | EMPTY_PLAYER = nuevo | {id,...} = editando
   const [playerSaving, setPlayerSaving] = useState(false);
   const [playerSearch, setPlayerSearch] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(null); // id del jugador a borrar
+  const [pendingDelete, setPendingDelete] = useState(null); // {id, name, timeoutId}
   const [invRol, setInvRol] = useState("jugador");
   const [invLink, setInvLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -214,12 +215,17 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
       finally { setPlayerSaving(false); }
     };
 
-    const doDelete = async (id) => {
-      try {
-        await removePlayer(id);
-        showToast("Jugador eliminado","success");
-      } catch(e) { showToast("Error: "+e.message,"error"); }
-      setConfirmDelete(null);
+    const startDelete = (player) => {
+      // Borra optimistamente y muestra toast con undo 5 seg
+      const tid = setTimeout(async () => {
+        try { await removePlayer(player.id); }
+        catch(e) { showToast("Error al eliminar: "+e.message,"error"); }
+        setPendingDelete(null);
+      }, 5000);
+      setPendingDelete({id:player.id, name:player.name, timeoutId:tid});
+      showToast(`${player.name} eliminado`, "warning",
+        () => { clearTimeout(tid); setPendingDelete(null); showToast("Eliminación cancelada ✓","success"); }
+      );
     };
 
     return (
@@ -292,22 +298,7 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
           </motion.div>
         )}
 
-        {/* Modal confirmar borrado */}
-        {confirmDelete && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
-            <motion.div initial={{scale:0.9}} animate={{scale:1}} style={{...ss.card,maxWidth:"340px",width:"90%",textAlign:"center"}}>
-              <div style={{fontSize:"32px",marginBottom:"12px"}}>⚠️</div>
-              <div style={{fontWeight:700,fontSize:"15px",marginBottom:"8px"}}>¿Eliminar jugador?</div>
-              <div style={{color:"var(--text-2)",fontSize:"13px",marginBottom:"20px"}}>Esta acción no se puede deshacer.</div>
-              <div style={{display:"flex",gap:"10px",justifyContent:"center"}}>
-                <motion.button whileTap={{scale:0.95}} onClick={()=>setConfirmDelete(null)}
-                  style={{...ss.btn,background:"var(--bg-elev-2)",color:"var(--text-2)",border:"1px solid var(--border-soft)"}}>Cancelar</motion.button>
-                <motion.button whileTap={{scale:0.95}} onClick={()=>doDelete(confirmDelete)}
-                  style={{...ss.btn,background:"linear-gradient(135deg,#EF4444,#DC2626)",color:"#fff",boxShadow:"0 4px 14px rgba(239,68,68,0.4)"}}>Eliminar</motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+        {/* (undo toast manejado desde App.jsx via showToast) */}
 
         {/* Buscador */}
         <div style={{marginBottom:"14px"}}>
@@ -340,7 +331,7 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
                       onClick={()=>setPlayerForm({...p})}
                       style={{...ss.btn,background:"transparent",color:sportColor,border:`1px solid ${sportColor}44`,padding:"4px 10px",fontSize:"11px"}}>✏️</motion.button>
                     <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}}
-                      onClick={()=>setConfirmDelete(p.id)}
+                      onClick={()=>startDelete(p)}
                       style={{...ss.btn,background:"transparent",color:"#EF4444",border:"1px solid #EF444444",padding:"4px 10px",fontSize:"11px"}}>🗑️</motion.button>
                   </div>
                 </td>
@@ -348,9 +339,9 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
             ))}</tbody>
           </table>
           {filtered.length === 0 && (
-            <div style={{textAlign:"center",padding:"30px",color:"var(--text-3)",fontSize:"13px"}}>
-              {playerSearch ? `Sin resultados para "${playerSearch}"` : "No hay jugadores aún"}
-            </div>
+            playerSearch
+              ? <EmptyState icon="🔍" title={`Sin resultados para "${playerSearch}"`} desc="Intenta con otro nombre o número." color={sportColor}/>
+              : <EmptyState icon="👥" title="No hay jugadores aún" desc="Agrega tu primer jugador para empezar a gestionar el plantel." color={sportColor} action={()=>setPlayerForm({...EMPTY_PLAYER})} actionLabel="+ Agregar primer jugador"/>
           )}
         </motion.div>
       </div>

@@ -7,6 +7,7 @@ import { usePosts } from "../lib/usePosts";
 import { useAttendance } from "../lib/useAttendance";
 import SectionTitle from "../components/SectionTitle";
 import Badge from "../components/Badge";
+import EmptyState from "../components/EmptyState";
 import Semaforo from "../components/Semaforo";
 import ProgressBar from "../components/ProgressBar";
 import MedalBadge from "../components/MedalBadge";
@@ -489,6 +490,9 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
             showToast("Post publicado", "success");
           } catch { showToast("Error al publicar","error"); }
         }}/>
+        {posts.length===0 && (
+          <EmptyState icon="💬" title="El Muro está vacío" desc="Sé el primero en publicar. Comparte un resultado, da una insignia o lanza un reto al equipo." color={sportColor}/>
+        )}
         {posts.map((post,i)=>(
           <PostCard key={post.id} post={post} sportColor={sportColor}
             reactions={reactions} onReact={handleReact}
