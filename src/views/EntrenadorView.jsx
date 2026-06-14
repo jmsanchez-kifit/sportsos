@@ -384,10 +384,33 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
     </motion.div>
   ) : null;
 
+  // Reglas de suspensión por deporte (en partidos)
+  const CARD_TYPES = {
+    rugby:      [{ id:"amarilla", label:"Amarilla 🟡", color:"#C98408", suspende:0, desc:"10 min en cancha" }, { id:"roja", label:"Roja 🔴", color:"#C0392B", suspende:2, desc:"Mínimo 2 partidos" }],
+    futbol:     [{ id:"amarilla", label:"Amarilla 🟡", color:"#C98408", suspende:0, desc:"Acumulable (5=1 partido)" }, { id:"roja", label:"Roja 🔴", color:"#C0392B", suspende:1, desc:"1 partido suspendido" }],
+    handball:   [{ id:"amarilla", label:"Amarilla 🟡", color:"#C98408", suspende:0, desc:"Amonestación" }, { id:"roja", label:"Roja 🔴", color:"#C0392B", suspende:1, desc:"1 partido suspendido" }],
+    basketball: [{ id:"tecnica", label:"Técnica ⚠️", color:"#C98408", suspende:0, desc:"2 técnicas = expulsión" }, { id:"directa", label:"Directa 🔴", color:"#C0392B", suspende:1, desc:"Revisión disciplinaria" }],
+    hockey:     [{ id:"verde", label:"Verde 🟢", color:"#1FA04A", suspende:0, desc:"Amonestación 5 min" }, { id:"amarilla", label:"Amarilla 🟡", color:"#C98408", suspende:0, desc:"10 min exclusión" }, { id:"roja", label:"Roja 🔴", color:"#C0392B", suspende:1, desc:"1 partido suspendido" }],
+  };
+  const sportCards = CARD_TYPES[sport] || CARD_TYPES.rugby;
+
   if(module==="muro") {
     const [showResultForm, setShowResultForm] = useState(false);
     const [resForm, setResForm] = useState({rival:"", golesLocal:"", golesVisita:"", lugar:"Local", resumen:"", destacados:""});
+    const [tarjetas, setTarjetas] = useState([]);          // [{playerId, playerName, tipo, suspende}]
+    const [tarjetaForm, setTarjetaForm] = useState({playerId:"", tipo: sportCards[0]?.id||"amarilla"});
     const myCats = isDemo ? sp.categories : userCats;
+
+    const addTarjeta = () => {
+      if (!tarjetaForm.playerId) return;
+      const player = players.find(p => String(p.id||p.number) === tarjetaForm.playerId);
+      const card   = sportCards.find(c => c.id === tarjetaForm.tipo);
+      if (!player || !card) return;
+      setTarjetas(prev => [...prev, { playerId: tarjetaForm.playerId, playerName: player.name, tipo: card.id, label: card.label, color: card.color, suspende: card.suspende, desc: card.desc }]);
+      setTarjetaForm(p => ({ ...p, playerId: "" }));
+    };
+
+    const removeTarjeta = (i) => setTarjetas(prev => prev.filter((_,j) => j !== i));
 
     const publishResultado = () => {
       if(!resForm.rival || resForm.golesLocal==="" || resForm.golesVisita==="") {
@@ -395,6 +418,7 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
       }
       const local = Number(resForm.golesLocal), visita = Number(resForm.golesVisita);
       const resultado = local > visita ? "victoria" : local < visita ? "derrota" : "empate";
+      const suspendidos = tarjetas.filter(t => t.suspende > 0);
       const nuevo = {
         id: Date.now(),
         cat: myCats[0] || currentCategory,
@@ -410,12 +434,21 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
         autor: "Entrenador",
         resumen: resForm.resumen || "Resultado registrado por el cuerpo técnico.",
         destacados: resForm.destacados ? resForm.destacados.split(",").map(d=>d.trim()).filter(Boolean) : [],
+        tarjetas,
         videoUrl: null, aiAnalysis: null, aiStatus: null,
       };
       setPartidos(prev=>[nuevo,...prev]);
       setResForm({rival:"",golesLocal:"",golesVisita:"",lugar:"Local",resumen:"",destacados:""});
+      setTarjetas([]);
       setShowResultForm(false);
+      // Toast principal
       showToast(`Resultado publicado — ${resultado.toUpperCase()} ✅`, resultado==="victoria"?"success":"warning");
+      // Segundo toast: wellness trigger
+      setTimeout(() => showToast("📣 Cuestionario wellness programado — se enviará en 24h automáticamente","info"), 800);
+      // Tercero: suspensiones si hay
+      if (suspendidos.length > 0) {
+        setTimeout(() => showToast(`⚠️ ${suspendidos.length} jugador${suspendidos.length>1?"es":""} con tarjeta roja — se generó alerta de suspensión`,"warning"), 1600);
+      }
     };
 
     return (
@@ -465,7 +498,69 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
                 <input value={resForm.destacados} onChange={e=>setResForm(p=>({...p,destacados:e.target.value}))} placeholder="Ej: Andrés Castro, Felipe Morales" style={ss.input}/>
               </div>
 
-              {/* Placeholder subida de video — futuro IA */}
+              {/* ── Tarjetas del partido ── */}
+              <div style={{borderTop:"1px solid var(--border-soft)",paddingTop:"14px",marginBottom:"14px"}}>
+                <div style={{fontWeight:700,fontSize:"12px",color:"var(--text-2)",marginBottom:"10px",display:"flex",alignItems:"center",gap:"6px"}}>
+                  🃏 Tarjetas del partido
+                  {tarjetas.length > 0 && <span style={{fontSize:"10px",padding:"1px 7px",borderRadius:"99px",background:"rgba(192,57,43,0.15)",color:"#C0392B",fontWeight:800}}>{tarjetas.length}</span>}
+                </div>
+
+                {/* Agregar tarjeta */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"8px",marginBottom:"10px",alignItems:"flex-end"}}>
+                  <div>
+                    <div style={ss.label}>Jugador</div>
+                    <select value={tarjetaForm.playerId} onChange={e=>setTarjetaForm(p=>({...p,playerId:e.target.value}))}
+                      style={{...ss.input,cursor:"pointer"}}>
+                      <option value="">— seleccionar —</option>
+                      {players.map(p=><option key={p.id||p.number} value={String(p.id||p.number)}>#{p.number} {p.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={ss.label}>Tipo</div>
+                    <select value={tarjetaForm.tipo} onChange={e=>setTarjetaForm(p=>({...p,tipo:e.target.value}))}
+                      style={{...ss.input,cursor:"pointer"}}>
+                      {sportCards.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
+                    </select>
+                  </div>
+                  <motion.button whileHover={{scale:1.06}} whileTap={{scale:0.94}} onClick={addTarjeta}
+                    style={{...ss.btn,background:"var(--bg-elev-3)",color:"var(--text-1)",border:"1px solid var(--border-mid)",padding:"9px 14px",fontSize:"13px",height:"38px",alignSelf:"flex-end"}}>
+                    + Agregar
+                  </motion.button>
+                </div>
+
+                {/* Info de la tarjeta seleccionada */}
+                {tarjetaForm.tipo && (()=>{const c=sportCards.find(x=>x.id===tarjetaForm.tipo);return c?(<div style={{fontSize:"10px",color:c.color,marginBottom:"10px",padding:"4px 10px",borderRadius:"var(--r-sm)",background:`${c.color}10`,border:`1px solid ${c.color}22`,display:"inline-block"}}>{c.desc} · {c.suspende>0?`${c.suspende} partido${c.suspende>1?"s":""} suspendido${c.suspende>1?"s":""}`:c.suspende===0?"Sin suspensión automática":""}</div>):null;})()}
+
+                {/* Lista de tarjetas agregadas */}
+                {tarjetas.length > 0 && (
+                  <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+                    {tarjetas.map((t,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 10px",borderRadius:"var(--r-sm)",background:`${t.color}0A`,border:`1px solid ${t.color}33`}}>
+                        <span style={{fontSize:"14px"}}>{t.label.split(" ")[1]}</span>
+                        <div style={{flex:1}}>
+                          <span style={{fontWeight:700,fontSize:"12px",color:t.color}}>{t.label.split(" ")[0]}</span>
+                          <span style={{fontSize:"12px",color:"var(--text-2)"}}> — {t.playerName}</span>
+                          {t.suspende > 0 && <span style={{fontSize:"10px",color:t.color,fontWeight:700,marginLeft:"6px"}}>⚠️ {t.suspende} partido{t.suspende>1?"s":""} suspendido{t.suspende>1?"s":""}</span>}
+                        </div>
+                        <button onClick={()=>removeTarjeta(i)} style={{background:"transparent",border:"none",cursor:"pointer",color:"var(--text-4)",fontSize:"14px",padding:"0 4px",lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {tarjetas.length === 0 && (
+                  <div style={{fontSize:"11px",color:"var(--text-4)",textAlign:"center",padding:"8px 0"}}>Sin tarjetas registradas</div>
+                )}
+              </div>
+
+              {/* Wellness automático */}
+              <div style={{padding:"10px 12px",borderRadius:"var(--r-md)",background:"rgba(192,57,43,0.06)",border:"1px solid rgba(192,57,43,0.2)",marginBottom:"14px",display:"flex",alignItems:"center",gap:"10px"}}>
+                <span style={{fontSize:"16px"}}>📣</span>
+                <div style={{fontSize:"11px",color:"var(--text-2)"}}>
+                  Al publicar se programará el <strong style={{color:"var(--text-1)"}}>cuestionario wellness automático</strong> a las 24h y 48h post partido para todos los jugadores.
+                </div>
+              </div>
+
+              {/* Placeholder subida de video */}
               <div style={{padding:"12px 14px",borderRadius:"var(--r-md)",background:"rgba(168,85,247,0.06)",border:"1px dashed rgba(168,85,247,0.3)",marginBottom:"14px",display:"flex",alignItems:"center",gap:"10px"}}>
                 <span style={{fontSize:"20px"}}>🎬</span>
                 <div>
@@ -476,7 +571,7 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
 
               <motion.button whileHover={{scale:1.02,y:-1}} whileTap={{scale:0.98}} onClick={publishResultado}
                 style={{...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`, color:"#fff", width:"100%", padding:"13px", fontSize:"13px", fontWeight:700, boxShadow:`0 6px 20px ${sportColor}44`}}>
-                🏆 Publicar resultado
+                🏆 Publicar resultado {tarjetas.length>0?`· ${tarjetas.length} tarjeta${tarjetas.length>1?"s":""}`:""} {tarjetas.filter(t=>t.suspende>0).length>0?`· ⚠️ ${tarjetas.filter(t=>t.suspende>0).length} suspensión${tarjetas.filter(t=>t.suspende>0).length>1?"es":""}` : ""}
               </motion.button>
             </motion.div>
           )}
