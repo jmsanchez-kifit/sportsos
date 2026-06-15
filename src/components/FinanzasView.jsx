@@ -1,0 +1,611 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { fadeUp } from "../styles/motion";
+import { ss } from "../styles/tokens";
+
+// ── Categorías predefinidas ───────────────────────────────────────────────
+
+const CAT_INGRESOS = ["Cuotas", "Sponsor", "Venta de entradas", "Evento", "Aporte externo", "Otro"];
+const CAT_EGRESOS  = ["Cancha / Arriendo", "Implementos", "Viajes", "Árbitros", "Premiaciones", "Servicios", "Otro"];
+const CAT_ADMIN    = ["Luz / Agua", "Internet", "Contabilidad", "Seguro", "Material oficina", "Otro"];
+
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+// ── Datos mock iniciales ──────────────────────────────────────────────────
+
+const MOCK_MOVIMIENTOS = [
+  { id:1,  tipo:"ingreso", cat:"Cuotas",           desc:"Cuotas marzo plantel",     monto:450000, fecha:"2026-03-05" },
+  { id:2,  tipo:"ingreso", cat:"Sponsor",           desc:"Auspicio Empresa XYZ",     monto:300000, fecha:"2026-03-10" },
+  { id:3,  tipo:"egreso",  cat:"Cancha / Arriendo", desc:"Arriendo cancha marzo",    monto:120000, fecha:"2026-03-12" },
+  { id:4,  tipo:"egreso",  cat:"Árbitros",          desc:"Árbitros partido local",   monto:45000,  fecha:"2026-03-15" },
+  { id:5,  tipo:"ingreso", cat:"Venta de entradas", desc:"Partido vs Universitario", monto:80000,  fecha:"2026-03-20" },
+  { id:6,  tipo:"egreso",  cat:"Implementos",       desc:"Pelotas y conos",          monto:65000,  fecha:"2026-03-22" },
+  { id:7,  tipo:"ingreso", cat:"Cuotas",            desc:"Cuotas abril plantel",     monto:460000, fecha:"2026-04-05" },
+  { id:8,  tipo:"egreso",  cat:"Viajes",            desc:"Bus partido visitante",    monto:95000,  fecha:"2026-04-08" },
+  { id:9,  tipo:"egreso",  cat:"Cancha / Arriendo", desc:"Arriendo cancha abril",    monto:120000, fecha:"2026-04-12" },
+  { id:10, tipo:"ingreso", cat:"Evento",            desc:"Cena anual del club",      monto:220000, fecha:"2026-04-18" },
+];
+
+const MOCK_SUELDOS = [
+  { id:1, nombre:"Carlos Vega",   cargo:"Entrenador Principal", monto:800000, activo:true },
+  { id:2, nombre:"Diego Fuentes", cargo:"Preparador Físico",    monto:600000, activo:true },
+  { id:3, nombre:"Ana López",     cargo:"Kinesiólogo",          monto:500000, activo:true },
+];
+
+const MOCK_GASTOS_ADMIN = [
+  { id:1, cat:"Luz / Agua",    desc:"Cuenta mensual sede",    monto:45000,  activo:true },
+  { id:2, cat:"Internet",      desc:"Fibra óptica sede",      monto:28000,  activo:true },
+  { id:3, cat:"Contabilidad",  desc:"Honorario contador",     monto:120000, activo:true },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+function fmt(n, sym="$") { return `${sym}${Number(n||0).toLocaleString("es-CL")}`; }
+
+function StatBox({ icon, label, value, sub, color }) {
+  return (
+    <motion.div {...fadeUp} whileHover={{y:-3}}
+      style={{ ...ss.card, padding:"20px", border:`1px solid ${color}33`,
+        background:`linear-gradient(135deg,${color}08,transparent)` }}>
+      <div style={{ fontSize:"22px", marginBottom:"8px" }}>{icon}</div>
+      <div style={{ fontSize:"28px", fontWeight:900, color, letterSpacing:"-0.02em" }}>{value}</div>
+      <div style={{ fontWeight:600, fontSize:"12px", marginTop:"6px" }}>{label}</div>
+      {sub && <div style={{ fontSize:"11px", color:"var(--text-3)", marginTop:"3px" }}>{sub}</div>}
+    </motion.div>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+      onClick={onClose}
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:200,
+        display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" }}>
+      <motion.div initial={{scale:0.93,opacity:0}} animate={{scale:1,opacity:1}} exit={{scale:0.93,opacity:0}}
+        onClick={e=>e.stopPropagation()}
+        style={{ ...ss.card, width:"100%", maxWidth:"460px", padding:"28px", maxHeight:"90vh", overflowY:"auto" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px" }}>
+          <div style={{ fontWeight:700, fontSize:"16px" }}>{title}</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:"var(--text-3)",
+            fontSize:"20px", cursor:"pointer", lineHeight:1 }}>×</button>
+        </div>
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────
+
+export default function FinanzasView({ countryData, payments=[], sportColor, showToast }) {
+  const sym = countryData?.symbol || "$";
+  const [tab,          setTab]          = useState("resumen");
+  const [movimientos,  setMovimientos]  = useState(MOCK_MOVIMIENTOS);
+  const [sueldos,      setSueldos]      = useState(MOCK_SUELDOS);
+  const [gastosAdmin,  setGastosAdmin]  = useState(MOCK_GASTOS_ADMIN);
+
+  // Modales
+  const [modalMov,    setModalMov]    = useState(false);
+  const [modalSueldo, setModalSueldo] = useState(false);
+  const [modalAdmin,  setModalAdmin]  = useState(false);
+  const [editSueldo,  setEditSueldo]  = useState(null);
+  const [editAdmin,   setEditAdmin]   = useState(null);
+
+  // Formularios
+  const emptyMov    = { tipo:"ingreso", cat:"Cuotas", desc:"", monto:"", fecha: new Date().toISOString().split("T")[0] };
+  const emptySueldo = { nombre:"", cargo:"", monto:"" };
+  const emptyAdmin  = { cat:"Luz / Agua", desc:"", monto:"" };
+  const [formMov,    setFormMov]    = useState(emptyMov);
+  const [formSueldo, setFormSueldo] = useState(emptySueldo);
+  const [formAdmin,  setFormAdmin]  = useState(emptyAdmin);
+
+  // ── Cálculos ──
+  const totalIngresosMovs = movimientos.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+m.monto,0);
+  const totalEgresosMovs  = movimientos.filter(m=>m.tipo==="egreso").reduce((s,m)=>s+m.monto,0);
+  const totalCuotas       = payments.reduce((s,p)=>s+p.amount,0);
+  const totalIngresosReal = totalIngresosMovs + totalCuotas;
+  const totalSueldos      = sueldos.filter(s=>s.activo).reduce((s,x)=>s+x.monto,0);
+  const totalGastosAdmin  = gastosAdmin.filter(g=>g.activo).reduce((s,g)=>s+g.monto,0);
+  const totalEgresosReal  = totalEgresosMovs + totalSueldos + totalGastosAdmin;
+  const saldo             = totalIngresosReal - totalEgresosReal;
+
+  // ── Datos para gráfico flujo de caja ──
+  const flujoPorMes = MESES.slice(0,6).map((mes, i) => {
+    const ingresos = movimientos.filter(m => m.tipo==="ingreso" && new Date(m.fecha).getMonth()===i+2).reduce((s,m)=>s+m.monto,0);
+    const egresos  = movimientos.filter(m => m.tipo==="egreso"  && new Date(m.fecha).getMonth()===i+2).reduce((s,m)=>s+m.monto,0)
+                   + (i===0||i===1 ? totalSueldos+totalGastosAdmin : 0);
+    return { mes, ingresos: ingresos||0, egresos: egresos||(totalSueldos+totalGastosAdmin), saldo: ingresos - egresos };
+  });
+
+  // ── Agregar movimiento ──
+  const agregarMovimiento = () => {
+    if (!formMov.desc || !formMov.monto) { showToast("Completa todos los campos","warning"); return; }
+    const nuevo = { ...formMov, id: Date.now(), monto: Number(formMov.monto) };
+    setMovimientos(prev => [nuevo, ...prev]);
+    setFormMov(emptyMov);
+    setModalMov(false);
+    showToast(`${formMov.tipo==="ingreso"?"Ingreso":"Egreso"} registrado ✅`);
+  };
+
+  // ── Guardar sueldo ──
+  const guardarSueldo = () => {
+    if (!formSueldo.nombre || !formSueldo.monto) { showToast("Completa todos los campos","warning"); return; }
+    if (editSueldo) {
+      setSueldos(prev => prev.map(s => s.id===editSueldo ? { ...s, ...formSueldo, monto:Number(formSueldo.monto) } : s));
+      showToast("Sueldo actualizado ✅");
+    } else {
+      setSueldos(prev => [...prev, { ...formSueldo, id:Date.now(), monto:Number(formSueldo.monto), activo:true }]);
+      showToast("Sueldo agregado ✅");
+    }
+    setEditSueldo(null);
+    setFormSueldo(emptySueldo);
+    setModalSueldo(false);
+  };
+
+  // ── Guardar gasto admin ──
+  const guardarAdmin = () => {
+    if (!formAdmin.desc || !formAdmin.monto) { showToast("Completa todos los campos","warning"); return; }
+    if (editAdmin) {
+      setGastosAdmin(prev => prev.map(g => g.id===editAdmin ? { ...g, ...formAdmin, monto:Number(formAdmin.monto) } : g));
+      showToast("Gasto actualizado ✅");
+    } else {
+      setGastosAdmin(prev => [...prev, { ...formAdmin, id:Date.now(), monto:Number(formAdmin.monto), activo:true }]);
+      showToast("Gasto agregado ✅");
+    }
+    setEditAdmin(null);
+    setFormAdmin(emptyAdmin);
+    setModalAdmin(false);
+  };
+
+  const TABS = [
+    { id:"resumen",   label:"Resumen",    icon:"📊" },
+    { id:"ingresos",  label:"Ingresos",   icon:"💰" },
+    { id:"egresos",   label:"Egresos",    icon:"📤" },
+    { id:"sueldos",   label:"Sueldos",    icon:"👤" },
+    { id:"admin",     label:"Gastos Adm.", icon:"🏢" },
+    { id:"flujo",     label:"Flujo Caja", icon:"📈" },
+  ];
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"20px", flexWrap:"wrap", gap:"12px" }}>
+        <div>
+          <div style={{ fontWeight:900, fontSize:"20px", letterSpacing:"-0.02em" }}>💼 Finanzas del Club</div>
+          <div style={{ fontSize:"12px", color:"var(--text-3)", marginTop:"3px" }}>{countryData?.name} · {countryData?.tax}</div>
+        </div>
+        <div style={{ display:"flex", gap:"8px" }}>
+          <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}}
+            onClick={()=>{ setFormMov({...emptyMov,tipo:"ingreso"}); setModalMov(true); }}
+            style={{ ...ss.btn, background:"rgba(31,160,74,0.15)", color:"#1FA04A",
+              border:"1px solid rgba(31,160,74,0.3)", fontSize:"12px", fontWeight:700 }}>
+            + Ingreso
+          </motion.button>
+          <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}}
+            onClick={()=>{ setFormMov({...emptyMov,tipo:"egreso"}); setModalMov(true); }}
+            style={{ ...ss.btn, background:"rgba(192,57,43,0.12)", color:"#C0392B",
+              border:"1px solid rgba(192,57,43,0.3)", fontSize:"12px", fontWeight:700 }}>
+            + Egreso
+          </motion.button>
+          <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}}
+            onClick={()=>showToast("Reporte exportado como CSV ✅")}
+            style={{ ...ss.btn, background:"var(--bg-elev-2)", color:"var(--text-2)",
+              border:"1px solid var(--border-soft)", fontSize:"12px" }}>
+            📊 CSV
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Stats resumen */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"12px", marginBottom:"20px" }}>
+        <StatBox icon="💰" label="Total ingresos" value={fmt(totalIngresosReal,sym)} sub="Este período" color="#1FA04A"/>
+        <StatBox icon="📤" label="Total egresos"  value={fmt(totalEgresosReal,sym)} sub="Incluye sueldos y admin" color="#C0392B"/>
+        <StatBox icon="👤" label="Sueldos"        value={fmt(totalSueldos,sym)}     sub={`${sueldos.filter(s=>s.activo).length} personas`} color="#C98408"/>
+        <StatBox icon="💼" label="Saldo disponible" value={fmt(saldo,sym)}
+          sub={saldo>=0?"Positivo ✅":"Déficit ⚠️"} color={saldo>=0?"#1FA04A":"#C0392B"}/>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:"4px", background:"var(--bg-elev-2)", borderRadius:"var(--r-md)",
+        padding:"4px", marginBottom:"20px", overflowX:"auto" }}>
+        {TABS.map(t => (
+          <motion.button key={t.id} whileTap={{scale:0.97}} onClick={()=>setTab(t.id)}
+            style={{ flex:1, padding:"8px 10px", borderRadius:"var(--r-sm)", border:"none",
+              cursor:"pointer", fontSize:"11px", fontWeight:tab===t.id?700:500, whiteSpace:"nowrap",
+              background:tab===t.id?`linear-gradient(135deg,${sportColor}33,${sportColor}11)`:"transparent",
+              color:tab===t.id?sportColor:"var(--text-2)", transition:"all 0.2s" }}>
+            {t.icon} {t.label}
+          </motion.button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+
+        {/* ── RESUMEN ── */}
+        {tab==="resumen" && (
+          <motion.div key="resumen" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+              {/* Ingresos por categoría */}
+              <div style={{ ...ss.card, padding:"20px" }}>
+                <div style={{ fontWeight:700, fontSize:"13px", marginBottom:"14px", color:"#1FA04A" }}>💰 Ingresos por categoría</div>
+                {CAT_INGRESOS.map(cat => {
+                  const total = movimientos.filter(m=>m.tipo==="ingreso"&&m.cat===cat).reduce((s,m)=>s+m.monto,0)
+                    + (cat==="Cuotas" ? totalCuotas : 0);
+                  if (!total) return null;
+                  return (
+                    <div key={cat} style={{ display:"flex", justifyContent:"space-between",
+                      padding:"8px 0", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                      <span style={{ color:"var(--text-2)" }}>{cat}</span>
+                      <span style={{ fontWeight:700, color:"#1FA04A" }}>{fmt(total,sym)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Egresos por categoría */}
+              <div style={{ ...ss.card, padding:"20px" }}>
+                <div style={{ fontWeight:700, fontSize:"13px", marginBottom:"14px", color:"#C0392B" }}>📤 Egresos por categoría</div>
+                {[...CAT_EGRESOS, "Sueldos", "Gastos Admin"].map(cat => {
+                  let total = 0;
+                  if (cat==="Sueldos") total = totalSueldos;
+                  else if (cat==="Gastos Admin") total = totalGastosAdmin;
+                  else total = movimientos.filter(m=>m.tipo==="egreso"&&m.cat===cat).reduce((s,m)=>s+m.monto,0);
+                  if (!total) return null;
+                  return (
+                    <div key={cat} style={{ display:"flex", justifyContent:"space-between",
+                      padding:"8px 0", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                      <span style={{ color:"var(--text-2)" }}>{cat}</span>
+                      <span style={{ fontWeight:700, color:"#C0392B" }}>{fmt(total,sym)}</span>
+                    </div>
+                  );
+                })}
+                <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0",
+                  fontSize:"13px", fontWeight:700, marginTop:"4px" }}>
+                  <span>Total egresos</span>
+                  <span style={{ color:"#C0392B" }}>{fmt(totalEgresosReal,sym)}</span>
+                </div>
+              </div>
+            </div>
+            {/* Saldo */}
+            <motion.div {...fadeUp} transition={{delay:0.1}}
+              style={{ ...ss.card, marginTop:"14px", padding:"20px", textAlign:"center",
+                border:`1px solid ${saldo>=0?"rgba(31,160,74,0.3)":"rgba(192,57,43,0.3)"}`,
+                background:`linear-gradient(135deg,${saldo>=0?"rgba(31,160,74,0.06)":"rgba(192,57,43,0.06)"},transparent)` }}>
+              <div style={{ fontSize:"12px", color:"var(--text-3)", marginBottom:"6px", textTransform:"uppercase", letterSpacing:"0.08em" }}>Saldo del período</div>
+              <div style={{ fontSize:"40px", fontWeight:900, letterSpacing:"-0.03em",
+                color:saldo>=0?"#1FA04A":"#C0392B" }}>
+                {saldo>=0?"+":""}{fmt(saldo,sym)}
+              </div>
+              <div style={{ fontSize:"12px", color:"var(--text-3)", marginTop:"6px" }}>
+                {saldo>=0?"El club está en positivo ✅":"El club está en déficit — revisar egresos ⚠️"}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* ── INGRESOS ── */}
+        {tab==="ingresos" && (
+          <motion.div key="ingresos" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>
+            <div style={{ ...ss.card, padding:0, overflow:"hidden" }}>
+              <div style={{ padding:"14px 16px", borderBottom:"1px solid var(--border-soft)",
+                display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:700, fontSize:"13px" }}>Movimientos de ingresos</span>
+                <span style={{ fontWeight:800, color:"#1FA04A", fontSize:"14px" }}>{fmt(totalIngresosReal,sym)}</span>
+              </div>
+              {/* Cuotas de jugadores */}
+              {payments.map((p,i) => (
+                <div key={p.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                  padding:"12px 16px", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                  <div>
+                    <div style={{ fontWeight:600 }}>{p.playerName}</div>
+                    <div style={{ color:"var(--text-3)", fontSize:"11px" }}>{p.date} · Cuota</div>
+                  </div>
+                  <span style={{ fontWeight:700, color:"#1FA04A" }}>+{fmt(p.amount,sym)}</span>
+                </div>
+              ))}
+              {/* Otros ingresos */}
+              {movimientos.filter(m=>m.tipo==="ingreso").map((m,i) => (
+                <motion.div key={m.id} initial={{opacity:0}} animate={{opacity:1}} transition={{delay:i*0.04}}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                    padding:"12px 16px", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                  <div>
+                    <div style={{ fontWeight:600 }}>{m.desc}</div>
+                    <div style={{ color:"var(--text-3)", fontSize:"11px" }}>{m.fecha} · {m.cat}</div>
+                  </div>
+                  <span style={{ fontWeight:700, color:"#1FA04A" }}>+{fmt(m.monto,sym)}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── EGRESOS ── */}
+        {tab==="egresos" && (
+          <motion.div key="egresos" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>
+            <div style={{ ...ss.card, padding:0, overflow:"hidden" }}>
+              <div style={{ padding:"14px 16px", borderBottom:"1px solid var(--border-soft)",
+                display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:700, fontSize:"13px" }}>Movimientos de egresos</span>
+                <span style={{ fontWeight:800, color:"#C0392B", fontSize:"14px" }}>{fmt(totalEgresosReal,sym)}</span>
+              </div>
+              {movimientos.filter(m=>m.tipo==="egreso").map((m,i) => (
+                <motion.div key={m.id} initial={{opacity:0}} animate={{opacity:1}} transition={{delay:i*0.04}}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                    padding:"12px 16px", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                  <div>
+                    <div style={{ fontWeight:600 }}>{m.desc}</div>
+                    <div style={{ color:"var(--text-3)", fontSize:"11px" }}>{m.fecha} · {m.cat}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                    <span style={{ fontWeight:700, color:"#C0392B" }}>-{fmt(m.monto,sym)}</span>
+                    <button onClick={()=>setMovimientos(p=>p.filter(x=>x.id!==m.id))}
+                      style={{ background:"none", border:"none", color:"var(--text-4)",
+                        cursor:"pointer", fontSize:"14px" }}>×</button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── SUELDOS ── */}
+        {tab==="sueldos" && (
+          <motion.div key="sueldos" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>
+            <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:"12px" }}>
+              <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}}
+                onClick={()=>{ setFormSueldo(emptySueldo); setEditSueldo(null); setModalSueldo(true); }}
+                style={{ ...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,
+                  color:"#fff", fontSize:"12px", fontWeight:700, boxShadow:`0 4px 14px ${sportColor}44` }}>
+                + Agregar persona
+              </motion.button>
+            </div>
+            <div style={{ ...ss.card, padding:0, overflow:"hidden" }}>
+              <div style={{ padding:"14px 16px", borderBottom:"1px solid var(--border-soft)",
+                display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:700, fontSize:"13px" }}>Nómina de sueldos</span>
+                <span style={{ fontWeight:800, color:"#C98408" }}>{fmt(totalSueldos,sym)} / mes</span>
+              </div>
+              {sueldos.map((s,i) => (
+                <motion.div key={s.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.05}}
+                  style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px",
+                    borderBottom:"1px solid var(--border-soft)", opacity:s.activo?1:0.45 }}>
+                  <div style={{ width:"38px", height:"38px", borderRadius:"50%", flexShrink:0,
+                    background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:"12px", fontWeight:800, color:sportColor,
+                    border:`1.5px solid ${sportColor}44` }}>
+                    {s.nombre.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:700, fontSize:"13px" }}>{s.nombre}</div>
+                    <div style={{ fontSize:"11px", color:"var(--text-3)", marginTop:"2px" }}>{s.cargo}</div>
+                  </div>
+                  <div style={{ fontWeight:800, color:"#C98408", fontSize:"14px" }}>{fmt(s.monto,sym)}</div>
+                  <div style={{ display:"flex", gap:"6px" }}>
+                    <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+                      onClick={()=>{ setFormSueldo({nombre:s.nombre,cargo:s.cargo,monto:s.monto}); setEditSueldo(s.id); setModalSueldo(true); }}
+                      style={{ ...ss.btn, background:"var(--bg-elev-2)", color:"var(--text-2)",
+                        border:"1px solid var(--border-soft)", fontSize:"11px", padding:"5px 10px" }}>
+                      Editar
+                    </motion.button>
+                    <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+                      onClick={()=>setSueldos(p=>p.map(x=>x.id===s.id?{...x,activo:!x.activo}:x))}
+                      style={{ ...ss.btn, fontSize:"11px", padding:"5px 10px",
+                        background:s.activo?"rgba(192,57,43,0.1)":"rgba(31,160,74,0.1)",
+                        color:s.activo?"#C0392B":"#1FA04A",
+                        border:`1px solid ${s.activo?"rgba(192,57,43,0.3)":"rgba(31,160,74,0.3)"}` }}>
+                      {s.activo?"Pausar":"Activar"}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── GASTOS ADMIN ── */}
+        {tab==="admin" && (
+          <motion.div key="admin" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>
+            <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:"12px" }}>
+              <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}}
+                onClick={()=>{ setFormAdmin(emptyAdmin); setEditAdmin(null); setModalAdmin(true); }}
+                style={{ ...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,
+                  color:"#fff", fontSize:"12px", fontWeight:700, boxShadow:`0 4px 14px ${sportColor}44` }}>
+                + Agregar gasto
+              </motion.button>
+            </div>
+            <div style={{ ...ss.card, padding:0, overflow:"hidden" }}>
+              <div style={{ padding:"14px 16px", borderBottom:"1px solid var(--border-soft)",
+                display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:700, fontSize:"13px" }}>Gastos administrativos fijos</span>
+                <span style={{ fontWeight:800, color:"#C0392B" }}>{fmt(totalGastosAdmin,sym)} / mes</span>
+              </div>
+              {gastosAdmin.map((g,i) => (
+                <motion.div key={g.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.05}}
+                  style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px",
+                    borderBottom:"1px solid var(--border-soft)", opacity:g.activo?1:0.45 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:"13px" }}>{g.desc}</div>
+                    <div style={{ fontSize:"11px", color:"var(--text-3)", marginTop:"2px" }}>{g.cat}</div>
+                  </div>
+                  <div style={{ fontWeight:800, color:"#C0392B", fontSize:"14px" }}>{fmt(g.monto,sym)}</div>
+                  <div style={{ display:"flex", gap:"6px" }}>
+                    <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+                      onClick={()=>{ setFormAdmin({cat:g.cat,desc:g.desc,monto:g.monto}); setEditAdmin(g.id); setModalAdmin(true); }}
+                      style={{ ...ss.btn, background:"var(--bg-elev-2)", color:"var(--text-2)",
+                        border:"1px solid var(--border-soft)", fontSize:"11px", padding:"5px 10px" }}>
+                      Editar
+                    </motion.button>
+                    <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+                      onClick={()=>setGastosAdmin(p=>p.filter(x=>x.id!==g.id))}
+                      style={{ ...ss.btn, background:"rgba(192,57,43,0.1)", color:"#C0392B",
+                        border:"1px solid rgba(192,57,43,0.3)", fontSize:"11px", padding:"5px 10px" }}>
+                      Eliminar
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── FLUJO DE CAJA ── */}
+        {tab==="flujo" && (
+          <motion.div key="flujo" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>
+            <motion.div {...fadeUp} style={{ ...ss.card, marginBottom:"16px" }}>
+              <div style={{ fontWeight:700, fontSize:"14px", marginBottom:"16px" }}>📈 Flujo de caja — últimos 6 meses</div>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={flujoPorMes}>
+                  <defs>
+                    <linearGradient id="grad-ing" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1FA04A" stopOpacity={0.4}/>
+                      <stop offset="100%" stopColor="#1FA04A" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="grad-egr" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#C0392B" stopOpacity={0.4}/>
+                      <stop offset="100%" stopColor="#C0392B" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)"/>
+                  <XAxis dataKey="mes" stroke="#6B7896" fontSize={11}/>
+                  <YAxis stroke="#6B7896" fontSize={11} tickFormatter={v=>`$${(v/1000).toFixed(0)}k`}/>
+                  <Tooltip contentStyle={{ background:"var(--bg-glass-strong)", backdropFilter:"blur(20px)",
+                    border:"1px solid var(--border-mid)", borderRadius:"var(--r-md)", color:"var(--text-1)", fontSize:12 }}
+                    formatter={(v,n)=>[fmt(v,sym), n==="ingresos"?"Ingresos":"Egresos"]}/>
+                  <Legend/>
+                  <Area type="monotone" dataKey="ingresos" stroke="#1FA04A" fill="url(#grad-ing)" strokeWidth={2.5} name="ingresos"/>
+                  <Area type="monotone" dataKey="egresos"  stroke="#C0392B" fill="url(#grad-egr)" strokeWidth={2.5} name="egresos"/>
+                </AreaChart>
+              </ResponsiveContainer>
+            </motion.div>
+
+            {/* Tabla cronológica */}
+            <motion.div {...fadeUp} transition={{delay:0.1}} style={{ ...ss.card, padding:0, overflow:"hidden" }}>
+              <div style={{ padding:"14px 16px", borderBottom:"1px solid var(--border-soft)", fontWeight:700, fontSize:"13px" }}>
+                Todos los movimientos
+              </div>
+              {[...movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map((m,i) => (
+                <div key={m.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                  padding:"11px 16px", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                    <span style={{ fontSize:"16px" }}>{m.tipo==="ingreso"?"💰":"📤"}</span>
+                    <div>
+                      <div style={{ fontWeight:600 }}>{m.desc}</div>
+                      <div style={{ fontSize:"11px", color:"var(--text-3)" }}>{m.fecha} · {m.cat}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontWeight:800, color:m.tipo==="ingreso"?"#1FA04A":"#C0392B" }}>
+                    {m.tipo==="ingreso"?"+":"-"}{fmt(m.monto,sym)}
+                  </span>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
+
+      {/* ── MODALES ── */}
+      <AnimatePresence>
+        {modalMov && (
+          <Modal title={formMov.tipo==="ingreso"?"Registrar ingreso":"Registrar egreso"} onClose={()=>setModalMov(false)}>
+            <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+              <div>
+                <div style={ss.label}>Tipo</div>
+                <div style={{ display:"flex", gap:"8px" }}>
+                  {["ingreso","egreso"].map(t => (
+                    <button key={t} onClick={()=>setFormMov(f=>({...f,tipo:t,cat:t==="ingreso"?CAT_INGRESOS[0]:CAT_EGRESOS[0]}))}
+                      style={{ flex:1, padding:"8px", borderRadius:"var(--r-sm)", border:`1px solid ${formMov.tipo===t?(t==="ingreso"?"#1FA04A":"#C0392B"):"var(--border-soft)"}`,
+                        background:formMov.tipo===t?(t==="ingreso"?"rgba(31,160,74,0.1)":"rgba(192,57,43,0.1)"):"transparent",
+                        color:formMov.tipo===t?(t==="ingreso"?"#1FA04A":"#C0392B"):"var(--text-2)",
+                        cursor:"pointer", fontWeight:600, fontSize:"13px", textTransform:"capitalize" }}>
+                      {t==="ingreso"?"💰 Ingreso":"📤 Egreso"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={ss.label}>Categoría</div>
+                <select value={formMov.cat} onChange={e=>setFormMov(f=>({...f,cat:e.target.value}))} style={{...ss.input,cursor:"pointer"}}>
+                  {(formMov.tipo==="ingreso"?CAT_INGRESOS:CAT_EGRESOS).map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={ss.label}>Descripción</div>
+                <input value={formMov.desc} onChange={e=>setFormMov(f=>({...f,desc:e.target.value}))} style={ss.input} placeholder="Ej: Auspicio empresa XYZ"/>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
+                <div>
+                  <div style={ss.label}>Monto ({sym})</div>
+                  <input type="number" value={formMov.monto} onChange={e=>setFormMov(f=>({...f,monto:e.target.value}))} style={ss.input} placeholder="0"/>
+                </div>
+                <div>
+                  <div style={ss.label}>Fecha</div>
+                  <input type="date" value={formMov.fecha} onChange={e=>setFormMov(f=>({...f,fecha:e.target.value}))} style={ss.input}/>
+                </div>
+              </div>
+              <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={agregarMovimiento}
+                style={{ ...ss.btn, background:formMov.tipo==="ingreso"?"linear-gradient(135deg,#1FA04A,#16A34A)":"linear-gradient(135deg,#C0392B,#9B2335)",
+                  color:"#fff", width:"100%", padding:"13px", fontSize:"14px", fontWeight:700,
+                  boxShadow:formMov.tipo==="ingreso"?"0 6px 20px rgba(31,160,74,0.35)":"0 6px 20px rgba(192,57,43,0.35)" }}>
+                Guardar {formMov.tipo==="ingreso"?"ingreso":"egreso"}
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modalSueldo && (
+          <Modal title={editSueldo?"Editar sueldo":"Agregar persona"} onClose={()=>setModalSueldo(false)}>
+            <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+              <div>
+                <div style={ss.label}>Nombre completo</div>
+                <input value={formSueldo.nombre} onChange={e=>setFormSueldo(f=>({...f,nombre:e.target.value}))} style={ss.input} placeholder="Ej: Carlos Vega"/>
+              </div>
+              <div>
+                <div style={ss.label}>Cargo</div>
+                <input value={formSueldo.cargo} onChange={e=>setFormSueldo(f=>({...f,cargo:e.target.value}))} style={ss.input} placeholder="Ej: Entrenador Principal"/>
+              </div>
+              <div>
+                <div style={ss.label}>Sueldo mensual ({sym})</div>
+                <input type="number" value={formSueldo.monto} onChange={e=>setFormSueldo(f=>({...f,monto:e.target.value}))} style={ss.input} placeholder="0"/>
+              </div>
+              <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={guardarSueldo}
+                style={{ ...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,
+                  color:"#fff", width:"100%", padding:"13px", fontSize:"14px", fontWeight:700,
+                  boxShadow:`0 6px 20px ${sportColor}44` }}>
+                {editSueldo?"Actualizar":"Agregar"}
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modalAdmin && (
+          <Modal title={editAdmin?"Editar gasto":"Agregar gasto administrativo"} onClose={()=>setModalAdmin(false)}>
+            <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+              <div>
+                <div style={ss.label}>Categoría</div>
+                <select value={formAdmin.cat} onChange={e=>setFormAdmin(f=>({...f,cat:e.target.value}))} style={{...ss.input,cursor:"pointer"}}>
+                  {CAT_ADMIN.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={ss.label}>Descripción</div>
+                <input value={formAdmin.desc} onChange={e=>setFormAdmin(f=>({...f,desc:e.target.value}))} style={ss.input} placeholder="Ej: Cuenta mensual sede"/>
+              </div>
+              <div>
+                <div style={ss.label}>Monto mensual ({sym})</div>
+                <input type="number" value={formAdmin.monto} onChange={e=>setFormAdmin(f=>({...f,monto:e.target.value}))} style={ss.input} placeholder="0"/>
+              </div>
+              <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={guardarAdmin}
+                style={{ ...ss.btn, background:`linear-gradient(135deg,${sportColor},${sportColor}cc)`,
+                  color:"#fff", width:"100%", padding:"13px", fontSize:"14px", fontWeight:700,
+                  boxShadow:`0 6px 20px ${sportColor}44` }}>
+                {editAdmin?"Actualizar":"Agregar"}
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

@@ -10,6 +10,7 @@ import Stat from "../components/Stat";
 import Badge from "../components/Badge";
 import Semaforo from "../components/Semaforo";
 import EmptyState from "../components/EmptyState";
+import FinanzasView from "../components/FinanzasView";
 
 const EMPTY_PLAYER = {name:"", number:"", cat:"", position:"", age:"", med:"verde", cuota:"ok"};
 
@@ -433,72 +434,7 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
   }
 
   if(module==="finanzas") {
-    const totalRecaudado = payments.reduce((s,p)=>s+p.amount,0);
-    const pagados = payments.length;
-    const pendientes = players.filter(p=>p.cuota!=="ok").length;
-    const methodColors = {Khipu:"#22C55E",Transbank:"#3B82F6",Transferencia:"#F59E0B","Mercado Pago":"#06B6D4",Pix:"#22C55E"};
-
-    return (
-      <div>
-        <SectionTitle title="Finanzas del Club" sub={`${countryData.flag} ${countryData.name} · ${countryData.tax}`}/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"14px",marginBottom:"20px"}}>
-          <Stat label="Total recaudado" value={`${countryData.symbol}${totalRecaudado.toLocaleString()}`} sub={`${countryData.currency} · ${pagados} pagos`} color="#22C55E" icon="💰" delay={0.05}/>
-          <Stat label="Pendientes" value={pendientes} sub="jugadores sin pagar" color="#EF4444" icon="⚠️" delay={0.1}/>
-          <Stat label="Cuota mensual" value={`${countryData.symbol}${club.cuota.toLocaleString()}`} sub={`${countryData.payments[0]}`} color="#3B82F6" icon="🎫" delay={0.15}/>
-        </div>
-
-        {/* Botón cobro masivo */}
-        <div style={{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap"}}>
-          <motion.button whileHover={{scale:1.02,y:-2}} whileTap={{scale:0.98}}
-            onClick={()=>showToast(`Cobro masivo enviado a ${pendientes} jugadores por ${countryData.payments[0]}`,"success")}
-            style={{...ss.btn,background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",padding:"14px 24px",fontSize:"13px",boxShadow:"0 8px 24px rgba(34,197,94,0.35)"}}>
-            💳 Cobrar cuota masiva
-          </motion.button>
-          <motion.button whileHover={{scale:1.02,y:-2}} whileTap={{scale:0.98}}
-            onClick={()=>showToast("Reporte exportado como CSV","success")}
-            style={{...ss.btn,background:"var(--bg-elev-2)",color:"var(--text-2)",border:"1px solid var(--border-soft)",padding:"14px 20px",fontSize:"13px"}}>
-            📊 Exportar CSV
-          </motion.button>
-        </div>
-
-        {/* Historial de pagos en tiempo real */}
-        <motion.div {...fadeUp} style={ss.card}>
-          <div style={{fontWeight:600,fontSize:"14px",marginBottom:"16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span>📋 Pagos recibidos</span>
-            <Badge color="#22C55E">{pagados} pagos</Badge>
-          </div>
-
-          {payments.length === 0 && (
-            <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-3)",fontSize:"13px"}}>Sin pagos registrados aún</div>
-          )}
-
-          {payments.map((p,i)=>(
-            <motion.div key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.04}}
-              style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px 0",borderBottom:i<payments.length-1?"1px solid var(--border-soft)":"none"}}>
-              <div style={{width:"38px",height:"38px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}44`,flexShrink:0}}>
-                {p.playerName.split(" ").map(n=>n[0]).join("").slice(0,2)}
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:600,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.playerName}</div>
-                <div style={{...ss.muted,fontSize:"11px",marginTop:"3px"}}>{p.date}</div>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px",flexShrink:0}}>
-                <span style={{fontWeight:700,color:"#22C55E",fontSize:"14px"}}>{countryData.symbol}{p.amount.toLocaleString()}</span>
-                <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"99px",background:`${methodColors[p.method]||"#3B82F6"}22`,color:methodColors[p.method]||"#3B82F6",border:`1px solid ${methodColors[p.method]||"#3B82F6"}44`,fontWeight:600}}>{p.method}</span>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Nota comisión */}
-        <motion.div {...fadeUp} transition={{delay:0.2}} style={{...ss.card,marginTop:"14px",background:"linear-gradient(135deg,rgba(59,130,246,0.08),transparent)",border:"1px solid rgba(59,130,246,0.25)"}}>
-          <div style={{display:"flex",gap:"12px",alignItems:"center"}}>
-            <span style={{fontSize:"18px",flexShrink:0}}>ℹ️</span>
-            <span style={{fontSize:"12px",color:"var(--text-2)",lineHeight:1.5}}>SportOS retiene una comisión del <strong style={{color:"#3B82F6"}}>3%</strong> por transacción para infraestructura y soporte.</span>
-          </div>
-        </motion.div>
-      </div>
-    );
+    return <FinanzasView countryData={countryData} payments={payments} sportColor={sportColor} showToast={showToast}/>;
   }
 
   return null;
