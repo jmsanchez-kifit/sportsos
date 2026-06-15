@@ -5,6 +5,7 @@ import { ss } from "../styles/tokens";
 import AuroraBg from "../components/AuroraBg";
 import { MOCK_USERS } from "../data/mockUsers";
 import { supabase } from "../lib/supabase";
+import BackButton from "../components/BackButton";
 
 const ROL_INFO = {
   superadmin: { label:"Super Admin",       icon:"⚡", color:"#8040CC" },
@@ -127,7 +128,7 @@ function PlanesSection({ onRegister }) {
   );
 }
 
-export default function LoginScreen({ onLogin, onDemo, onRegister }) {
+export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -211,8 +212,11 @@ export default function LoginScreen({ onLogin, onDemo, onRegister }) {
       <AuroraBg/>
 
       {/* Topbar */}
-      <div style={{position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",height:"60px",background:"rgba(10,8,8,0.7)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid var(--border-soft)"}}>
-        <div style={{fontSize:"18px",fontWeight:900,color:"#C0392B",letterSpacing:"-0.02em",filter:"drop-shadow(0 0 10px #C0392B66)"}}>⚡ SportOS</div>
+      <div style={{position:"sticky",top:0,zIndex:10,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",height:"60px",background:"rgba(10,8,8,0.7)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid var(--border-soft)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          {onBack && <BackButton onClick={onBack} label="Inicio"/>}
+          <div style={{fontSize:"18px",fontWeight:900,color:"#C0392B",letterSpacing:"-0.02em",filter:"drop-shadow(0 0 10px #C0392B66)"}}>⚡ SportOS</div>
+        </div>
         <div style={{display:"flex",gap:"6px"}}>
           {[{id:"login",label:"Iniciar sesión"},{id:"planes",label:"Ver planes"}].map(t=>(
             <motion.button key={t.id} whileTap={{scale:0.96}} onClick={()=>setTab(t.id)}

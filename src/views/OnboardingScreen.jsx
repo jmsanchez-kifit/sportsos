@@ -3,13 +3,19 @@ import { motion } from "framer-motion";
 import { SPORTS_CONFIG } from "../data/sports";
 import AuroraBg from "../components/AuroraBg";
 import { ss } from "../styles/tokens";
+import BackButton from "../components/BackButton";
 
-export default function OnboardingScreen({onSelect}) {
+export default function OnboardingScreen({onSelect, onBack}) {
   const [selSport, setSelSport] = useState(null);
   const [selCountry] = useState("CL");
   return (
     <div style={{position:"relative",height:"100vh",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px",overflow:"auto"}}>
       <AuroraBg/>
+      {onBack && (
+        <div style={{position:"fixed",top:"16px",left:"20px",zIndex:10}}>
+          <BackButton onClick={onBack} label="Inicio"/>
+        </div>
+      )}
       <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.8,ease:[0.16,1,0.3,1]}} style={{position:"relative",zIndex:2,textAlign:"center",maxWidth:"900px",width:"100%"}}>
         <motion.div initial={{scale:0.8,opacity:0}} animate={{scale:1,opacity:1}} transition={{duration:0.6,type:"spring",stiffness:120}} style={{display:"inline-flex",alignItems:"center",gap:"10px",padding:"8px 18px",borderRadius:"99px",background:"var(--bg-glass)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid var(--border-soft)",marginBottom:"24px"}}>
           <span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#22C55E",boxShadow:"0 0 12px #22C55E",animation:"pulse-soft 2s infinite"}}/>

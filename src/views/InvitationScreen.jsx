@@ -4,6 +4,7 @@ import { fadeUp, scaleIn } from "../styles/motion";
 import { ss } from "../styles/tokens";
 import AuroraBg from "../components/AuroraBg";
 import { supabase } from "../lib/supabase";
+import BackButton from "../components/BackButton";
 
 const ROL_INFO = {
   superadmin: { label:"Super Admin",       icon:"⚡", color:"#8040CC", desc:"Acceso total a la plataforma SportOS." },
@@ -13,7 +14,7 @@ const ROL_INFO = {
   jugador:     { label:"Jugador",           icon:"👤", color:"#1FA04A", desc:"Tu dashboard, cuota, gym y convocatorias." },
 };
 
-export default function InvitationScreen({ params, onComplete }) {
+export default function InvitationScreen({ params, onComplete, onBack }) {
   const rol      = params.get("rol")    || "jugador";
   const clubId   = params.get("club")   || null;
   const clubName = params.get("name")   || "Tu Club";
@@ -115,6 +116,11 @@ export default function InvitationScreen({ params, onComplete }) {
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
       <AuroraBg/>
+      {onBack && (
+        <div style={{position:"fixed",top:"16px",left:"20px",zIndex:10}}>
+          <BackButton onClick={onBack} label="Inicio"/>
+        </div>
+      )}
       <motion.div {...fadeUp} style={{maxWidth:"440px",width:"90%",position:"relative",zIndex:1}}>
 
         {/* Cabecera — club y rol */}

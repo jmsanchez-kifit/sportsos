@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SPORTS_CONFIG, COUNTRIES } from "../data/sports";
 import AuroraBg from "../components/AuroraBg";
 import { ss } from "../styles/tokens";
+import BackButton from "../components/BackButton";
 import { supabase } from "../lib/supabase";
 
 const STEPS = ["Tu cuenta", "Tu club", "Tu deporte"];
 
-export default function ClubOnboarding({ onComplete }) {
+export default function ClubOnboarding({ onComplete, onBack }) {
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -98,8 +99,18 @@ export default function ClubOnboarding({ onComplete }) {
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
         style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: "460px" }}>
 
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+        {/* Logo + volver */}
+        <div style={{ textAlign: "center", marginBottom: "32px", position:"relative" }}>
+          {onBack && step === 0 && (
+            <div style={{position:"absolute",left:0,top:"50%",transform:"translateY(-50%)"}}>
+              <BackButton onClick={onBack} label="Volver"/>
+            </div>
+          )}
+          {step > 0 && (
+            <div style={{position:"absolute",left:0,top:"50%",transform:"translateY(-50%)"}}>
+              <BackButton onClick={()=>setStep(s=>s-1)} label="Atrás"/>
+            </div>
+          )}
           <div style={{ fontWeight: 900, fontSize: "28px", color: accentColor, letterSpacing: "-0.03em", filter: `drop-shadow(0 0 16px ${accentColor}66)` }}>⚡ SportOS</div>
           <div style={{ fontSize: "13px", color: "var(--text-3)", marginTop: "6px" }}>Configura tu club en 3 pasos</div>
         </div>

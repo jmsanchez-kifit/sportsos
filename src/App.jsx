@@ -134,6 +134,7 @@ export default function SportOS() {
   // Onboarding nuevo club
   if(screen==="club-onboarding") return (
     <ClubOnboarding
+      onBack={()=>setScreen("login")}
       onComplete={(usuario)=>{
         if(!usuario) { setScreen("login"); return; }
         setCurrentUser({nombre:usuario.nombre, email:usuario.email, rol:usuario.rol, club:usuario.club, club_id:usuario.club_id, cats:usuario.cats});
@@ -147,6 +148,7 @@ export default function SportOS() {
   if(isInvitation) return (
     <InvitationScreen
       params={urlParams}
+      onBack={()=>{ window.history.replaceState({},"","/"); setScreen("landing"); }}
       onComplete={(usuario)=>{
         setCurrentUser(usuario);
         setRole(usuario.rol);
@@ -158,6 +160,7 @@ export default function SportOS() {
 
   if(screen==="login") return (
     <LoginScreen
+      onBack={()=>setScreen("landing")}
       onLogin={(user)=>{
         setCurrentUser({nombre:user.nombre, email:user.email, rol:user.rol, club:user.club, club_id:user.club_id||null, cats:user.cats});
         setRole(user.rol);
@@ -169,7 +172,7 @@ export default function SportOS() {
     />
   );
 
-  if(screen==="onboarding") return <OnboardingScreen onSelect={(s,c)=>{setSport(s);setCountry(c);setScreen("app");}}/>;
+  if(screen==="onboarding") return <OnboardingScreen onBack={()=>setScreen("landing")} onSelect={(s,c)=>{setSport(s);setCountry(c);setScreen("app");}}/>;
 
   const rolActual = ROLES.find(r=>r.id===role);
 
