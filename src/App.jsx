@@ -87,13 +87,20 @@ export default function SportOS() {
   // Plan del usuario: demo ve todo hasta Pro; usuarios reales usan su plan
   const userPlan = isDemo ? DEMO_PLAN : (currentUser?.plan || "free");
 
-  // Navegar a módulo con gate de freemium
+  // Historial de navegación para el botón ← dentro de la app
+  const [moduleHistory, setModuleHistory] = useState([]);
+
   const navigateTo = (moduleId) => {
-    if (canAccess(userPlan, moduleId)) {
-      setModule(moduleId);
-    } else {
-      setUpgradeFor(moduleId);
-    }
+    if (!canAccess(userPlan, moduleId)) { setUpgradeFor(moduleId); return; }
+    setModuleHistory(prev => [...prev.slice(-9), module]); // guarda el módulo actual antes de cambiar
+    setModule(moduleId);
+  };
+
+  const goBack = () => {
+    if (moduleHistory.length === 0) { setScreen("landing"); return; }
+    const prev = moduleHistory[moduleHistory.length - 1];
+    setModuleHistory(h => h.slice(0, -1));
+    setModule(prev);
   };
 
   const sp           = SPORTS_CONFIG[sport];
@@ -116,7 +123,7 @@ export default function SportOS() {
     return ()=>window.removeEventListener("keydown", handler);
   },[]);
 
-  useEffect(()=>{const mods=MODULE_MAP[role]||[];if(mods.length>0)setModule(mods[0].id);},[role]);
+  useEffect(()=>{const mods=MODULE_MAP[role]||[];if(mods.length>0){setModule(mods[0].id);setModuleHistory([]);};},[role]);
   useEffect(()=>{setCategory(0);},[sport]);
 
   // Detecta link de invitación en la URL
@@ -183,13 +190,13 @@ export default function SportOS() {
         {toast&&<Toast msg={toast.msg} type={toast.type} onUndo={toast.onUndo||null} onClose={()=>setToast(null)}/>}
       </AnimatePresence>
       <AnimatePresence>
-        {searchOpen&&<GlobalSearch players={players} posts={[]} sportColor={sportColor} role={role} modules={sportModules} onNavigate={(id)=>setModule(id)} onClose={()=>setSearchOpen(false)}/>}
+        {searchOpen&&<GlobalSearch players={players} posts={[]} sportColor={sportColor} role={role} modules={sportModules} onNavigate={(id)=>navigateTo(id)} onClose={()=>setSearchOpen(false)}/>}
       </AnimatePresence>
       {screen==="app"&&<OnboardingTip
         sportColor={sportColor}
         role={role}
         userKey={currentUser?.email || "demo"}
-        onNavigate={(moduleId)=>setModule(moduleId)}
+        onNavigate={(moduleId)=>navigateTo(moduleId)}
       />}
       {whatsappModal&&<WhatsAppModal onClose={()=>setWhatsappModal(false)} team={club.name} rival={club.next.rival} date={club.next.dia}
         starters={SPORTS_CONFIG[sport].positions.slice(0,sp.teamSize).map((pos,i)=>({name:players[i]?players[i].name:"Jugador "+(i+1),pos}))}
@@ -235,6 +242,14 @@ export default function SportOS() {
 
       {/* ── Topbar ── */}
       <div style={ss.topbar} className="sportos-topbar">
+        {/* Botón volver — historial de módulos o salida a landing */}
+        <motion.button
+          whileHover={{x:-3,scale:1.05}} whileTap={{scale:0.95}}
+          onClick={goBack}
+          title={moduleHistory.length>0?"Módulo anterior":"Ir al inicio"}
+          style={{background:"transparent",border:"1px solid var(--border-soft)",color:"var(--text-3)",borderRadius:"var(--r-sm)",padding:"5px 10px",cursor:"pointer",fontSize:"16px",lineHeight:1,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          ←
+        </motion.button>
         <motion.div initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.4}} style={{fontWeight:800,fontSize:"16px",color:sportColor,marginRight:"8px",whiteSpace:"nowrap",letterSpacing:"-0.01em",display:"flex",alignItems:"center",gap:"6px",filter:`drop-shadow(0 0 12px ${sportColor}66)`}}>⚡ SportOS</motion.div>
         {/* Selector de deporte y categoría: oculto para jugador real */}
         {(isDemo || role !== "jugador") && <>
@@ -313,7 +328,7 @@ export default function SportOS() {
               const locked = !canAccess(userPlan, m.id);
               return (
                 <motion.button key={m.id} whileHover={{x:locked?0:3}} whileTap={{scale:0.97}}
-                  onClick={()=>navigateTo(m.id)}
+                  onClick={()=>{ if(m.id!==module) navigateTo(m.id); }}
                   style={{display:"flex",alignItems:"center",gap:"8px",padding:"9px 10px",borderRadius:"var(--r-sm)",border:"none",cursor:"pointer",background:module===m.id?`linear-gradient(135deg,${sportColor}22,${sportColor}08)`:"transparent",color:module===m.id?sportColor:locked?"var(--text-4)":"var(--text-2)",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?700:500,marginBottom:"3px",transition:"all 0.2s",boxShadow:module===m.id?`0 0 12px ${sportColor}33`:"none",opacity:locked?0.6:1}}>
                   <span style={{width:"4px",height:"16px",borderRadius:"2px",background:module===m.id?sportColor:"transparent",transition:"all 0.2s"}}/>
                   <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{m.label}</span>
