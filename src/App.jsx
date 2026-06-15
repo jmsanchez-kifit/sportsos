@@ -5,6 +5,7 @@ import { SPORTS_CONFIG, COUNTRIES, CLUBS } from "./data/sports";
 import { PLAYERS_RUGBY } from "./data/players";
 import { COMMISSION_DATA, CLUB_LIST, COUNTRY_COUNTS, MOCK_PAYMENTS, MOCK_PARTIDOS } from "./data/mockData";
 import { usePlayers } from "./lib/usePlayers";
+import { supabase } from "./lib/supabase";
 
 import { fadeUp } from "./styles/motion";
 import { ss } from "./styles/tokens";
@@ -128,6 +129,40 @@ export default function SportOS() {
   useEffect(()=>{setModule("home");setModuleHistory([]);},[role]);
   useEffect(()=>{setCategory(0);},[sport]);
 
+  // Detecta sesión de Supabase al cargar (OAuth redirect o sesión guardada)
+  useEffect(()=>{
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user && !currentUser) {
+        const u = session.user;
+        // Buscar perfil en tabla profiles
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*, clubs(name, sport, country)")
+          .eq("id", u.id)
+          .single();
+
+        const usuario = {
+          id: u.id,
+          nombre: profile?.nombre || u.user_metadata?.full_name || u.email,
+          email: u.email,
+          rol: profile?.rol || "admin",
+          club: profile?.clubs?.name || "Mi Club",
+          club_id: profile?.club_id || null,
+          sport: profile?.clubs?.sport || "rugby",
+          plan: profile?.plan || "free",
+          cats: [],
+          isReal: true,
+        };
+        setCurrentUser(usuario);
+        setRole(usuario.rol);
+        if (usuario.sport) setSport(usuario.sport);
+        setScreen("app");
+      }
+    });
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Detecta link de invitación en la URL
   const urlParams = new URLSearchParams(window.location.search);
   const isInvitation = urlParams.has("token") && urlParams.has("rol");
@@ -137,6 +172,7 @@ export default function SportOS() {
     <LandingPage
       onLogin={()=>setScreen("login")}
       onDemo={()=>setScreen("onboarding")}
+      onRegister={()=>setScreen("club-onboarding")}
     />
   );
 

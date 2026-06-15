@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
 export default function ProgressBar({value, max, color, height=6, animated=true}) {
-  const pct = Math.min(100, Math.round((value / max) * 100));
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"99px",height,overflow:"hidden",position:"relative"}}>
       <motion.div

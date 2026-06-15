@@ -341,7 +341,7 @@ function AsistenciaGrid({players, sportColor, showToast, present={}, saving={}, 
       <motion.div {...fadeUp} style={{...ss.card,marginBottom:"16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:"10px",alignItems:"center"}}>
           <span style={{fontSize:"13px",fontWeight:600}}>Asistencia: {count}/{players.length}</span>
-          <span style={{color:sportColor,fontSize:"15px",fontWeight:800,filter:`drop-shadow(0 0 8px ${sportColor}88)`}}>{Math.round(count/players.length*100)}%</span>
+          <span style={{color:sportColor,fontSize:"15px",fontWeight:800,filter:`drop-shadow(0 0 8px ${sportColor}88)`}}>{players.length>0?Math.round(count/players.length*100):0}%</span>
         </div>
         <ProgressBar value={count} max={players.length} color={sportColor} height={8}/>
       </motion.div>

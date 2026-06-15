@@ -56,7 +56,7 @@ const TESTIMONIALS = [
   { name: "Diego Fuentes", role: "Preparador Físico · HC Tigres", text: "Publico el microciclo del lunes y los chicos ya lo tienen en su celular. El ranking de fuerza los motiva un montón." },
 ];
 
-export default function LandingPage({ onLogin, onDemo }) {
+export default function LandingPage({ onLogin, onDemo, onRegister }) {
   const [activeSport, setActiveSport] = useState(0);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
@@ -66,9 +66,9 @@ export default function LandingPage({ onLogin, onDemo }) {
   const handleCTA = () => {
     if (email.trim()) {
       setEmailSent(true);
-      setTimeout(() => onLogin(), 1200);
+      setTimeout(() => onRegister(), 1200);
     } else {
-      onLogin();
+      onRegister();
     }
   };
 
@@ -211,7 +211,7 @@ export default function LandingPage({ onLogin, onDemo }) {
                   </div>
                 ))}
               </div>
-              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onLogin}
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onRegister}
                 style={{ ...ss.btn, width: "100%", padding: "12px", fontSize: "13px", fontWeight: 700, background: plan.highlight ? `linear-gradient(135deg,${plan.color},${plan.color}cc)` : "var(--bg-elev-2)", color: plan.highlight ? "#fff" : "var(--text-2)", border: plan.highlight ? "none" : "1px solid var(--border-soft)", boxShadow: plan.highlight ? `0 6px 20px ${plan.color}44` : "none" }}>
                 {plan.cta}
               </motion.button>
@@ -231,7 +231,7 @@ export default function LandingPage({ onLogin, onDemo }) {
             Únete a los clubes de LATAM que ya gestionan todo desde SportOS.
           </p>
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-            <motion.button whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} onClick={onLogin}
+            <motion.button whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} onClick={onRegister}
               style={{ ...ss.btn, background: `linear-gradient(135deg,${sport.color},${sport.color}bb)`, color: "#fff", fontSize: "15px", padding: "14px 32px", boxShadow: `0 8px 28px ${sport.color}44`, fontWeight: 700 }}>
               Crear mi club gratis
             </motion.button>

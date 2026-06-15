@@ -32,7 +32,7 @@ export const MOCK_USERS = [
     rol: "entrenador",
     sport: "rugby",
     club: "Toros RC",
-    cats: ["Primer Equipo"],
+    cats: ["Superior"],
     avatar: "ER",
   },
   {
@@ -43,7 +43,7 @@ export const MOCK_USERS = [
     rol: "entrenador",
     sport: "rugby",
     club: "Toros RC",
-    cats: ["Reserva", "Sub-20"],
+    cats: ["M16", "M18"],
     avatar: "CV",
   },
   {
@@ -54,7 +54,7 @@ export const MOCK_USERS = [
     rol: "preparador",
     sport: "rugby",
     club: "Toros RC",
-    cats: ["Primer Equipo", "Reserva"],
+    cats: ["Superior", "M16", "M18"],
     avatar: "PD",
   },
   {
