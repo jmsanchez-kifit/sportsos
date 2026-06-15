@@ -133,11 +133,39 @@ function HomeAdmin({ players, sportColor, club, sp, countryData, payments, parti
   );
 }
 
+// Gráfico de barras simple para tendencia de asistencia
+function TrendBar({ data, color }) {
+  const max = Math.max(...data.map(d=>d.pct), 1);
+  return (
+    <div style={{display:"flex",alignItems:"flex-end",gap:"8px",height:"60px"}}>
+      {data.map((d,i)=>(
+        <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"4px"}}>
+          <div style={{fontSize:"9px",color:"var(--text-3)",fontWeight:700}}>{d.pct}%</div>
+          <motion.div
+            initial={{height:0}} animate={{height:`${(d.pct/max)*44}px`}}
+            transition={{duration:0.6,delay:i*0.08}}
+            style={{width:"100%",borderRadius:"4px 4px 2px 2px",
+              background:d.pct>=75?color:d.pct>=50?"#C98408":"#C0392B",
+              minHeight:"4px"}}/>
+          <div style={{fontSize:"9px",color:"var(--text-3)",whiteSpace:"nowrap"}}>{d.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function HomeEntrenador({ players, sportColor, club, sp, partidos, onNavigate }) {
   const hoy       = new Date().toISOString().split("T")[0];
-  const proxPartido = partidos.find(p=>p.estado==="programado"&&p.fecha>=hoy);
   const ultimoRes = partidos.find(p=>p.estado==="jugado");
-  const presentes = Math.floor(players.length * 0.78); // mock asistencia de hoy
+  const presentes = Math.floor(players.length * 0.78);
+
+  // Tendencia de asistencia — mock últimas 4 semanas
+  const trendData = [
+    { label:"Sem 1", pct: 65 },
+    { label:"Sem 2", pct: 72 },
+    { label:"Sem 3", pct: 80 },
+    { label:"Hoy",   pct: players.length > 0 ? Math.round(presentes/players.length*100) : 78 },
+  ];
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
@@ -145,7 +173,7 @@ function HomeEntrenador({ players, sportColor, club, sp, partidos, onNavigate })
       <NextMatchCard club={club} sp={sp} sportColor={sportColor} onNavigate={onNavigate}/>
 
       {/* Stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px"}}>
+      <div className="stats-hero-4" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px"}}>
         <HeroStat icon="✅" value={`${presentes}/${players.length}`} label="Asistencia hoy"
           sub="Presentes en entrenamiento" color="#1FA04A" onClick={()=>onNavigate("asistencia")}/>
         <HeroStat icon="🏆" value={partidos.filter(p=>p.resultado==="victoria").length}
@@ -155,7 +183,15 @@ function HomeEntrenador({ players, sportColor, club, sp, partidos, onNavigate })
           sub="Jugadores activos" color="#3B82F6" onClick={()=>onNavigate("nomina")}/>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"}}>
+      <div className="home-2col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"}}>
+        {/* Tendencia asistencia */}
+        <MiniCard title="Tendencia asistencia — 4 semanas" delay={0.08}>
+          <TrendBar data={trendData} color={sportColor}/>
+          <div style={{fontSize:"10px",color:"var(--text-3)",marginTop:"8px"}}>
+            {trendData[3].pct > trendData[0].pct ? "📈 Asistencia en alza este mes" : "📉 Asistencia en baja este mes"}
+          </div>
+        </MiniCard>
+
         {/* Acciones rápidas */}
         <MiniCard title="Acciones rápidas" delay={0.1}>
           <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
@@ -165,32 +201,32 @@ function HomeEntrenador({ players, sportColor, club, sp, partidos, onNavigate })
             <QuickAction icon="🏆" label="Resultado" color="#C98408" onClick={()=>onNavigate("muro")}/>
           </div>
         </MiniCard>
-
-        {/* Último resultado */}
-        <MiniCard title="Último partido" delay={0.12}>
-          {ultimoRes ? (
-            <div>
-              <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"10px"}}>
-                <div style={{fontWeight:900,fontSize:"26px",
-                  color:ultimoRes.resultado==="victoria"?"#1FA04A":ultimoRes.resultado==="derrota"?"#C0392B":"#C98408"}}>
-                  {ultimoRes.golesLocal} — {ultimoRes.golesVisita}
-                </div>
-                <div>
-                  <div style={{fontWeight:700,fontSize:"12px"}}>vs {ultimoRes.rival}</div>
-                  <div style={{fontSize:"10px",color:"var(--text-3)"}}>{ultimoRes.fecha} · {ultimoRes.lugar}</div>
-                </div>
-              </div>
-              {ultimoRes.tarjetas?.length>0 && (
-                <div style={{fontSize:"11px",color:"var(--text-3)"}}>
-                  🃏 {ultimoRes.tarjetas.length} tarjeta{ultimoRes.tarjetas.length>1?"s":""} en el partido
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{fontSize:"12px",color:"var(--text-3)"}}>Sin partidos jugados aún.</div>
-          )}
-        </MiniCard>
       </div>
+
+      {/* Último resultado */}
+      <MiniCard title="Último partido" delay={0.12}>
+        {ultimoRes ? (
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"10px"}}>
+              <div style={{fontWeight:900,fontSize:"26px",
+                color:ultimoRes.resultado==="victoria"?"#1FA04A":ultimoRes.resultado==="derrota"?"#C0392B":"#C98408"}}>
+                {ultimoRes.golesLocal} — {ultimoRes.golesVisita}
+              </div>
+              <div>
+                <div style={{fontWeight:700,fontSize:"12px"}}>vs {ultimoRes.rival}</div>
+                <div style={{fontSize:"10px",color:"var(--text-3)"}}>{ultimoRes.fecha} · {ultimoRes.lugar}</div>
+              </div>
+            </div>
+            {ultimoRes.tarjetas?.length>0 && (
+              <div style={{fontSize:"11px",color:"var(--text-3)"}}>
+                🃏 {ultimoRes.tarjetas.length} tarjeta{ultimoRes.tarjetas.length>1?"s":""} en el partido
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{fontSize:"12px",color:"var(--text-3)"}}>Sin partidos jugados aún.</div>
+        )}
+      </MiniCard>
     </div>
   );
 }

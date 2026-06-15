@@ -316,7 +316,21 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
               <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}} onClick={()=>setPlayerForm(null)}
                 style={{...ss.btn,background:"transparent",color:"var(--text-3)",padding:"2px 8px",fontSize:"16px"}}>✕</motion.button>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"12px"}}>
+            {/* Foto del jugador */}
+            <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"16px"}}>
+              <div style={{position:"relative"}}>
+                {playerForm.avatar_url
+                  ? <img src={playerForm.avatar_url} alt="foto" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:`2px solid ${sportColor}55`}}/>
+                  : <div style={{width:64,height:64,borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",fontWeight:800,color:sportColor,border:`2px solid ${sportColor}55`}}>{(playerForm.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2)||"?"}</div>
+                }
+              </div>
+              <div style={{flex:1}}>
+                <div style={ss.label}>Foto (URL de imagen)</div>
+                <input value={playerForm.avatar_url||""} onChange={e=>setPlayerForm(p=>({...p,avatar_url:e.target.value}))} placeholder="https://... (link a foto del jugador)" style={ss.input}/>
+                <div style={{fontSize:"10px",color:"var(--text-3)",marginTop:"4px"}}>Pega un link de imagen. El jugador puede actualizarla desde su perfil.</div>
+              </div>
+            </div>
+            <div className="player-form-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"12px"}}>
               <div>
                 <div style={ss.label}>Nombre completo *</div>
                 <input value={playerForm.name||""} onChange={e=>setPlayerForm(p=>({...p,name:e.target.value}))} placeholder="Ej: Carlos Rodríguez" style={ss.input}/>
@@ -380,7 +394,10 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
               <motion.tr key={p.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3,delay:i*0.03}} whileHover={{background:"var(--bg-elev-2)"}} style={{borderBottom:"1px solid var(--border-soft)"}}>
                 <td style={{padding:"12px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                    <div style={{width:"32px",height:"32px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}55`}}>{(p.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2)}</div>
+                    {p.avatar_url
+                      ? <img src={p.avatar_url} alt={p.name} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover",border:`1.5px solid ${sportColor}55`,flexShrink:0}}/>
+                      : <div style={{width:"32px",height:"32px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}55`,flexShrink:0}}>{(p.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2)}</div>
+                    }
                     <div>
                       <div style={{fontWeight:600}}>{p.name}</div>
                       {p.number && <div style={{fontSize:"10px",color:"var(--text-3)"}}>#{p.number}</div>}

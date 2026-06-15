@@ -76,6 +76,15 @@ const WELLNESS_MOCK = [
     w48:{ sueño:4, fatiga:5, dolor:4, estres:5, animo:5 },
     lesion:null,
     golpes:[{ zona:"espalda", sev:"leve", desc:"Esfuerzo en scrum" }] },
+  { name:"Tomás Espinoza",  num:21, pos:"Centro",       cat:"M18",           filled24h:true,  filled48h:false,
+    w24:{ sueño:5, fatiga:5, dolor:5, estres:5, animo:5 },
+    w48:null, lesion:null, golpes:[] },
+  { name:"Ignacio Reyes",   num:22, pos:"Ala",          cat:"M18",           filled24h:false, filled48h:false,
+    w24:null, w48:null, lesion:null, golpes:[] },
+  { name:"Sebastián Moya",  num:31, pos:"Apertura",     cat:"M16",           filled24h:true,  filled48h:true,
+    w24:{ sueño:3, fatiga:2, dolor:2, estres:3, animo:3 },
+    w48:{ sueño:3, fatiga:2, dolor:2, estres:3, animo:3 },
+    lesion:"Dolor rodilla izq — en observación", golpes:[{ zona:"rodilla-izq", sev:"moderado", desc:"Golpe en tackle" }] },
 ];
 
 function scoreOf(w) {
@@ -382,17 +391,21 @@ function EstadoPlantelView({ sportColor }) {
   const [showModal, setShowModal] = useLocalState(false);
   const [selected, setSelected]   = useLocalState(null);
   const [tab, setTab]             = useLocalState("wellness"); // "wellness" | "golpes"
+  const [catFilter, setCatFilter] = useLocalState("Todas");
 
+  const allCats = ["Todas", ...Array.from(new Set(WELLNESS_MOCK.map(p => p.cat)))];
   const withLevel = WELLNESS_MOCK.map(p => ({ ...p, level: alertLevel(p), score: scoreOf(p.w48) ?? scoreOf(p.w24) }));
-  const lesionados = withLevel.filter(p => p.level === "lesionado");
-  const alertaRoja = withLevel.filter(p => p.level === "alerta-roja");
-  const alertas    = withLevel.filter(p => p.level === "alerta");
-  const ok         = withLevel.filter(p => p.level === "ok");
-  const pendientes = withLevel.filter(p => p.level === "pendiente");
+  const filtered  = catFilter === "Todas" ? withLevel : withLevel.filter(p => p.cat === catFilter);
 
-  const totalFilled = withLevel.filter(p => p.filled24h || p.filled48h).length;
+  const lesionados = filtered.filter(p => p.level === "lesionado");
+  const alertaRoja = filtered.filter(p => p.level === "alerta-roja");
+  const alertas    = filtered.filter(p => p.level === "alerta");
+  const ok         = filtered.filter(p => p.level === "ok");
+  const pendientes = filtered.filter(p => p.level === "pendiente");
+
+  const totalFilled = filtered.filter(p => p.filled24h || p.filled48h).length;
   const avgScore    = (() => {
-    const scored = withLevel.filter(p => p.score !== null);
+    const scored = filtered.filter(p => p.score !== null);
     if (!scored.length) return 0;
     return Math.round(scored.reduce((a,b)=>a+b.score,0)/scored.length);
   })();
@@ -470,6 +483,32 @@ function EstadoPlantelView({ sportColor }) {
           </motion.button>
         </div>
       </motion.div>
+
+      {/* ── Resumen por categoría ── */}
+      <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"16px"}}>
+        {allCats.map(cat => {
+          const catPlayers = cat === "Todas" ? withLevel : withLevel.filter(p => p.cat === cat);
+          const catAlerta  = catPlayers.filter(p => p.level === "lesionado" || p.level === "alerta-roja" || p.level === "alerta").length;
+          const catOk      = catPlayers.filter(p => p.level === "ok").length;
+          const catPend    = catPlayers.filter(p => p.level === "pendiente").length;
+          const semColor   = catAlerta > 0 ? "#C0392B" : catPend > catOk ? "#C98408" : "#1FA04A";
+          const semIcon    = catAlerta > 0 ? "🔴" : catPend > catOk ? "🟡" : "🟢";
+          return (
+            <motion.button key={cat} whileHover={{y:-1}} whileTap={{scale:0.97}}
+              onClick={() => setCatFilter(cat)}
+              style={{...ss.btn, padding:"7px 14px", fontSize:"12px",
+                background: catFilter===cat ? `${semColor}18` : "var(--bg-elev-2)",
+                border: `1px solid ${catFilter===cat ? semColor+"55" : "var(--border-soft)"}`,
+                color: catFilter===cat ? semColor : "var(--text-2)",
+                fontWeight: catFilter===cat ? 700 : 500,
+                boxShadow: catFilter===cat ? `0 0 12px ${semColor}22` : "none",
+                gap:"6px"}}>
+              <span>{semIcon}</span> {cat}
+              <span style={{fontSize:"10px",color:"var(--text-3)",fontWeight:400}}>({catPlayers.length})</span>
+            </motion.button>
+          );
+        })}
+      </div>
 
       {/* ── Pestañas ── */}
       <div style={{display:"flex",gap:"6px",marginBottom:"20px",borderBottom:"1px solid var(--border-soft)",paddingBottom:"0"}}>

@@ -179,6 +179,15 @@ body {
   color: #fff;
 }
 
+/* ══════════════ SELECT DROPDOWN ══════════════ */
+select {
+  color-scheme: dark;
+}
+select option {
+  background: #1a1414;
+  color: #f0eded;
+}
+
 /* ══════════════ GLOBAL KEYFRAMES ══════════════ */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -388,4 +397,16 @@ body {
   .sportos-topbar { padding: 0 8px !important; }
   .sportos-main   { padding: 12px 10px !important; }
   .grid-3         { grid-template-columns: 1fr !important; }
+}
+
+/* ── Mejoras mobile para secciones específicas ── */
+@media (max-width: 768px) {
+  /* Stats hero: 2 columnas en mobile */
+  .stats-hero-4 { grid-template-columns: 1fr 1fr !important; }
+  /* Cards lado a lado en home → apiladas en mobile */
+  .home-2col    { grid-template-columns: 1fr !important; }
+  /* Formulario jugador: 1 columna en mobile */
+  .player-form-grid { grid-template-columns: 1fr !important; }
+  /* Foto jugador en form: columna */
+  .player-photo-row { flex-direction: column !important; align-items: flex-start !important; }
 }
