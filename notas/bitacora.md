@@ -1,5 +1,16 @@
 # Bitácora — sportsos
 
+## 2026-06-14
+- Creado `src/views/HomeView.jsx`: dashboard de inicio con métricas por rol
+  - Admin: jugadores activos, cuotas (pagadas/pendientes/vencidas), próximo partido, barra de progreso
+  - Entrenador: próximo partido hero, asistencia del día, victorias, últimos partidos
+  - Preparador: estado del plantel wellness (lesionados/alertas/aptos), microciclo, ranking fuerza
+  - Jugador: ¿Estoy convocado? hero (grande), cuota, wellness, ranking gym
+  - SuperAdmin: clubes activos, comisiones, usuarios, retención
+- HomeView conectado en App.jsx como módulo por defecto al entrar/cambiar de rol
+- Todas las tarjetas clickeables navegan al módulo correspondiente (`onNavigate`)
+
+
 ## 2026-06-08
 - Repo clonado y configurado con stack de IA (Cline + CLAUDE.md)
 - .env protegido (sacado de git)

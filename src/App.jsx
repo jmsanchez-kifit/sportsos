@@ -27,6 +27,7 @@ import AdminView from "./views/AdminView";
 import EntrenadorView from "./views/EntrenadorView";
 import PreparadorView from "./views/PreparadorView";
 import JugadorView from "./views/JugadorView";
+import HomeView from "./views/HomeView";
 
 const ROLES = [
   {id:"superadmin",label:"Super Admin",icon:"⚡"},
@@ -37,11 +38,11 @@ const ROLES = [
 ];
 
 const MODULE_MAP = {
-  superadmin:[{id:"dashboard",label:"Dashboard Global"},{id:"clubes",label:"Clubes"},{id:"comisiones",label:"Comisiones"},{id:"comparativa",label:"vs SportEasy"}],
-  admin:[{id:"miclub",label:"Mi Club"},{id:"jugadores",label:"Jugadores"},{id:"finanzas",label:"Finanzas"}],
-  entrenador:[{id:"muro",label:"El Muro"},{id:"calendario",label:"Calendario"},{id:"matchcenter",label:"Match Center"},{id:"nomina",label:"Nómina"},{id:"estadisticas",label:"Estadísticas"},{id:"asistencia",label:"Asistencia"},{id:"salud",label:"Salud"}],
-  preparador:[{id:"microciclo",label:"Microciclo"},{id:"estadoplantel",label:"Estado Plantel"},{id:"rankingfuerza",label:"Ranking Fuerza"}],
-  jugador:[{id:"midashboard",label:"Mi Dashboard"},{id:"noticias",label:"Noticias & Resultados"},{id:"micuota",label:"Mi Cuota"},{id:"migym",label:"Mi Gym"},{id:"nominasclub",label:"Nóminas Club"},{id:"miconvocatoria",label:"Mi Convocatoria"}],
+  superadmin:[{id:"home",label:"Inicio",icon:"🏠"},{id:"dashboard",label:"Dashboard Global",icon:"📊"},{id:"clubes",label:"Clubes",icon:"🏢"},{id:"comisiones",label:"Comisiones",icon:"💰"},{id:"comparativa",label:"vs SportEasy",icon:"📈"}],
+  admin:[{id:"home",label:"Inicio",icon:"🏠"},{id:"miclub",label:"Mi Club",icon:"🏢"},{id:"jugadores",label:"Jugadores",icon:"👥"},{id:"finanzas",label:"Finanzas",icon:"💰"}],
+  entrenador:[{id:"home",label:"Inicio",icon:"🏠"},{id:"muro",label:"El Muro",icon:"💬"},{id:"calendario",label:"Calendario",icon:"📅"},{id:"matchcenter",label:"Match Center",icon:"🏆"},{id:"nomina",label:"Nómina",icon:"📋"},{id:"estadisticas",label:"Estadísticas",icon:"📊"},{id:"asistencia",label:"Asistencia",icon:"✅"},{id:"salud",label:"Salud",icon:"🩺"}],
+  preparador:[{id:"home",label:"Inicio",icon:"🏠"},{id:"microciclo",label:"Microciclo",icon:"📅"},{id:"estadoplantel",label:"Estado Plantel",icon:"💪"},{id:"rankingfuerza",label:"Ranking Fuerza",icon:"🏋️"}],
+  jugador:[{id:"home",label:"Inicio",icon:"🏠"},{id:"midashboard",label:"Mi Dashboard",icon:"📊"},{id:"noticias",label:"Noticias",icon:"📰"},{id:"micuota",label:"Mi Cuota",icon:"💳"},{id:"migym",label:"Mi Gym",icon:"🏋️"},{id:"nominasclub",label:"Nóminas Club",icon:"📋"},{id:"miconvocatoria",label:"Mi Convocatoria",icon:"🎽"}],
 };
 
 const ROL_ICONS = {superadmin:"⚡",admin:"🏢",entrenador:"📋",preparador:"💪",jugador:"👤"};
@@ -123,7 +124,7 @@ export default function SportOS() {
     return ()=>window.removeEventListener("keydown", handler);
   },[]);
 
-  useEffect(()=>{const mods=MODULE_MAP[role]||[];if(mods.length>0){setModule(mods[0].id);setModuleHistory([]);};},[role]);
+  useEffect(()=>{setModule("home");setModuleHistory([]);},[role]);
   useEffect(()=>{setCategory(0);},[sport]);
 
   // Detecta link de invitación en la URL
@@ -372,11 +373,12 @@ export default function SportOS() {
         <div className="sportos-main" style={ss.main} key={role+module}>
           <AnimatePresence mode="wait">
             <motion.div key={role+module} {...fadeUp} transition={{duration:0.4}}>
-              {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
-              {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={players} addPlayer={addPlayer} updatePlayer={updatePlayer} removePlayer={removePlayer} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments} clubId={clubId} currentUser={currentUser} userPlan={userPlan}/>}
-              {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={players} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} userCats={userCats} isDemo={isDemo} partidos={partidos} setPartidos={setPartidos} clubId={clubId} currentUserId={currentUser?.id||null}/>}
-              {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} userCats={userCats} isDemo={isDemo}/>}
-              {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={players[0]} players={players} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} payments={payments} setPayments={setPayments} userCats={userCats} isDemo={isDemo} partidos={partidos}/>}
+              {module==="home"&&<HomeView role={role} players={players} sportColor={sportColor} club={club} sp={sp} countryData={countryData} payments={payments} partidos={partidos} onNavigate={navigateTo} currentUser={currentUser}/>}
+              {module!=="home"&&role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
+              {module!=="home"&&role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={players} addPlayer={addPlayer} updatePlayer={updatePlayer} removePlayer={removePlayer} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments} clubId={clubId} currentUser={currentUser} userPlan={userPlan}/>}
+              {module!=="home"&&role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={players} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} userCats={userCats} isDemo={isDemo} partidos={partidos} setPartidos={setPartidos} clubId={clubId} currentUserId={currentUser?.id||null}/>}
+              {module!=="home"&&role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} userCats={userCats} isDemo={isDemo}/>}
+              {module!=="home"&&role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={players[0]} players={players} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} payments={payments} setPayments={setPayments} userCats={userCats} isDemo={isDemo} partidos={partidos}/>}
             </motion.div>
           </AnimatePresence>
         </div>
