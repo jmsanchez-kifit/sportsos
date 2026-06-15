@@ -14,6 +14,8 @@ import Toast from "./components/Toast";
 import WhatsAppModal from "./components/WhatsAppModal";
 import GlobalSearch from "./components/GlobalSearch";
 import OnboardingTip from "./components/OnboardingTip";
+import UpgradeModal from "./components/UpgradeModal";
+import { canAccess, requiredPlan, DEMO_PLAN, PLANS } from "./lib/freemium";
 
 import OnboardingScreen from "./views/OnboardingScreen";
 import InvitationScreen from "./views/InvitationScreen";
@@ -71,16 +73,28 @@ export default function SportOS() {
   const [payments,setPayments]           = useState(MOCK_PAYMENTS);
   const [partidos,setPartidos]           = useState(MOCK_PARTIDOS);
 
-  // null = modo demo | { nombre, email, rol, club, cats[], club_id } = usuario real
+  // null = modo demo | { nombre, email, rol, club, cats[], club_id, plan } = usuario real
   const [currentUser,setCurrentUser]     = useState(null);
   const [searchOpen,setSearchOpen]       = useState(false);
+  const [upgradeFor,setUpgradeFor]       = useState(null); // id de feature bloqueada
 
   // Jugadores: datos reales de Supabase si hay club_id, mock si no
   const clubId = currentUser?.club_id ?? null;
   const { players, addPlayer, updatePlayer, removePlayer } = usePlayers(clubId);
   const isDemo = currentUser === null;
-  // En demo ve todo; en modo real filtra por sus categorías asignadas
   const userCats = isDemo ? [] : (currentUser.cats || []);
+
+  // Plan del usuario: demo ve todo hasta Pro; usuarios reales usan su plan
+  const userPlan = isDemo ? DEMO_PLAN : (currentUser?.plan || "free");
+
+  // Navegar a módulo con gate de freemium
+  const navigateTo = (moduleId) => {
+    if (canAccess(userPlan, moduleId)) {
+      setModule(moduleId);
+    } else {
+      setUpgradeFor(moduleId);
+    }
+  };
 
   const sp           = SPORTS_CONFIG[sport];
   const club         = CLUBS[sport];
@@ -287,34 +301,56 @@ export default function SportOS() {
 
           <div className="sidebar-modules" style={{padding:"12px 8px 4px",borderTop:isDemo?"1px solid var(--border-soft)":"none",marginTop:isDemo?"6px":"0",flex:1}}>
             <div className="hide-mobile" style={{...ss.label,paddingLeft:"8px"}}>Módulos</div>
-            {sportModules.map(m=>(
-              <motion.button key={m.id} whileHover={{x:3}} whileTap={{scale:0.97}} onClick={()=>setModule(m.id)} style={{display:"flex",alignItems:"center",gap:"8px",padding:"9px 10px",borderRadius:"var(--r-sm)",border:"none",cursor:"pointer",background:module===m.id?`linear-gradient(135deg,${sportColor}22,${sportColor}08)`:"transparent",color:module===m.id?sportColor:"var(--text-2)",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?700:500,marginBottom:"3px",transition:"all 0.2s",boxShadow:module===m.id?`0 0 12px ${sportColor}33`:"none"}}>
-                <span style={{width:"4px",height:"16px",borderRadius:"2px",background:module===m.id?sportColor:"transparent",transition:"all 0.2s"}}/>
-                <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.label}</span>
-              </motion.button>
-            ))}
+            {sportModules.map(m=>{
+              const locked = !canAccess(userPlan, m.id);
+              return (
+                <motion.button key={m.id} whileHover={{x:locked?0:3}} whileTap={{scale:0.97}}
+                  onClick={()=>navigateTo(m.id)}
+                  style={{display:"flex",alignItems:"center",gap:"8px",padding:"9px 10px",borderRadius:"var(--r-sm)",border:"none",cursor:"pointer",background:module===m.id?`linear-gradient(135deg,${sportColor}22,${sportColor}08)`:"transparent",color:module===m.id?sportColor:locked?"var(--text-4)":"var(--text-2)",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?700:500,marginBottom:"3px",transition:"all 0.2s",boxShadow:module===m.id?`0 0 12px ${sportColor}33`:"none",opacity:locked?0.6:1}}>
+                  <span style={{width:"4px",height:"16px",borderRadius:"2px",background:module===m.id?sportColor:"transparent",transition:"all 0.2s"}}/>
+                  <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{m.label}</span>
+                  {locked && <span style={{fontSize:"10px",flexShrink:0}}>🔒</span>}
+                </motion.button>
+              );
+            })}
           </div>
 
           <div className="sidebar-plan" style={{padding:"12px",borderTop:"1px solid var(--border-soft)"}}>
-            <div style={{...ss.card,padding:"10px",border:"1px solid rgba(168,85,247,0.3)",background:"linear-gradient(135deg,rgba(168,85,247,0.08),transparent)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
-                <span style={{fontSize:"10px",color:"var(--text-2)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Plan</span>
-                <span style={{background:"#A855F722",color:"#A855F7",border:"1px solid #A855F755",borderRadius:"99px",padding:"3px 7px",fontSize:"10px",fontWeight:600,boxShadow:"0 0 12px #A855F744"}}>Pro</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
-                <span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#22C55E",boxShadow:"0 0 8px #22C55E",animation:"pulse-soft 2s infinite"}}/>
-                <span style={{fontSize:"10px",color:"#22C55E",fontWeight:600}}>Sistema operativo</span>
-              </div>
-            </div>
+            {(()=>{
+              const plan = PLANS[userPlan] || PLANS.free;
+              return (
+                <div style={{...ss.card,padding:"10px",border:`1px solid ${plan.color}33`,background:`${plan.color}08`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+                    <span style={{fontSize:"10px",color:"var(--text-2)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Plan</span>
+                    <span style={{background:`${plan.color}22`,color:plan.color,border:`1px solid ${plan.color}55`,borderRadius:"99px",padding:"3px 7px",fontSize:"10px",fontWeight:600}}>{plan.icon} {plan.label}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                    <span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#1FA04A",boxShadow:"0 0 8px #1FA04A",animation:"pulse-soft 2s infinite"}}/>
+                    <span style={{fontSize:"10px",color:"#1FA04A",fontWeight:600}}>Sistema activo</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </motion.div>
+
+        {/* Modal de upgrade freemium */}
+        <AnimatePresence>
+          {upgradeFor && (
+            <UpgradeModal
+              requiredPlan={requiredPlan(upgradeFor)}
+              sportColor={sportColor}
+              onClose={()=>setUpgradeFor(null)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Main content */}
         <div className="sportos-main" style={ss.main} key={role+module}>
           <AnimatePresence mode="wait">
             <motion.div key={role+module} {...fadeUp} transition={{duration:0.4}}>
               {role==="superadmin"&&<SuperAdminView module={module} commData={COMMISSION_DATA} clubList={clubList} setClubList={setClubList} showToast={showToast} COUNTRY_COUNTS={COUNTRY_COUNTS}/>}
-              {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={players} addPlayer={addPlayer} updatePlayer={updatePlayer} removePlayer={removePlayer} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments}/>}
+              {role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={players} addPlayer={addPlayer} updatePlayer={updatePlayer} removePlayer={removePlayer} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments} clubId={clubId} currentUser={currentUser} userPlan={userPlan}/>}
               {role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={players} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} userCats={userCats} isDemo={isDemo} partidos={partidos} setPartidos={setPartidos} clubId={clubId} currentUserId={currentUser?.id||null}/>}
               {role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} userCats={userCats} isDemo={isDemo}/>}
               {role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={players[0]} players={players} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} payments={payments} setPayments={setPayments} userCats={userCats} isDemo={isDemo} partidos={partidos}/>}

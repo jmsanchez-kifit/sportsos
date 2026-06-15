@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { supabase } from "../lib/supabase";
+import { PLANS } from "../lib/freemium";
 import { fadeUp } from "../styles/motion";
 import { ss } from "../styles/tokens";
 import { SPORTS_CONFIG } from "../data/sports";
@@ -11,7 +13,7 @@ import EmptyState from "../components/EmptyState";
 
 const EMPTY_PLAYER = {name:"", number:"", cat:"", position:"", age:"", med:"verde", cuota:"ok"};
 
-export default function AdminView({module, sport, sp, club, activeClubs, setActiveClubs, countryData, players, addPlayer, updatePlayer, removePlayer, showToast, sportColor, payments=[], setPayments}) {
+export default function AdminView({module, sport, sp, club, activeClubs, setActiveClubs, countryData, players, addPlayer, updatePlayer, removePlayer, showToast, sportColor, payments=[], setPayments, clubId=null, currentUser=null, userPlan="free"}) {
   const [primaryColor, setPrimaryColor] = useState("#1B4332");
   const [secondaryColor, setSecondaryColor] = useState("#FFD700");
 
@@ -23,8 +25,16 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
   const [invRol, setInvRol] = useState("jugador");
   const [invLink, setInvLink] = useState("");
   const [copied, setCopied] = useState(false);
-  const [invCats, setInvCats] = useState([]);      // entrenador / preparador: múltiples
-  const [invPlantel, setInvPlantel] = useState(""); // jugador: uno solo
+  const [invCats, setInvCats] = useState([]);
+  const [invPlantel, setInvPlantel] = useState("");
+  const [members, setMembers] = useState([]);
+
+  // Cargar miembros del club desde Supabase
+  useEffect(() => {
+    if (!clubId) return;
+    supabase.from("profiles").select("id,nombre,rol,created_at").eq("club_id", clubId)
+      .then(({ data }) => { if (data) setMembers(data); });
+  }, [clubId]);
 
   const ROL_OPTS = [
     {id:"jugador",    label:"Jugador",           icon:"👤"},
@@ -45,12 +55,14 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
   const generateLink = () => {
     if(!canGenerate()){ showToast("Asigna al menos una categoría antes de generar","warning"); return; }
     const token = Math.random().toString(36).slice(2,8).toUpperCase();
-    const clubSlug = club.name.toLowerCase().replace(/\s+/g,"-");
     const base = window.location.origin;
     const catsParam = invRol==="jugador"
       ? encodeURIComponent(invPlantel)
       : encodeURIComponent(invCats.join(","));
-    setInvLink(`${base}/?token=${token}&rol=${invRol}&club=${clubSlug}&cats=${catsParam}`);
+    // Incluye club_id real para vincular al jugador al club correcto en Supabase
+    const clubParam = clubId || club.name.toLowerCase().replace(/\s+/g,"-");
+    const nameParam = encodeURIComponent(club.name);
+    setInvLink(`${base}/?token=${token}&rol=${invRol}&club=${clubParam}&name=${nameParam}&sport=${sport}&cats=${catsParam}`);
     setCopied(false);
   };
 
@@ -188,11 +200,66 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
               </div>
             </div>
             <div style={{...ss.muted,fontSize:"11px",marginTop:"8px"}}>
-              Este link es de un solo uso. El invitado podrá registrarse directamente como <strong style={{color:sportColor}}>{ROL_OPTS.find(r=>r.id===invRol)?.label}</strong> en {club.name}.
+              El invitado se registrará directamente como <strong style={{color:sportColor}}>{ROL_OPTS.find(r=>r.id===invRol)?.label}</strong> en {club.name} y quedará vinculado al club automáticamente.
             </div>
           </motion.div>
         )}
       </motion.div>
+
+      {/* ── Miembros del club ── */}
+      <motion.div {...fadeUp} transition={{delay:0.3}} style={{...ss.card, marginTop:"20px"}}>
+        <div style={{fontWeight:700,fontSize:"14px",marginBottom:"16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span>👥 Miembros del club</span>
+          <span style={{fontSize:"11px",color:"var(--text-3)",fontWeight:400}}>{members.length > 0 ? members.length : players.length} miembros</span>
+        </div>
+        {(members.length > 0 ? members : [
+          {id:1, nombre:"Admin Toros",      rol:"admin"},
+          {id:2, nombre:"Eduardo Ramírez",  rol:"entrenador"},
+          {id:3, nombre:"Preparador Díaz",  rol:"preparador"},
+          {id:4, nombre:"Andrés Castro",    rol:"jugador"},
+          {id:5, nombre:"Pablo Rodríguez",  rol:"jugador"},
+        ]).map((m,i) => {
+          const ROL_COLORS = {admin:"#3B82F6",entrenador:"#C98408",preparador:"#C0392B",jugador:"#1FA04A",superadmin:"#8040CC"};
+          const ROL_ICONS  = {admin:"🏢",entrenador:"📋",preparador:"💪",jugador:"👤",superadmin:"⚡"};
+          const ROL_LABELS = {admin:"Admin",entrenador:"Entrenador",preparador:"Preparador",jugador:"Jugador",superadmin:"Super Admin"};
+          const c = ROL_COLORS[m.rol]||"#6B5A5A";
+          return (
+            <motion.div key={m.id||i} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} transition={{delay:i*0.05}}
+              style={{display:"flex",alignItems:"center",gap:"12px",padding:"10px 0",borderBottom:"1px solid var(--border-soft)"}}>
+              <div style={{width:"34px",height:"34px",borderRadius:"50%",background:`${c}18`,border:`1.5px solid ${c}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",flexShrink:0}}>
+                {ROL_ICONS[m.rol]||"👤"}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:600,fontSize:"13px"}}>{m.nombre||"—"}</div>
+              </div>
+              <span style={{fontSize:"10px",padding:"2px 9px",borderRadius:"99px",background:`${c}15`,color:c,border:`1px solid ${c}33`,fontWeight:700}}>
+                {ROL_LABELS[m.rol]||m.rol}
+              </span>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* ── Plan actual ── */}
+      {(() => {
+        const plan = PLANS[userPlan] || PLANS.free;
+        return (
+          <motion.div {...fadeUp} transition={{delay:0.35}} style={{...ss.card,marginTop:"20px",border:`1px solid ${plan.color}33`,background:`${plan.color}06`,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"12px"}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:"14px",marginBottom:"3px"}}>{plan.icon} Plan {plan.label} activo</div>
+              <div style={{fontSize:"11px",color:"var(--text-3)"}}>
+                {userPlan==="free" ? "Upgrade a Pro para desbloquear Match Center, Wellness, Microciclo y más." : userPlan==="pro" ? "Upgrade a Elite para desbloquear Finanzas y SportOS Cam." : "Tienes acceso completo a todas las funciones."}
+              </div>
+            </div>
+            {userPlan !== "elite" && (
+              <motion.button whileHover={{scale:1.04}} whileTap={{scale:0.96}}
+                style={{...ss.btn,background:`linear-gradient(135deg,${plan.color},${plan.color}cc)`,color:"#fff",fontSize:"12px",padding:"9px 18px",fontWeight:700,boxShadow:`0 4px 14px ${plan.color}44`,flexShrink:0}}>
+                {userPlan==="free"?"Subir a Pro — $29/mes":"Subir a Elite — $59/mes"}
+              </motion.button>
+            )}
+          </motion.div>
+        );
+      })()}
     </div>
   );
 
