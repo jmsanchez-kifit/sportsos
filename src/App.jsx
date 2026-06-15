@@ -217,7 +217,8 @@ export default function SportOS() {
     />
   );
 
-  if(screen==="onboarding") return <OnboardingScreen onBack={()=>setScreen("landing")} onSelect={(s,c)=>{setSport(s);setCountry(c);setScreen("app");}}/>;
+  // Sin sesión activa y pantalla app → redirigir a login
+  if(screen==="app" && !currentUser) { setScreen("login"); return null; }
 
   const rolActual = ROLES.find(r=>r.id===role);
 
@@ -240,36 +241,15 @@ export default function SportOS() {
         starters={SPORTS_CONFIG[sport].positions.slice(0,sp.teamSize).map((pos,i)=>({name:players[i]?players[i].name:"Jugador "+(i+1),pos}))}
         bench={[]}/>}
 
-      {/* ── Banner: Demo o Usuario real ── */}
-      {isDemo ? (
-        <div className="sportos-demo-banner" style={{background:"linear-gradient(90deg,rgba(168,85,247,0.15),rgba(59,130,246,0.15))",borderBottom:"1px solid rgba(168,85,247,0.25)",padding:"6px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:"11px",gap:"8px",flexWrap:"wrap"}}>
-          <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-            <span style={{width:"7px",height:"7px",borderRadius:"50%",background:"#A855F7",boxShadow:"0 0 8px #A855F7",display:"inline-block"}}/>
-            <span style={{color:"#C084FC",fontWeight:700,letterSpacing:"0.04em",textTransform:"uppercase",fontSize:"10px"}}>Modo Demo</span>
-            <span className="hide-mobile" style={{color:"var(--text-3)"}}>— puedes cambiar entre roles libremente.</span>
-          </div>
-          <div className="roles-row" style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-            {ROLES.map(r=>(
-              <motion.button key={r.id} whileTap={{scale:0.95}} onClick={()=>setRole(r.id)}
-                style={{fontSize:"10px",padding:"2px 9px",borderRadius:"99px",cursor:"pointer",border:"none",background:role===r.id?"rgba(168,85,247,0.3)":"rgba(168,85,247,0.1)",color:role===r.id?"#E9D5FF":"#C084FC",fontWeight:role===r.id?700:400,transition:"all 0.15s"}}>
-                {r.icon} {r.label}
-              </motion.button>
-            ))}
-          </div>
-          <motion.button whileHover={{scale:1.05,x:-2}} whileTap={{scale:0.95}}
-            onClick={()=>setScreen("login")}
-            style={{...ss.btn,background:"rgba(168,85,247,0.15)",color:"#C084FC",border:"1px solid rgba(168,85,247,0.35)",fontSize:"10px",padding:"3px 12px",fontWeight:700,flexShrink:0}}>
-            ← Crear cuenta
-          </motion.button>
-        </div>
-      ) : (
+      {/* ── Banner usuario ── */}
+      {(
         <div style={{background:"linear-gradient(90deg,rgba(34,197,94,0.1),rgba(59,130,246,0.08))",borderBottom:"1px solid rgba(34,197,94,0.2)",padding:"5px 16px",display:"flex",alignItems:"center",gap:"10px",fontSize:"11px"}}>
           <span style={{width:"7px",height:"7px",borderRadius:"50%",background:"#22C55E",boxShadow:"0 0 8px #22C55E",display:"inline-block"}}/>
-          <span style={{color:"#22C55E",fontWeight:700}}>{currentUser.nombre}</span>
+          <span style={{color:"#22C55E",fontWeight:700}}>{currentUser?.nombre}</span>
           <span style={{color:"var(--text-3)"}}>·</span>
           <span style={{color:"var(--text-2)"}}>{ROL_ICONS[role]} {rolActual?.label}</span>
           <span style={{color:"var(--text-3)"}}>·</span>
-          <span style={{color:"var(--text-3)"}}>{currentUser.club}</span>
+          <span style={{color:"var(--text-3)"}}>{currentUser?.club}</span>
           <div style={{flex:1}}/>
           <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>{ setCurrentUser(null); setRole("entrenador"); setScreen("login"); }}
             style={{...ss.btn,background:"transparent",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"10px",padding:"3px 10px"}}>
@@ -329,38 +309,23 @@ export default function SportOS() {
             <div style={{...ss.muted,fontSize:"11px",marginTop:"3px"}}>{countryData.flag} {countryData.name}</div>
           </div>
 
-          {/* Selector de roles: solo en modo demo */}
-          {isDemo && (
-            <div className="sidebar-roles" style={{padding:"12px 8px 4px"}}>
-              <div style={{...ss.label,paddingLeft:"8px"}}>Rol activo</div>
-              {ROLES.map(r=>(
-                <motion.button key={r.id} whileHover={{x:3}} whileTap={{scale:0.97}} onClick={()=>setRole(r.id)} style={{display:"flex",alignItems:"center",gap:"9px",padding:"9px 10px",borderRadius:"var(--r-sm)",border:"none",cursor:"pointer",background:role===r.id?`linear-gradient(135deg,${sportColor}22,${sportColor}08)`:"transparent",color:role===r.id?sportColor:"var(--text-2)",width:"100%",textAlign:"left",fontSize:"11px",fontWeight:role===r.id?700:500,marginBottom:"3px",transition:"all 0.2s",boxShadow:role===r.id?`0 0 12px ${sportColor}33`:"none"}}>
-                  <span style={{fontSize:"14px"}}>{r.icon}</span>
-                  <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.label}</span>
-                </motion.button>
-              ))}
-            </div>
-          )}
-
-          {/* Modo real: muestra nombre y rol fijo */}
-          {!isDemo && (
-            <div className="sidebar-profile" style={{padding:"14px 12px",borderBottom:"1px solid var(--border-soft)"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}44`,flexShrink:0}}>
-                  {currentUser.nombre.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-                </div>
-                <div style={{minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser.nombre}</div>
-                  <div style={{display:"inline-flex",alignItems:"center",gap:"4px",marginTop:"3px",padding:"2px 8px",borderRadius:"99px",background:`${sportColor}18`,border:`1px solid ${sportColor}33`}}>
-                    <span style={{fontSize:"11px"}}>{ROL_ICONS[role]}</span>
-                    <span style={{fontSize:"10px",fontWeight:700,color:sportColor}}>{rolActual?.label}</span>
-                  </div>
+          {/* Perfil del usuario */}
+          <div className="sidebar-profile" style={{padding:"14px 12px",borderBottom:"1px solid var(--border-soft)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+              <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}44`,flexShrink:0}}>
+                {currentUser?.nombre?.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()||"?"}
+              </div>
+              <div style={{minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser?.nombre}</div>
+                <div style={{display:"inline-flex",alignItems:"center",gap:"4px",marginTop:"3px",padding:"2px 8px",borderRadius:"99px",background:`${sportColor}18`,border:`1px solid ${sportColor}33`}}>
+                  <span style={{fontSize:"11px"}}>{ROL_ICONS[role]}</span>
+                  <span style={{fontSize:"10px",fontWeight:700,color:sportColor}}>{rolActual?.label}</span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          <div className="sidebar-modules" style={{padding:"12px 8px 4px",borderTop:isDemo?"1px solid var(--border-soft)":"none",marginTop:isDemo?"6px":"0",flex:1}}>
+          <div className="sidebar-modules" style={{padding:"12px 8px 4px",flex:1}}>
             <div className="hide-mobile" style={{...ss.label,paddingLeft:"8px"}}>Módulos</div>
             {sportModules.map(m=>{
               const locked = !canAccess(userPlan, m.id);

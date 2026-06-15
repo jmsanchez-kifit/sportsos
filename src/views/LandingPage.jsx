@@ -80,9 +80,9 @@ export default function LandingPage({ onLogin, onDemo, onRegister }) {
       <nav style={{ position: "sticky", top: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 clamp(16px,5vw,80px)", height: "60px", background: "var(--bg-glass)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid var(--border-soft)" }}>
         <div style={{ fontWeight: 900, fontSize: "18px", color: sport.color, letterSpacing: "-0.03em", filter: `drop-shadow(0 0 12px ${sport.color}66)` }}>⚡ SportOS</div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onDemo}
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onRegister}
             style={{ ...ss.btn, background: "transparent", color: "var(--text-2)", border: "1px solid var(--border-soft)", fontSize: "13px" }}>
-            Ver demo
+            Crear club gratis
           </motion.button>
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onLogin}
             style={{ ...ss.btn, background: `linear-gradient(135deg,${sport.color},${sport.color}cc)`, color: "#fff", fontSize: "13px", boxShadow: `0 4px 14px ${sport.color}44` }}>
