@@ -208,6 +208,11 @@ export default function SportOS() {
               </motion.button>
             ))}
           </div>
+          <motion.button whileHover={{scale:1.05,x:-2}} whileTap={{scale:0.95}}
+            onClick={()=>setScreen("login")}
+            style={{...ss.btn,background:"rgba(168,85,247,0.15)",color:"#C084FC",border:"1px solid rgba(168,85,247,0.35)",fontSize:"10px",padding:"3px 12px",fontWeight:700,flexShrink:0}}>
+            ← Crear cuenta
+          </motion.button>
         </div>
       ) : (
         <div style={{background:"linear-gradient(90deg,rgba(34,197,94,0.1),rgba(59,130,246,0.08))",borderBottom:"1px solid rgba(34,197,94,0.2)",padding:"5px 16px",display:"flex",alignItems:"center",gap:"10px",fontSize:"11px"}}>
