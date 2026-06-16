@@ -146,7 +146,8 @@ export default function LandingPage({ onLogin, onRegister }) {
 
   return (
     <div style={{ position:"relative", minHeight:"100vh", background:"var(--bg-base)",
-      color:"var(--text-1)", fontFamily:"'Inter',system-ui,sans-serif", overflowX:"hidden" }}>
+      color:"var(--text-1)", fontFamily:"'Inter',system-ui,sans-serif", overflowX:"hidden",
+      overflowY:"auto", height:"100vh" }}>
       <AuroraBg/>
 
       {/* ── NAV ── */}
