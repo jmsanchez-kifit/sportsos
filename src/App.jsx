@@ -357,6 +357,16 @@ export default function SportOS() {
                 </div>
               );
             })()}
+            <motion.button whileHover={{scale:1.02,y:-1}} whileTap={{scale:0.97}}
+              onClick={async()=>{
+                await supabase.auth.signOut();
+                setCurrentUser(null);
+                setRole("entrenador");
+                setScreen("landing");
+              }}
+              style={{width:"100%",marginTop:"10px",padding:"9px",borderRadius:"var(--r-sm)",border:"1px solid rgba(239,68,68,0.25)",background:"rgba(239,68,68,0.06)",color:"#EF4444",fontSize:"12px",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",fontFamily:"inherit",transition:"all 0.2s"}}>
+              🚪 Cerrar sesión
+            </motion.button>
           </div>
         </motion.div>
 
