@@ -1,5 +1,16 @@
 # Bitácora — sportsos
 
+## IDEAS FUTURAS (pendientes de implementar)
+
+### QR de asistencia
+- Entrenador genera QR único del día → jugadores escanean con su celular → confirma presencia automática
+- Vista entrenador: lista en tiempo real (Supabase Realtime)
+- Vista jugador: pantalla "Confirmar presencia ✅" al abrir el link del QR
+- Tabla Supabase: `asistencia` con jugador_id, club_id, fecha, metodo (qr/manual)
+- Librería: qrcode.react
+- URL del QR: sportsos-iota.vercel.app?asistencia=<club_id>&fecha=<hoy>
+
+
 ## 2026-06-14
 - Creado `src/views/HomeView.jsx`: dashboard de inicio con métricas por rol
   - Admin: jugadores activos, cuotas (pagadas/pendientes/vencidas), próximo partido, barra de progreso

@@ -216,7 +216,7 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
 
   // ── Pantalla principal ──────────────────────────────────────────────────
   return (
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative",overflowX:"hidden",overflowY:"auto",height:"100vh"}}>
       <AuroraBg/>
 
       {/* Topbar */}
