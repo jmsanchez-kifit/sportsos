@@ -137,7 +137,7 @@ export default function SportOS() {
         // Buscar perfil en tabla profiles
         const { data: profile } = await supabase
           .from("profiles")
-          .select("*, clubs(name, sport, country)")
+          .select("*")
           .eq("id", u.id)
           .single();
 

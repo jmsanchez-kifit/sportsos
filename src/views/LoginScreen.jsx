@@ -150,7 +150,7 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) throw authError;
         const { data: profile } = await supabase
-          .from("profiles").select("*, clubs(name,sport,country)").eq("id", data.user.id).single();
+          .from("profiles").select("*").eq("id", data.user.id).single();
         setLoading(false);
         const user = {
           id: data.user.id,
