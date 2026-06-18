@@ -326,7 +326,7 @@ export default function SportOS() {
           </div>
 
           {/* Selector de rol para superadmin/admin elite */}
-          {(currentUser?.isReal && (currentUser?.plan==="elite"||currentUser?.plan==="pro"||currentUser?.rol==="superadmin"))&&(
+          {currentUser&&(
             <div style={{padding:"10px 12px",borderBottom:"1px solid var(--border-soft)"}}>
               <div style={{...ss.label,marginBottom:"6px",paddingLeft:"2px"}}>Vista de rol</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:"4px"}}>
