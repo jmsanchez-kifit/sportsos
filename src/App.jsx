@@ -138,7 +138,7 @@ export default function SportOS() {
         const { data: profile } = await supabase
           .from("profiles")
           .select("*, clubs(name, sport, country)")
-          .eq("user_id", u.id)
+          .eq("id", u.id)
           .single();
 
         const usuario = {
