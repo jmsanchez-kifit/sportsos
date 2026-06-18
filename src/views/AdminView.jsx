@@ -434,7 +434,7 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
   }
 
   if(module==="finanzas") {
-    return <FinanzasView countryData={countryData} payments={payments} sportColor={sportColor} showToast={showToast}/>;
+    return <FinanzasView countryData={countryData} payments={payments} sportColor={sportColor} showToast={showToast} clubId={clubId}/>;
   }
 
   return null;

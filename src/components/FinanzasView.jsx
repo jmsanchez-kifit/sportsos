@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { fadeUp } from "../styles/motion";
@@ -78,12 +79,29 @@ function Modal({ title, onClose, children }) {
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export default function FinanzasView({ countryData, payments=[], sportColor, showToast }) {
+export default function FinanzasView({ countryData, payments=[], sportColor, showToast, clubId=null }) {
   const sym = countryData?.symbol || "$";
   const [tab,          setTab]          = useState("resumen");
   const [movimientos,  setMovimientos]  = useState(MOCK_MOVIMIENTOS);
   const [sueldos,      setSueldos]      = useState(MOCK_SUELDOS);
   const [gastosAdmin,  setGastosAdmin]  = useState(MOCK_GASTOS_ADMIN);
+  const [loading,      setLoading]      = useState(false);
+
+  // Carga datos reales si hay club_id
+  useEffect(() => {
+    if (!clubId) return;
+    setLoading(true);
+    Promise.all([
+      supabase.from("finanzas_movimientos").select("*").eq("club_id", clubId).order("fecha", { ascending: false }),
+      supabase.from("finanzas_sueldos").select("*").eq("club_id", clubId).order("created_at"),
+      supabase.from("finanzas_gastos_admin").select("*").eq("club_id", clubId).order("created_at"),
+    ]).then(([movRes, suelRes, admRes]) => {
+      if (movRes.data?.length)  setMovimientos(movRes.data.map(r => ({ ...r, desc: r.descripcion })));
+      if (suelRes.data?.length) setSueldos(suelRes.data);
+      if (admRes.data?.length)  setGastosAdmin(admRes.data.map(r => ({ ...r, desc: r.descripcion })));
+      setLoading(false);
+    });
+  }, [clubId]);
 
   // Modales
   const [modalMov,    setModalMov]    = useState(false);
@@ -119,24 +137,51 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
   });
 
   // ── Agregar movimiento ──
-  const agregarMovimiento = () => {
+  const agregarMovimiento = async () => {
     if (!formMov.desc || !formMov.monto) { showToast("Completa todos los campos","warning"); return; }
-    const nuevo = { ...formMov, id: Date.now(), monto: Number(formMov.monto) };
-    setMovimientos(prev => [nuevo, ...prev]);
+    const monto = Number(formMov.monto);
+    if (clubId) {
+      const { data, error } = await supabase.from("finanzas_movimientos")
+        .insert({ club_id: clubId, tipo: formMov.tipo, cat: formMov.cat, descripcion: formMov.desc, monto, fecha: formMov.fecha })
+        .select().single();
+      if (error) { showToast("Error al guardar","error"); return; }
+      setMovimientos(prev => [{ ...data, desc: data.descripcion }, ...prev]);
+    } else {
+      setMovimientos(prev => [{ ...formMov, id: Date.now(), monto }, ...prev]);
+    }
     setFormMov(emptyMov);
     setModalMov(false);
     showToast(`${formMov.tipo==="ingreso"?"Ingreso":"Egreso"} registrado ✅`);
   };
 
   // ── Guardar sueldo ──
-  const guardarSueldo = () => {
+  const guardarSueldo = async () => {
     if (!formSueldo.nombre || !formSueldo.monto) { showToast("Completa todos los campos","warning"); return; }
-    if (editSueldo) {
-      setSueldos(prev => prev.map(s => s.id===editSueldo ? { ...s, ...formSueldo, monto:Number(formSueldo.monto) } : s));
-      showToast("Sueldo actualizado ✅");
+    const monto = Number(formSueldo.monto);
+    if (clubId) {
+      if (editSueldo) {
+        const { data, error } = await supabase.from("finanzas_sueldos")
+          .update({ nombre: formSueldo.nombre, cargo: formSueldo.cargo, monto })
+          .eq("id", editSueldo).select().single();
+        if (error) { showToast("Error al guardar","error"); return; }
+        setSueldos(prev => prev.map(s => s.id===editSueldo ? data : s));
+        showToast("Sueldo actualizado ✅");
+      } else {
+        const { data, error } = await supabase.from("finanzas_sueldos")
+          .insert({ club_id: clubId, nombre: formSueldo.nombre, cargo: formSueldo.cargo, monto, activo: true })
+          .select().single();
+        if (error) { showToast("Error al guardar","error"); return; }
+        setSueldos(prev => [...prev, data]);
+        showToast("Sueldo agregado ✅");
+      }
     } else {
-      setSueldos(prev => [...prev, { ...formSueldo, id:Date.now(), monto:Number(formSueldo.monto), activo:true }]);
-      showToast("Sueldo agregado ✅");
+      if (editSueldo) {
+        setSueldos(prev => prev.map(s => s.id===editSueldo ? { ...s, ...formSueldo, monto } : s));
+        showToast("Sueldo actualizado ✅");
+      } else {
+        setSueldos(prev => [...prev, { ...formSueldo, id:Date.now(), monto, activo:true }]);
+        showToast("Sueldo agregado ✅");
+      }
     }
     setEditSueldo(null);
     setFormSueldo(emptySueldo);
@@ -144,14 +189,33 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
   };
 
   // ── Guardar gasto admin ──
-  const guardarAdmin = () => {
+  const guardarAdmin = async () => {
     if (!formAdmin.desc || !formAdmin.monto) { showToast("Completa todos los campos","warning"); return; }
-    if (editAdmin) {
-      setGastosAdmin(prev => prev.map(g => g.id===editAdmin ? { ...g, ...formAdmin, monto:Number(formAdmin.monto) } : g));
-      showToast("Gasto actualizado ✅");
+    const monto = Number(formAdmin.monto);
+    if (clubId) {
+      if (editAdmin) {
+        const { data, error } = await supabase.from("finanzas_gastos_admin")
+          .update({ cat: formAdmin.cat, descripcion: formAdmin.desc, monto })
+          .eq("id", editAdmin).select().single();
+        if (error) { showToast("Error al guardar","error"); return; }
+        setGastosAdmin(prev => prev.map(g => g.id===editAdmin ? { ...data, desc: data.descripcion } : g));
+        showToast("Gasto actualizado ✅");
+      } else {
+        const { data, error } = await supabase.from("finanzas_gastos_admin")
+          .insert({ club_id: clubId, cat: formAdmin.cat, descripcion: formAdmin.desc, monto, activo: true })
+          .select().single();
+        if (error) { showToast("Error al guardar","error"); return; }
+        setGastosAdmin(prev => [...prev, { ...data, desc: data.descripcion }]);
+        showToast("Gasto agregado ✅");
+      }
     } else {
-      setGastosAdmin(prev => [...prev, { ...formAdmin, id:Date.now(), monto:Number(formAdmin.monto), activo:true }]);
-      showToast("Gasto agregado ✅");
+      if (editAdmin) {
+        setGastosAdmin(prev => prev.map(g => g.id===editAdmin ? { ...g, ...formAdmin, monto } : g));
+        showToast("Gasto actualizado ✅");
+      } else {
+        setGastosAdmin(prev => [...prev, { ...formAdmin, id:Date.now(), monto, activo:true }]);
+        showToast("Gasto agregado ✅");
+      }
     }
     setEditAdmin(null);
     setFormAdmin(emptyAdmin);
