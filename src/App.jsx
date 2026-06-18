@@ -325,6 +325,22 @@ export default function SportOS() {
             </div>
           </div>
 
+          {/* Selector de rol para superadmin/admin elite */}
+          {(currentUser?.rol==="superadmin"||(currentUser?.rol==="admin"&&currentUser?.plan==="elite"))&&(
+            <div style={{padding:"10px 12px",borderBottom:"1px solid var(--border-soft)"}}>
+              <div style={{...ss.label,marginBottom:"6px",paddingLeft:"2px"}}>Vista de rol</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"4px"}}>
+                {ROLES.map(r=>(
+                  <motion.button key={r.id} whileTap={{scale:0.95}}
+                    onClick={()=>{ setRole(r.id); setModule("home"); }}
+                    style={{padding:"4px 8px",borderRadius:"99px",border:`1px solid ${role===r.id?"var(--accent)":"var(--border-soft)"}`,background:role===r.id?"var(--accent)":"transparent",color:role===r.id?"#fff":"var(--text-3)",fontSize:"10px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+                    {r.icon} {r.label}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="sidebar-modules" style={{padding:"12px 8px 4px",flex:1}}>
             <div className="hide-mobile" style={{...ss.label,paddingLeft:"8px"}}>Módulos</div>
             {sportModules.map(m=>{
