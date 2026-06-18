@@ -207,7 +207,7 @@ export default function SportOS() {
     <LoginScreen
       onBack={()=>setScreen("landing")}
       onLogin={(user)=>{
-        setCurrentUser({nombre:user.nombre, email:user.email, rol:user.rol, club:user.club, club_id:user.club_id||null, cats:user.cats});
+        setCurrentUser({nombre:user.nombre, email:user.email, rol:user.rol, club:user.club, club_id:user.club_id||null, cats:user.cats, plan:user.plan||"free"});
         setRole(user.rol);
         setSport(user.sport||"rugby");
         setScreen("app");
