@@ -243,13 +243,23 @@ export default function SportOS() {
 
       {/* ── Banner usuario ── */}
       {(
-        <div style={{background:"linear-gradient(90deg,rgba(34,197,94,0.1),rgba(59,130,246,0.08))",borderBottom:"1px solid rgba(34,197,94,0.2)",padding:"5px 16px",display:"flex",alignItems:"center",gap:"10px",fontSize:"11px"}}>
-          <span style={{width:"7px",height:"7px",borderRadius:"50%",background:"#22C55E",boxShadow:"0 0 8px #22C55E",display:"inline-block"}}/>
+        <div style={{background:"linear-gradient(90deg,rgba(34,197,94,0.1),rgba(59,130,246,0.08))",borderBottom:"1px solid rgba(34,197,94,0.2)",padding:"5px 16px",display:"flex",alignItems:"center",gap:"8px",fontSize:"11px",flexWrap:"wrap"}}>
+          <span style={{width:"7px",height:"7px",borderRadius:"50%",background:"#22C55E",boxShadow:"0 0 8px #22C55E",display:"inline-block",flexShrink:0}}/>
           <span style={{color:"#22C55E",fontWeight:700}}>{currentUser?.nombre}</span>
           <span style={{color:"var(--text-3)"}}>·</span>
           <span style={{color:"var(--text-2)"}}>{ROL_ICONS[role]} {rolActual?.label}</span>
-          <span style={{color:"var(--text-3)"}}>·</span>
-          <span style={{color:"var(--text-3)"}}>{currentUser?.club}</span>
+          {/* Selector de rol rápido */}
+          {currentUser && (
+            <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
+              {ROLES.map(r=>(
+                <motion.button key={r.id} whileTap={{scale:0.95}}
+                  onClick={()=>{ setRole(r.id); setModule("home"); }}
+                  style={{padding:"2px 8px",borderRadius:"99px",border:`1px solid ${role===r.id?"#22C55E":"rgba(255,255,255,0.15)"}`,background:role===r.id?"#22C55E22":"transparent",color:role===r.id?"#22C55E":"rgba(255,255,255,0.5)",fontSize:"10px",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+                  {r.icon} {r.label}
+                </motion.button>
+              ))}
+            </div>
+          )}
           <div style={{flex:1}}/>
           <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>{ setCurrentUser(null); setRole("entrenador"); setScreen("login"); }}
             style={{...ss.btn,background:"transparent",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"10px",padding:"3px 10px"}}>
