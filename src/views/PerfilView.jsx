@@ -45,6 +45,8 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState("personal");
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Edad calculada
   const edad = form.fecha_nacimiento
@@ -69,6 +71,9 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
           else setForm(f => ({ ...f, nombre: currentUser.nombre || "", email: currentUser.email || "" }));
           setLoading(false);
         });
+      // Cargar foto si existe
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(`${currentUser.id}.jpg`);
+      if (urlData?.publicUrl) setAvatarUrl(urlData.publicUrl + "?t=" + Date.now());
     } else {
       setForm(f => ({ ...f, nombre: currentUser?.nombre || "", email: currentUser?.email || "" }));
       setLoading(false);
@@ -76,6 +81,19 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
   }, [currentUser, playerData, readOnly]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?.id) return;
+    setUploadingPhoto(true);
+    const { error } = await supabase.storage.from("avatars")
+      .upload(`${currentUser.id}.jpg`, file, { upsert: true, contentType: file.type });
+    if (!error) {
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(`${currentUser.id}.jpg`);
+      setAvatarUrl(urlData.publicUrl + "?t=" + Date.now());
+    }
+    setUploadingPhoto(false);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -116,14 +134,19 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
     <motion.div {...fadeUp}>
       {/* Avatar y nombre */}
       <div style={{ display:"flex", alignItems:"center", gap:"18px", marginBottom:"24px" }}>
-        <div style={{ width:"72px", height:"72px", borderRadius:"50%",
-          background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:"28px", fontWeight:800, color:sportColor,
-          border:`2.5px solid ${sportColor}55`,
-          boxShadow:`0 0 20px ${sportColor}44`, flexShrink:0 }}>
-          {(form.nombre||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-        </div>
+        {playerData?.avatar_url
+          ? <img src={playerData.avatar_url} alt={form.nombre}
+              style={{ width:72, height:72, borderRadius:"50%", objectFit:"cover",
+                border:`2.5px solid ${sportColor}55`, boxShadow:`0 0 20px ${sportColor}44`, flexShrink:0 }}/>
+          : <div style={{ width:"72px", height:"72px", borderRadius:"50%",
+              background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:"28px", fontWeight:800, color:sportColor,
+              border:`2.5px solid ${sportColor}55`,
+              boxShadow:`0 0 20px ${sportColor}44`, flexShrink:0 }}>
+              {(form.nombre||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+            </div>
+        }
         <div>
           <div style={{ fontSize:"20px", fontWeight:800 }}>{form.nombre || "Jugador"}</div>
           <div style={{ display:"flex", gap:"8px", marginTop:"6px", flexWrap:"wrap" }}>
@@ -174,21 +197,37 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
   // ── Modo edición (el propio jugador/admin) ──
   return (
     <motion.div {...fadeUp}>
-      {/* Avatar */}
+      {/* Avatar con subida de foto */}
       <div style={{ display:"flex", alignItems:"center", gap:"18px", marginBottom:"28px" }}>
-        <motion.div whileHover={{ scale:1.05, rotate:5 }}
-          style={{ width:"72px", height:"72px", borderRadius:"50%",
-            background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,
+        <div style={{ position:"relative", flexShrink:0 }}>
+          {avatarUrl
+            ? <img src={avatarUrl} alt="foto" onError={()=>setAvatarUrl(null)}
+                style={{ width:72, height:72, borderRadius:"50%", objectFit:"cover",
+                  border:`2.5px solid ${sportColor}55`, boxShadow:`0 0 20px ${sportColor}44` }}/>
+            : <div style={{ width:72, height:72, borderRadius:"50%",
+                background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:"26px", fontWeight:800, color:sportColor,
+                border:`2.5px solid ${sportColor}55`, boxShadow:`0 0 20px ${sportColor}44` }}>
+                {(form.nombre||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+              </div>
+          }
+          {/* Botón cámara */}
+          <label htmlFor="photo-upload" style={{ position:"absolute", bottom:0, right:0,
+            width:24, height:24, borderRadius:"50%", background:sportColor,
             display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:"26px", fontWeight:800, color:sportColor,
-            border:`2.5px solid ${sportColor}55`, boxShadow:`0 0 20px ${sportColor}44`,
-            cursor:"default", flexShrink:0 }}>
-          {(form.nombre||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-        </motion.div>
+            cursor:"pointer", border:"2px solid var(--bg-base)", fontSize:"11px",
+            boxShadow:"0 2px 6px rgba(0,0,0,0.4)" }}>
+            {uploadingPhoto ? "⏳" : "📷"}
+          </label>
+          <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload}
+            style={{ display:"none" }}/>
+        </div>
         <div>
           <div style={{ fontSize:"20px", fontWeight:800 }}>{form.nombre || "Mi Perfil"}</div>
           <div style={{ fontSize:"12px", color:"var(--text-3)", marginTop:"3px" }}>{form.email}</div>
           {edad && <div style={{ fontSize:"11px", color:sportColor, marginTop:"4px", fontWeight:600 }}>{edad} años</div>}
+          <div style={{ fontSize:"10px", color:"var(--text-3)", marginTop:"4px" }}>Toca la cámara 📷 para cambiar tu foto</div>
         </div>
       </div>
 
