@@ -199,7 +199,7 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
     <motion.div {...fadeUp}>
       {/* Avatar con subida de foto */}
       <div style={{ display:"flex", alignItems:"center", gap:"18px", marginBottom:"28px" }}>
-        <div style={{ position:"relative", flexShrink:0 }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"8px", flexShrink:0 }}>
           {avatarUrl
             ? <img src={avatarUrl} alt="foto" onError={()=>setAvatarUrl(null)}
                 style={{ width:72, height:72, borderRadius:"50%", objectFit:"cover",
@@ -212,13 +212,11 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
                 {(form.nombre||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
               </div>
           }
-          {/* Botón cámara */}
-          <label htmlFor="photo-upload" style={{ position:"absolute", bottom:0, right:0,
-            width:24, height:24, borderRadius:"50%", background:sportColor,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            cursor:"pointer", border:"2px solid var(--bg-base)", fontSize:"11px",
-            boxShadow:"0 2px 6px rgba(0,0,0,0.4)" }}>
-            {uploadingPhoto ? "⏳" : "📷"}
+          <label htmlFor="photo-upload"
+            style={{ display:"flex", alignItems:"center", gap:"5px", cursor:"pointer",
+              padding:"5px 10px", borderRadius:"var(--r-sm)", fontSize:"11px", fontWeight:600,
+              background:`${sportColor}18`, border:`1px solid ${sportColor}44`, color:sportColor }}>
+            {uploadingPhoto ? "⏳ Subiendo..." : "📷 Cambiar foto"}
           </label>
           <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload}
             style={{ display:"none" }}/>
@@ -227,7 +225,6 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
           <div style={{ fontSize:"20px", fontWeight:800 }}>{form.nombre || "Mi Perfil"}</div>
           <div style={{ fontSize:"12px", color:"var(--text-3)", marginTop:"3px" }}>{form.email}</div>
           {edad && <div style={{ fontSize:"11px", color:sportColor, marginTop:"4px", fontWeight:600 }}>{edad} años</div>}
-          <div style={{ fontSize:"10px", color:"var(--text-3)", marginTop:"4px" }}>Toca la cámara 📷 para cambiar tu foto</div>
         </div>
       </div>
 
