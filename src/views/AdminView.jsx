@@ -319,16 +319,29 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
             </div>
             {/* Foto del jugador */}
             <div style={{display:"flex",alignItems:"center",gap:"16px",marginBottom:"16px"}}>
-              <div style={{position:"relative"}}>
+              <div style={{position:"relative",flexShrink:0}}>
                 {playerForm.avatar_url
                   ? <img src={playerForm.avatar_url} alt="foto" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:`2px solid ${sportColor}55`}}/>
                   : <div style={{width:64,height:64,borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",fontWeight:800,color:sportColor,border:`2px solid ${sportColor}55`}}>{(playerForm.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2)||"?"}</div>
                 }
+                <label htmlFor="avatar-upload" style={{position:"absolute",bottom:0,right:0,width:"22px",height:"22px",borderRadius:"50%",background:sportColor,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",border:"2px solid var(--bg-glass)",fontSize:"11px",lineHeight:1}}>📷</label>
+                <input id="avatar-upload" type="file" accept="image/*" style={{display:"none"}} onChange={async (e)=>{
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setPlayerSaving(true);
+                  const ext = file.name.split(".").pop();
+                  const path = `players/${Date.now()}.${ext}`;
+                  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+                  if (error) { showToast("Error al subir foto","error"); setPlayerSaving(false); return; }
+                  const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+                  setPlayerForm(p=>({...p, avatar_url: publicUrl}));
+                  setPlayerSaving(false);
+                  showToast("Foto actualizada ✅","success");
+                }}/>
               </div>
               <div style={{flex:1}}>
-                <div style={ss.label}>Foto (URL de imagen)</div>
-                <input value={playerForm.avatar_url||""} onChange={e=>setPlayerForm(p=>({...p,avatar_url:e.target.value}))} placeholder="https://... (link a foto del jugador)" style={ss.input}/>
-                <div style={{fontSize:"10px",color:"var(--text-3)",marginTop:"4px"}}>Pega un link de imagen. El jugador puede actualizarla desde su perfil.</div>
+                <div style={ss.label}>Foto del jugador</div>
+                <div style={{fontSize:"11px",color:"var(--text-3)",marginTop:"4px"}}>Toca 📷 para subir desde tu dispositivo.</div>
               </div>
             </div>
             <div className="player-form-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"12px"}}>

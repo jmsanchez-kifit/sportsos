@@ -5,6 +5,7 @@ import { ss } from "../styles/tokens";
 import { FORMATIONS, TEAMS } from "../data/sports";
 import { usePosts } from "../lib/usePosts";
 import { useAttendance } from "../lib/useAttendance";
+import { useComments } from "../lib/useComments";
 import SectionTitle from "../components/SectionTitle";
 import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
@@ -206,18 +207,17 @@ function MuroInput({sportColor, onPublish, players=[]}) {
 }
 
 /* ── PostCard ─────────────────────────────────────────── */
-function PostCard({post, sportColor, onReact, reactions={}, postLikes, setPostLikes}) {
+function PostCard({post, sportColor, onReact, reactions={}, postLikes, setPostLikes, clubId=null, currentUserId=null, authorName="Yo"}) {
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments]         = useState(post.comments||[]);
   const [newComment, setNewComment]     = useState("");
+  const { comments, addComment: saveComment } = useComments(post.id, clubId);
 
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#3B82F6","advertencia":"#EF4444","insignia":"#F59E0B","reto":"#A855F7","general":"#6B7896"};
   const color = postColors[post.type] || "#6B7280";
 
   const addComment = () => {
     if (!newComment.trim()) return;
-    const c = {id:Date.now(), author:"Yo", text:newComment.trim(), time:"Ahora"};
-    setComments(prev=>[...prev,c]);
+    saveComment({ authorName, text: newComment.trim(), authorId: currentUserId });
     setNewComment("");
   };
 
@@ -591,7 +591,8 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
         {posts.map((post,i)=>(
           <PostCard key={post.id} post={post} sportColor={sportColor}
             reactions={reactions} onReact={handleReact}
-            postLikes={postLikes} setPostLikes={setPostLikes}/>
+            postLikes={postLikes} setPostLikes={setPostLikes}
+            clubId={clubId} currentUserId={currentUserId}/>
         ))}
       </div>
     );

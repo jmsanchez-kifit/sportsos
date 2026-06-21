@@ -67,27 +67,67 @@ function ComparisonTable() {
   );
 }
 
+const PLAN_LABELS    = { free:"Free", starter:"Starter", pro:"Pro", elite:"Elite" };
+const PLAN_PRICES    = { free:0, starter:0, pro:29, elite:59 };
+const SUPERADMIN_ID  = "fe1c22a4-c990-49cb-a28b-c8ab0175ad3c";
+
 // ── Hook: carga datos reales de Supabase ──────────────────────────────────
 function useAdminData() {
-  const [data, setData] = useState({ clubs:[], users:[], loading:true });
+  const [data, setData] = useState({ clubs:[], users:[], history:[], loading:true });
 
-  useEffect(() => {
-    const load = async () => {
-      const [{ data: clubs }, { data: users }] = await Promise.all([
-        supabase.from("clubs").select("*").order("created_at", { ascending:false }),
-        supabase.from("profiles").select("id,nombre,rol,plan,club_id,created_at").order("created_at", { ascending:false }),
-      ]);
-      setData({ clubs: clubs||[], users: users||[], loading:false });
-    };
-    load();
-  }, []);
+  const load = async () => {
+    const [{ data: clubs }, { data: users }, { data: hist }] = await Promise.all([
+      supabase.from("clubs").select("*").order("created_at", { ascending:false }),
+      supabase.from("profiles").select("id,nombre,rol,plan,club_id,created_at").order("created_at", { ascending:false }),
+      supabase.from("plan_history").select("*").order("created_at", { ascending:false }).limit(50),
+    ]);
+    setData({ clubs: clubs||[], users: users||[], history: hist||[], loading:false });
+  };
 
-  return data;
+  useEffect(() => { load(); }, []);
+
+  const cambiarPlan = async (clubId, nuevoPlan, vence, notas) => {
+    const clubActual = data.clubs.find(c=>c.id===clubId);
+    await supabase.from("clubs").update({
+      plan: nuevoPlan,
+      plan_vence: vence || null,
+      plan_notas: notas || null,
+      plan_updated_at: new Date().toISOString(),
+    }).eq("id", clubId);
+    await supabase.from("profiles").update({ plan: nuevoPlan })
+      .eq("club_id", clubId).neq("rol","superadmin");
+    await supabase.from("plan_history").insert({
+      club_id: clubId,
+      plan_antes: clubActual?.plan || "free",
+      plan_nuevo: nuevoPlan,
+      notas: notas || null,
+      cambiado_por: SUPERADMIN_ID,
+    });
+    await load();
+  };
+
+  const suspenderClub = async (clubId, suspender) => {
+    await supabase.from("clubs").update({
+      suspended: suspender,
+      plan_updated_at: new Date().toISOString(),
+    }).eq("id", clubId);
+    const clubActual = data.clubs.find(c=>c.id===clubId);
+    await supabase.from("plan_history").insert({
+      club_id: clubId,
+      plan_antes: clubActual?.plan || "free",
+      plan_nuevo: suspender ? "suspended" : (clubActual?.plan || "free"),
+      notas: suspender ? "Club suspendido por superadmin" : "Club reactivado por superadmin",
+      cambiado_por: SUPERADMIN_ID,
+    });
+    await load();
+  };
+
+  return { ...data, cambiarPlan, suspenderClub, reload: load };
 }
 
 // ── Vista principal ───────────────────────────────────────────────────────
 export default function SuperAdminView({ module, commData, clubList, setClubList, showToast, COUNTRY_COUNTS }) {
-  const { clubs, users, loading } = useAdminData();
+  const { clubs, users, loading, cambiarPlan, suspenderClub } = useAdminData();
 
   const totalClubes  = clubs.length || clubList.length;
   const totalUsuarios = users.length;
@@ -338,5 +378,220 @@ export default function SuperAdminView({ module, commData, clubList, setClubList
   );
 
   if (module==="comparativa") return <ComparisonTable/>;
+
+  if (module==="membresias") {
+    const [editando, setEditando]   = useState(null);   // clubId que está en modo edición
+    const [form, setForm]           = useState({});     // { [clubId]: { plan, vence, notas } }
+    const [guardando, setGuardando] = useState(false);
+    const [verHistorial, setVerHistorial] = useState(false);
+
+    const adminDeClub = (clubId) => users.find(u => u.club_id === clubId && u.rol === "admin");
+    const activosReales = clubs.filter(c => !c.suspended);
+    const mrr = activosReales.reduce((s,c) => s + (PLAN_PRICES[c.plan]||0), 0);
+
+    const abrirEdicion = (club) => {
+      setEditando(club.id);
+      setForm(f => ({...f, [club.id]: {
+        plan: club.plan || "free",
+        vence: club.plan_vence || "",
+        notas: club.plan_notas || "",
+      }}));
+    };
+
+    const guardarCambios = async (clubId) => {
+      const f = form[clubId];
+      if (!f) return;
+      setGuardando(true);
+      await cambiarPlan(clubId, f.plan, f.vence || null, f.notas || null);
+      setEditando(null);
+      setGuardando(false);
+      showToast(`Plan actualizado a ${PLAN_LABELS[f.plan]||f.plan} ✅`, "success");
+    };
+
+    const toggleSuspender = async (club) => {
+      const suspender = !club.suspended;
+      await suspenderClub(club.id, suspender);
+      showToast(suspender ? `${club.name} suspendido` : `${club.name} reactivado ✅`, suspender?"warning":"success");
+    };
+
+    const PLANES = [
+      { id:"free",  label:"Free",  precio:0,  color:"#6B7896", desc:"Sin cargo" },
+      { id:"pro",   label:"Pro",   precio:29, color:"#C0392B", desc:"USD/mes" },
+      { id:"elite", label:"Elite", precio:59, color:"#C98408", desc:"USD/mes" },
+    ];
+
+    return (
+      <div>
+        <SectionTitle title="Membresías y Pagos" sub="Control de planes, estados y facturación de todos los clubes"/>
+
+        {/* KPIs */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"14px", marginBottom:"24px" }}>
+          <StatCard icon="🏢" value={activosReales.length} label="Clubes activos" color="#3B82F6"/>
+          <StatCard icon="💰" value={`$${mrr}`} label="MRR (USD/mes)" sub="Suma de planes activos" color="#1FA04A"/>
+          <StatCard icon="⚡" value={clubs.filter(c=>c.plan==="elite"&&!c.suspended).length} label="Plan Elite" color="#C98408"/>
+          <StatCard icon="🚫" value={clubs.filter(c=>c.suspended).length} label="Suspendidos" color="#EF4444"/>
+        </div>
+
+        {/* Tabla de clubes */}
+        <motion.div {...fadeUp} style={{ ...ss.card, padding:0, overflow:"hidden", marginBottom:"20px" }}>
+          <div style={{ padding:"14px 20px", borderBottom:"1px solid var(--border-soft)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ fontWeight:700, fontSize:"14px" }}>Clubes registrados</div>
+            <div style={{ fontSize:"12px", color:"var(--text-3)" }}>{clubs.length} en total</div>
+          </div>
+
+          {loading && <div style={{ padding:"24px", fontSize:"12px", color:"var(--text-3)" }}>⏳ Cargando desde Supabase...</div>}
+
+          {!loading && clubs.length === 0 && (
+            <div style={{ padding:"40px", textAlign:"center", color:"var(--text-3)", fontSize:"13px" }}>
+              Sin clubes aún. Aparecerán aquí cuando los admins completen el onboarding.
+            </div>
+          )}
+
+          {clubs.map((club, i) => {
+            const admin    = adminDeClub(club.id);
+            const sp2      = SPORTS_CONFIG[club.sport] || SPORTS_CONFIG.rugby;
+            const planActual = club.plan || "free";
+            const color    = PLAN_COLOR[planActual] || "#6B7896";
+            const enEdit   = editando === club.id;
+            const fEdit    = form[club.id] || {};
+            const histClub = history.filter(h=>h.club_id===club.id).slice(0,3);
+
+            return (
+              <motion.div key={club.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{delay:i*0.04}}
+                style={{ borderBottom:"1px solid var(--border-soft)", opacity:club.suspended?0.6:1 }}>
+
+                {/* Fila principal */}
+                <div style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:"14px", flexWrap:"wrap" }}>
+                  <div style={{ width:"40px", height:"40px", borderRadius:"8px", background:`${sp2.color}18`, border:`1px solid ${sp2.color}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"18px", flexShrink:0 }}>
+                    {sp2.icon}
+                  </div>
+
+                  <div style={{ flex:1, minWidth:"150px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap" }}>
+                      <span style={{ fontWeight:700, fontSize:"14px" }}>{club.name}</span>
+                      {club.suspended && <Badge color="#EF4444">Suspendido</Badge>}
+                    </div>
+                    <div style={{ fontSize:"11px", color:"var(--text-3)", marginTop:"2px" }}>
+                      {sp2.name} · {club.country||"—"} {admin && `· 👤 ${admin.nombre||"Admin"}`}
+                    </div>
+                    {club.plan_vence && (
+                      <div style={{ fontSize:"10px", color: new Date(club.plan_vence)<new Date()?"#EF4444":"#C98408", marginTop:"2px", fontWeight:600 }}>
+                        {new Date(club.plan_vence)<new Date()?"⚠️ Vencido":"📅 Vence"}: {new Date(club.plan_vence).toLocaleDateString("es-CL")}
+                      </div>
+                    )}
+                    {club.plan_notas && (
+                      <div style={{ fontSize:"10px", color:"var(--text-3)", marginTop:"2px", fontStyle:"italic" }}>"{club.plan_notas}"</div>
+                    )}
+                  </div>
+
+                  {/* Badge plan + acciones */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"8px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                      <Badge color={color}>{PLAN_LABELS[planActual]||planActual} — ${PLAN_PRICES[planActual]||0}/mes</Badge>
+                      {!club.suspended && !enEdit && (
+                        <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>abrirEdicion(club)}
+                          style={{ ...ss.btn, background:"var(--bg-elev-2)", color:"var(--text-2)", border:"1px solid var(--border-soft)", fontSize:"11px", padding:"4px 10px" }}>
+                          ✏️ Editar
+                        </motion.button>
+                      )}
+                    </div>
+                    <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={()=>toggleSuspender(club)}
+                      style={{ ...ss.btn, background:club.suspended?"rgba(34,197,94,0.1)":"rgba(239,68,68,0.1)", color:club.suspended?"#22C55E":"#EF4444", border:`1px solid ${club.suspended?"#22C55E44":"#EF444444"}`, fontSize:"11px" }}>
+                      {club.suspended?"✅ Reactivar":"🚫 Suspender"}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Panel de edición */}
+                {enEdit && (
+                  <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}}
+                    style={{ padding:"16px 20px", background:"var(--bg-elev-1)", borderTop:"1px solid var(--border-soft)" }}>
+                    <div style={{ fontWeight:600, fontSize:"13px", marginBottom:"14px" }}>✏️ Cambiar membresía — {club.name}</div>
+
+                    {/* Selector de plan */}
+                    <div style={{ marginBottom:"14px" }}>
+                      <div style={{ fontSize:"11px", color:"var(--text-3)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"8px" }}>Plan</div>
+                      <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+                        {PLANES.map(p => (
+                          <motion.button key={p.id} whileTap={{scale:0.95}}
+                            onClick={()=>setForm(f=>({...f,[club.id]:{...f[club.id],plan:p.id}}))}
+                            style={{ padding:"10px 18px", borderRadius:"var(--r-sm)", border:`2px solid ${fEdit.plan===p.id?p.color:"var(--border-soft)"}`, background:fEdit.plan===p.id?`${p.color}18`:"transparent", color:fEdit.plan===p.id?p.color:"var(--text-2)", fontSize:"13px", fontWeight:fEdit.plan===p.id?700:400, cursor:"pointer", transition:"all 0.15s" }}>
+                            <div style={{ fontWeight:700 }}>{p.label}</div>
+                            <div style={{ fontSize:"10px", marginTop:"2px", opacity:0.8 }}>${p.precio} {p.desc}</div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Fecha de vencimiento */}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", marginBottom:"14px" }}>
+                      <div>
+                        <div style={{ fontSize:"11px", color:"var(--text-3)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"6px" }}>Fecha de vencimiento (opcional)</div>
+                        <input type="date" value={fEdit.vence||""} onChange={e=>setForm(f=>({...f,[club.id]:{...f[club.id],vence:e.target.value}}))}
+                          style={{ ...ss.input, width:"100%" }}/>
+                        <div style={{ fontSize:"10px", color:"var(--text-4)", marginTop:"4px" }}>Deja vacío para sin vencimiento</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:"11px", color:"var(--text-3)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"6px" }}>Notas internas</div>
+                        <input value={fEdit.notas||""} onChange={e=>setForm(f=>({...f,[club.id]:{...f[club.id],notas:e.target.value}}))}
+                          placeholder="Ej: pago por transferencia, cortesía 30 días..."
+                          style={{ ...ss.input, width:"100%" }}/>
+                      </div>
+                    </div>
+
+                    <div style={{ display:"flex", gap:"8px", justifyContent:"flex-end" }}>
+                      <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={()=>setEditando(null)}
+                        style={{ ...ss.btn, background:"var(--bg-elev-2)", color:"var(--text-2)", border:"1px solid var(--border-soft)" }}>
+                        Cancelar
+                      </motion.button>
+                      <motion.button disabled={guardando} whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={()=>guardarCambios(club.id)}
+                        style={{ ...ss.btn, background:"linear-gradient(135deg,#22C55E,#16A34A)", color:"#fff", boxShadow:"0 4px 14px rgba(34,197,94,0.3)", opacity:guardando?0.6:1 }}>
+                        {guardando?"Guardando...":"Guardar cambios"}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Historial mini */}
+                {histClub.length > 0 && !enEdit && (
+                  <div style={{ padding:"8px 20px 10px", borderTop:"1px solid var(--border-soft)" }}>
+                    {histClub.map((h,hi)=>(
+                      <div key={h.id} style={{ fontSize:"10px", color:"var(--text-4)", display:"flex", gap:"8px", padding:"2px 0" }}>
+                        <span>{new Date(h.created_at).toLocaleDateString("es-CL")}</span>
+                        <span style={{ color:"var(--text-3)" }}>{h.plan_antes} → <span style={{ fontWeight:700, color:PLAN_COLOR[h.plan_nuevo]||"var(--text-2)" }}>{PLAN_LABELS[h.plan_nuevo]||h.plan_nuevo}</span></span>
+                        {h.notas && <span style={{ fontStyle:"italic" }}>— {h.notas}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        {/* Historial completo */}
+        {history.length > 0 && (
+          <motion.div {...fadeUp} transition={{ delay:0.1 }} style={{ ...ss.card, padding:0, overflow:"hidden" }}>
+            <div style={{ padding:"14px 20px", borderBottom:"1px solid var(--border-soft)", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }} onClick={()=>setVerHistorial(v=>!v)}>
+              <div style={{ fontWeight:700, fontSize:"13px" }}>📋 Historial de cambios de plan</div>
+              <span style={{ fontSize:"11px", color:"var(--text-3)" }}>{verHistorial?"Ocultar":"Ver todos"} ({history.length})</span>
+            </div>
+            {verHistorial && history.map((h,i)=>{
+              const club = clubs.find(c=>c.id===h.club_id);
+              return (
+                <div key={h.id} style={{ display:"flex", gap:"12px", padding:"10px 20px", borderBottom:"1px solid var(--border-soft)", fontSize:"12px" }}>
+                  <span style={{ color:"var(--text-4)", minWidth:"80px" }}>{new Date(h.created_at).toLocaleDateString("es-CL")}</span>
+                  <span style={{ fontWeight:600, flex:1 }}>{club?.name||"Club"}</span>
+                  <span style={{ color:"var(--text-3)" }}>{h.plan_antes||"—"} → <span style={{ fontWeight:700, color:PLAN_COLOR[h.plan_nuevo]||"var(--text-1)" }}>{PLAN_LABELS[h.plan_nuevo]||h.plan_nuevo}</span></span>
+                  {h.notas && <span style={{ color:"var(--text-3)", fontStyle:"italic" }}>{h.notas}</span>}
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </div>
+    );
+  }
+
   return null;
 }

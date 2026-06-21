@@ -1,5 +1,22 @@
 # Bitácora — sportsos
 
+## 2026-06-18 — Membresías y super admin completados
+
+### Supabase: RLS y tabla nueva
+- Añadidas políticas RLS para que `admin@sportostest.com` (UUID `fe1c22a4-...`) pueda:
+  - **SELECT y UPDATE en `clubs`** — leer y modificar todos los clubes
+  - **SELECT y UPDATE en `profiles`** — leer y modificar perfiles de cualquier usuario
+- Nuevas columnas en `clubs`: `plan_vence` (date), `plan_notas` (text), `suspended` (boolean), `plan_updated_at` (timestamptz)
+- Nueva tabla `plan_history`: registra cada cambio de plan con plan anterior, plan nuevo, notas y quién lo cambió
+
+### SuperAdminView — módulo Membresías
+- Reescrito con editor inline por club: selector de plan (Free/Pro/Elite), fecha de vencimiento, notas internas
+- Indicador visual de plan vencido (rojo) y por vencer (naranja)
+- Botón Suspender / Reactivar usa campo `suspended` (booleano) en vez de cambiar el plan
+- Historial de cambios visible por club (últimos 3) y listado completo colapsable
+- KPIs: clubes activos, MRR total, cuenta Elite, cuenta suspendidos
+- Doble escritura: actualiza `clubs.plan` y también `profiles.plan` de todos los usuarios del club
+
 ## IDEAS FUTURAS (pendientes de implementar)
 
 ### QR de asistencia

@@ -5,6 +5,7 @@ import { ss } from "../styles/tokens";
 import { FORMATIONS, TEAMS } from "../data/sports";
 import { GYM_PLAN } from "../data/gymPlan";
 import { MOCK_POSTS } from "../data/mockData";
+import { usePosts } from "../lib/usePosts";
 import SectionTitle from "../components/SectionTitle";
 import Badge from "../components/Badge";
 import Semaforo from "../components/Semaforo";
@@ -217,8 +218,9 @@ function GymJugador({player, sportColor, gymLog, setGymLog, completedSession, se
 }
 
 /* ── JugadorView ────────────────────────────────────────────── */
-export default function JugadorView({module, sport, sp, club, player, players, sportColor, countryData, convocado, setConvocado, setWhatsappModal, showToast, gymLog, setGymLog, completedSession, setCompletedSession, newRecord, setNewRecord, expandedEx, setExpandedEx, rankTab, setRankTab, payments, setPayments, userCats=[], isDemo=true, partidos=[]}) {
+export default function JugadorView({module, sport, sp, club, player, players, sportColor, countryData, convocado, setConvocado, setWhatsappModal, showToast, gymLog, setGymLog, completedSession, setCompletedSession, newRecord, setNewRecord, expandedEx, setExpandedEx, rankTab, setRankTab, payments, setPayments, userCats=[], isDemo=true, partidos=[], clubId=null}) {
   const camiseta = player.num;
+  const { posts: realPosts } = usePosts(clubId);
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
 
   // El plantel del jugador es su primera categoría asignada (solo una)
@@ -256,7 +258,7 @@ export default function JugadorView({module, sport, sp, club, player, players, s
     // Feed cronológico: mezcla resultados + noticias del club
     const feedItems = [
       ...misPartidos.filter(p=>p.estado==="jugado").map(r=>({...r, _tipo:"resultado", _fecha:r.fecha})),
-      ...MOCK_POSTS.map(p=>({...p, _tipo:"noticia", _fecha:"2025-06-08"})),
+      ...realPosts.map(p=>({...p, _tipo:"noticia", _fecha:p.created_at||"2025-06-08"})),
     ].sort((a,b)=> new Date(b._fecha) - new Date(a._fecha));
 
     return (

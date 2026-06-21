@@ -253,7 +253,29 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
             + Egreso
           </motion.button>
           <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}}
-            onClick={()=>showToast("Reporte exportado como CSV ✅")}
+            onClick={()=>{
+              const sym2 = countryData?.symbol || "$";
+              const rows = [
+                ["Tipo","Categoría","Descripción","Monto","Fecha"],
+                ...payments.map(p=>["ingreso","Cuotas",`Cuota ${p.playerName||p.jugador||""}`,p.amount||p.monto||0,p.date||p.fecha||""]),
+                ...movimientos.map(m=>[m.tipo,m.cat,m.desc||m.descripcion||"",m.monto,m.fecha]),
+                [],
+                ["SUELDOS","","","",""],
+                ["Nombre","Cargo","Monto mensual","Activo",""],
+                ...sueldos.map(s=>[s.nombre,s.cargo,s.monto,s.activo?"Sí":"No",""]),
+                [],
+                ["GASTOS ADMIN","","","",""],
+                ["Categoría","Descripción","Monto","Activo",""],
+                ...gastosAdmin.map(g=>[g.cat,g.desc||g.descripcion||"",g.monto,g.activo?"Sí":"No",""]),
+              ];
+              const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+              const blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"});
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = `finanzas_${new Date().toISOString().slice(0,10)}.csv`;
+              a.click(); URL.revokeObjectURL(url);
+              showToast("CSV descargado ✅","success");
+            }}
             style={{ ...ss.btn, background:"var(--bg-elev-2)", color:"var(--text-2)",
               border:"1px solid var(--border-soft)", fontSize:"12px" }}>
             📊 CSV

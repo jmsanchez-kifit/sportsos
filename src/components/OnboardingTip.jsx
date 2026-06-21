@@ -39,13 +39,15 @@ export default function OnboardingTip({ sportColor="#22C55E", role="entrenador",
   const TIPS = TIPS_BY_ROLE[role] || TIPS_BY_ROLE.entrenador;
 
   useEffect(() => {
-    setStep(0); // reiniciar al cambiar de usuario/rol
+    setStep(0);
+    // Si no hay usuario real todavía, no mostrar
+    if (!userKey || userKey === "demo") return;
     const done = localStorage.getItem(storageKey);
     if (!done) {
       const t = setTimeout(() => setVisible(true), 1400);
       return () => clearTimeout(t);
     }
-  }, [storageKey]);
+  }, [storageKey, userKey]);
 
   const dismiss = () => {
     localStorage.setItem(storageKey, "1");

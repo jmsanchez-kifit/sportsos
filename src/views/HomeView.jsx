@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { fadeUp } from "../styles/motion";
 import { ss } from "../styles/tokens";
+import { supabase } from "../lib/supabase";
 
 // ── Componentes base del Home ─────────────────────────────────────────────
 
@@ -88,47 +90,193 @@ function NextMatchCard({ club, sp, sportColor, onNavigate }) {
 
 // ── HOME POR ROL ──────────────────────────────────────────────────────────
 
+const BEBAS = "'Bebas Neue', sans-serif";
+const DM_MONO = "'DM Mono', monospace";
+
+// Mapea posición larga a abreviatura de 3 letras
+function posAbbr(pos="") {
+  const p = pos.toLowerCase();
+  if (p.includes("portero") || p.includes("arquero") || p.includes("goalkeeper")) return "POR";
+  if (p.includes("delantero") || p.includes("ala") || p.includes("forward") || p.includes("fullback") || p.includes("tries")) return "DEL";
+  if (p.includes("medio") || p.includes("apertura") || p.includes("scrum") || p.includes("centro") || p.includes("half")) return "MED";
+  if (p.includes("defensa") || p.includes("flanker") || p.includes("lock") || p.includes("prop") || p.includes("hooker") || p.includes("número")) return "DEF";
+  return "MED";
+}
+
 function HomeAdmin({ players, sportColor, club, sp, countryData, payments, partidos, onNavigate }) {
+  const [posFilter, setPosFilter] = useState("TODOS");
+
   const pagados    = payments.filter(p=>p.estado==="pagado").length;
-  const pendientes = payments.filter(p=>p.estado==="pendiente").length;
-  const vencidos   = payments.filter(p=>p.estado==="vencido").length;
   const totalJugs  = players.length;
+  const victorias  = partidos.filter(p=>p.resultado==="victoria").length;
+  const totalGoles = players.reduce((s,p)=>s+(p.stats?.goles||0),0);
+  const balanceMes = payments.filter(p=>p.estado==="pagado").length * 15000;
+
+  // Próximos partidos
+  const proximos = partidos.filter(p=>p.estado==="programado").slice(0,4);
+
+  // Actividad reciente (mock basado en posts/datos reales)
+  const activity = [
+    { dot: sportColor,  text: `${players[0]?.name||"Jugador"} marcó hat-trick en entrenamiento`, time: "Hace 2h" },
+    { dot: "#818cf8",   text: "Cuotas del mes procesadas correctamente", time: "Hace 5h" },
+    { dot: "#fbbf24",   text: `${players.filter(p=>p.cuota==="vencida").length} jugadores con cuota vencida`, time: "Ayer 14:30" },
+    { dot: "#f87171",   text: players.find(p=>p.med==="rojo") ? `${players.find(p=>p.med==="rojo").name} en protocolo médico` : "Sin alertas médicas", time: "Ayer 09:00" },
+    { dot: "#5a5753",   text: "Convocatoria para próximo partido publicada", time: "Hace 2d" },
+  ];
+
+  // Tabla de jugadores con filtro de posición
+  const allFilters = ["TODOS", ...Array.from(new Set(players.map(p=>posAbbr(p.pos))))];
+  const filtered = posFilter === "TODOS" ? players : players.filter(p=>posAbbr(p.pos)===posFilter);
+
+  // Rating basado en gym.pct o stats
+  const perf = (p) => {
+    const pct = p.gym?.pct ?? 70;
+    return ((pct / 100) * 5 + 5).toFixed(1); // escala 5–10
+  };
+  const perfColor = (v) => parseFloat(v) >= 8 ? sportColor : "#fbbf24";
+
+  const avatarColors = ["#4f46e5","#0284c7","#b45309","#be185d","#047857","#7c3aed","#c2410c","#0f766e"];
+
+  const CARD = { background:"#121110", border:"1px solid #1e1c19", borderRadius:"8px", padding:"18px" };
+
+  const kpi = [
+    { label:"Jugadores activos",  value: totalJugs,  change: "+2 este mes",      changeColor: sportColor, onClick: ()=>onNavigate("jugadores") },
+    { label:"Partidos ganados",   value: victorias,  change: `${partidos.filter(p=>p.estado==="jugado").length} jugados`, changeColor:"#a8a49f", onClick: ()=>onNavigate("matchcenter") },
+    { label:"Goles marcados",     value: totalGoles, change: "Temporada actual",  changeColor:"#a8a49f", onClick: ()=>onNavigate("estadisticas") },
+    { label:"Cuotas pagadas",     value: `${pagados}/${totalJugs}`, change: `${Math.round(pagados/(totalJugs||1)*100)}% al día`, changeColor: sportColor, onClick: ()=>onNavigate("finanzas") },
+  ];
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
-      {/* Stats hero */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px"}}>
-        <HeroStat icon="👥" value={totalJugs} label="Jugadores" sub="En el plantel" color={sportColor} onClick={()=>onNavigate("jugadores")}/>
-        <HeroStat icon="✅" value={pagados} label="Cuotas pagas" sub="Este mes" color="#1FA04A" onClick={()=>onNavigate("finanzas")}/>
-        <HeroStat icon="⏳" value={pendientes} label="Pendientes" sub="Sin pagar" color="#C98408" onClick={()=>onNavigate("finanzas")}/>
-        <HeroStat icon="🚨" value={vencidos} label="Vencidos" sub="Requieren aviso" color="#C0392B" onClick={()=>onNavigate("finanzas")}/>
+
+      {/* KPI CARDS */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"10px"}}>
+        {kpi.map((card,i)=>(
+          <motion.div key={i} whileHover={{background:"#161412"}} onClick={card.onClick}
+            style={{...CARD, cursor:"pointer", transition:"background 0.15s"}}>
+            <div style={{fontSize:"11px",fontWeight:500,color:"#4a4743",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:"10px"}}>{card.label}</div>
+            <div style={{fontFamily:BEBAS,fontSize:"38px",color:"#f0ede8",lineHeight:1,letterSpacing:"-0.02em"}}>{card.value}</div>
+            <div style={{marginTop:"8px",fontSize:"11.5px",color:card.changeColor}}>{card.change}</div>
+          </motion.div>
+        ))}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"}}>
-        <NextMatchCard club={club} sp={sp} sportColor={sportColor} onNavigate={onNavigate}/>
+      {/* PARTIDOS + ACTIVIDAD */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:"10px"}}>
 
-        <MiniCard title="Acciones rápidas" delay={0.1}>
-          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-            <QuickAction icon="👤" label="Agregar jugador" color={sportColor} onClick={()=>onNavigate("jugadores")}/>
-            <QuickAction icon="🔗" label="Invitar miembro" color="#3B82F6" onClick={()=>onNavigate("miclub")}/>
-            <QuickAction icon="💰" label="Ver finanzas" color="#C98408" onClick={()=>onNavigate("finanzas")}/>
+        {/* Próximos partidos */}
+        <div style={CARD}>
+          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:"14px"}}>
+            <div style={{fontFamily:BEBAS,fontSize:"14px",color:"#f0ede8",textTransform:"uppercase",letterSpacing:"0.04em"}}>Próximos Partidos</div>
+            <button onClick={()=>onNavigate("matchcenter")} style={{fontSize:"11.5px",fontWeight:500,color:sportColor,background:"none",border:"none",cursor:"pointer",padding:0}}>ver todos →</button>
           </div>
-        </MiniCard>
-      </div>
-
-      <MiniCard title="Estado del plantel" delay={0.15}>
-        <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
-          <div style={{flex:1,height:"8px",borderRadius:"99px",background:"var(--bg-elev-3)",overflow:"hidden"}}>
-            <motion.div initial={{width:0}} animate={{width:`${Math.round(pagados/(totalJugs||1)*100)}%`}}
-              transition={{duration:1,delay:0.3}}
-              style={{height:"100%",borderRadius:"99px",background:"linear-gradient(90deg,#1FA04A,#2DC05A)"}}/>
-          </div>
-          <span style={{fontSize:"13px",fontWeight:800,color:"#1FA04A",minWidth:"42px",textAlign:"right"}}>
-            {Math.round(pagados/(totalJugs||1)*100)}%
-          </span>
-          <span style={{fontSize:"11px",color:"var(--text-3)"}}>cuotas al día</span>
+          {proximos.length === 0 ? (
+            <div style={{fontSize:"12px",color:"#4a4743",padding:"12px 0"}}>No hay partidos programados.</div>
+          ) : proximos.map((m,i)=>(
+            <motion.div key={m.id||i} whileHover={{background:"#161412"}}
+              style={{display:"flex",alignItems:"center",gap:"14px",padding:"10px 11px",borderRadius:"6px",cursor:"pointer",transition:"background 0.12s"}}>
+              <div style={{fontFamily:DM_MONO,fontSize:"12px",color:"#4a4743",flexShrink:0,width:"56px"}}>{m.fecha?.slice(5).replace("-","/")||"—"}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:"13px",fontWeight:500,color:"#d4d2ce",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.rival}</div>
+                <div style={{fontSize:"11px",color:"#4a4743",marginTop:"1px"}}>{m.lugar} · {m.hora||"—"}</div>
+              </div>
+              <div style={{fontFamily:DM_MONO,fontSize:"10.5px",fontWeight:500,color:m.cat?.includes("Primer")?"#818cf8":"#5a5753",flexShrink:0}}>
+                {m.cat?.includes("Primer")?"LIGA":"AMIST."}
+              </div>
+            </motion.div>
+          ))}
         </div>
-      </MiniCard>
+
+        {/* Actividad */}
+        <div style={CARD}>
+          <div style={{fontFamily:BEBAS,fontSize:"14px",color:"#f0ede8",textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:"14px"}}>Actividad</div>
+          {activity.map((act,i)=>(
+            <div key={i} style={{display:"flex",gap:"10px",padding:"9px 0",borderBottom:"1px solid #1a1816"}}>
+              <div style={{width:"5px",height:"5px",borderRadius:"50%",background:act.dot,marginTop:"6px",flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:"12px",color:"#b0ada8",lineHeight:1.45}}>{act.text}</div>
+                <div style={{fontFamily:DM_MONO,fontSize:"10.5px",color:"#3e3b37",marginTop:"3px"}}>{act.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TABLA PLANTEL */}
+      <div style={CARD}>
+        <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:"14px"}}>
+          <div>
+            <span style={{fontFamily:BEBAS,fontSize:"14px",color:"#f0ede8",textTransform:"uppercase",letterSpacing:"0.04em"}}>Plantel</span>
+            <span style={{fontSize:"11.5px",color:"#4a4743",marginLeft:"10px"}}>{players.length} jugadores</span>
+          </div>
+          <div style={{display:"flex",gap:"4px"}}>
+            {allFilters.map(f=>(
+              <button key={f} onClick={()=>setPosFilter(f)}
+                style={{fontFamily:DM_MONO,fontSize:"11.5px",fontWeight:500,padding:"4px 10px",borderRadius:"4px",cursor:"pointer",
+                  border:`1px solid ${posFilter===f?sportColor:"#1e1c19"}`,
+                  background:posFilter===f?sportColor:"transparent",
+                  color:posFilter===f?"#0b0a09":"#5a5753",
+                  transition:"all 0.12s"}}>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:"500px"}}>
+            <thead>
+              <tr style={{borderBottom:"1px solid #1e1c19"}}>
+                {["#","Jugador","Pos","PJ","Goles","Asist.","Estado","Rating"].map((h,i)=>(
+                  <th key={h} style={{textAlign:i>3?"right":i===6?"center":"left",padding:"6px 10px",fontSize:"10px",fontWeight:500,color:"#3e3b37",textTransform:"uppercase",letterSpacing:"0.08em"}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p,i)=>{
+                const rating = perf(p);
+                const pc = perfColor(rating);
+                const initials = p.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+                const statusColor = p.med==="rojo"?"#f87171":p.med==="amarillo"?"#fbbf24":sportColor;
+                const statusLabel = p.med==="rojo"?"Lesionado":p.med==="amarillo"?"Alerta":"Disponible";
+                const bgColor = avatarColors[i % avatarColors.length];
+                return (
+                  <tr key={p.id} style={{cursor:"pointer"}}
+                    onMouseEnter={e=>{Array.from(e.currentTarget.cells).forEach(c=>c.style.background="#161412");}}
+                    onMouseLeave={e=>{Array.from(e.currentTarget.cells).forEach(c=>c.style.background="");}}
+                  >
+                    <td style={{padding:"10px",fontFamily:DM_MONO,fontSize:"11.5px",color:"#3e3b37",borderBottom:"1px solid #1a1816"}}>{p.num}</td>
+                    <td style={{padding:"10px",borderBottom:"1px solid #1a1816"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"9px"}}>
+                        <div style={{width:"28px",height:"28px",borderRadius:"50%",background:bgColor,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:BEBAS,fontSize:"11px",color:"#fff",flexShrink:0}}>{initials}</div>
+                        <div>
+                          <div style={{fontSize:"13px",fontWeight:500,color:"#d4d2ce"}}>{p.name}</div>
+                          <div style={{fontSize:"10.5px",color:"#3e3b37"}}>{p.cat||"—"}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{padding:"10px",borderBottom:"1px solid #1a1816",fontFamily:DM_MONO,fontSize:"11.5px",fontWeight:500,color:"#a8a49f"}}>{posAbbr(p.pos)}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:DM_MONO,fontSize:"13px",color:"#b0ada8",borderBottom:"1px solid #1a1816"}}>{Math.round((p.stats?.minutos||0)/90)}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:BEBAS,fontSize:"15px",fontWeight:700,color:sportColor,borderBottom:"1px solid #1a1816"}}>{p.stats?.goles||0}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:DM_MONO,fontSize:"13px",color:"#b0ada8",borderBottom:"1px solid #1a1816"}}>{p.stats?.asistencias||0}</td>
+                    <td style={{padding:"10px",textAlign:"center",borderBottom:"1px solid #1a1816"}}>
+                      <span style={{fontSize:"10.5px",fontWeight:500,color:statusColor}}>{statusLabel}</span>
+                    </td>
+                    <td style={{padding:"10px",textAlign:"right",borderBottom:"1px solid #1a1816"}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:"7px"}}>
+                        <div style={{width:"48px",height:"3px",borderRadius:"2px",background:"#1e1c19",overflow:"hidden"}}>
+                          <div style={{height:"100%",borderRadius:"2px",width:`${parseFloat(rating)*10}%`,background:pc}}/>
+                        </div>
+                        <span style={{fontFamily:DM_MONO,fontSize:"12px",fontWeight:500,color:pc,width:"28px",textAlign:"right"}}>{rating}</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
@@ -154,18 +302,49 @@ function TrendBar({ data, color }) {
   );
 }
 
-function HomeEntrenador({ players, sportColor, club, sp, partidos, onNavigate }) {
+function HomeEntrenador({ players, sportColor, club, sp, partidos, onNavigate, clubId=null }) {
   const hoy       = new Date().toISOString().split("T")[0];
   const ultimoRes = partidos.find(p=>p.estado==="jugado");
   const presentes = Math.floor(players.length * 0.78);
 
-  // Tendencia de asistencia — mock últimas 4 semanas
-  const trendData = [
+  // Tendencia de asistencia — últimas 4 semanas desde Supabase
+  const [trendData, setTrendData] = useState([
     { label:"Sem 1", pct: 65 },
     { label:"Sem 2", pct: 72 },
     { label:"Sem 3", pct: 80 },
     { label:"Hoy",   pct: players.length > 0 ? Math.round(presentes/players.length*100) : 78 },
-  ];
+  ]);
+
+  useEffect(() => {
+    if (!clubId || players.length === 0) return;
+    const lunes = (offsetWeeks) => {
+      const d = new Date();
+      d.setDate(d.getDate() - d.getDay() + 1 - offsetWeeks * 7);
+      return d.toISOString().split("T")[0];
+    };
+    const semanas = [
+      { label:"Sem 1", desde: lunes(3), hasta: lunes(2) },
+      { label:"Sem 2", desde: lunes(2), hasta: lunes(1) },
+      { label:"Sem 3", desde: lunes(1), hasta: lunes(0) },
+      { label:"Hoy",   desde: lunes(0), hasta: new Date(Date.now()+86400000).toISOString().split("T")[0] },
+    ];
+    Promise.all(semanas.map(s =>
+      supabase.from("attendance")
+        .select("present", { count: "estimated" })
+        .eq("club_id", clubId)
+        .gte("date", s.desde)
+        .lt("date", s.hasta)
+        .eq("present", true)
+    )).then(results => {
+      const nuevoTrend = results.map((res, i) => {
+        const count = res.count ?? (res.data?.length ?? 0);
+        const pct = players.length > 0 ? Math.round((count / players.length) * 100) : semanas[i].pct || 0;
+        return { label: semanas[i].label, pct: Math.min(pct, 100) };
+      });
+      const hayDatos = nuevoTrend.some(t => t.pct > 0);
+      if (hayDatos) setTrendData(nuevoTrend);
+    });
+  }, [clubId, players.length]);
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
@@ -305,10 +484,12 @@ function HomePreparador({ players, sportColor, sp, onNavigate }) {
   );
 }
 
-function HomeJugador({ player, sportColor, sp, club, payments, partidos, onNavigate }) {
+function HomeJugador({ player, sportColor, sp, club, payments, partidos, onNavigate, convocado=null }) {
   const miPago     = payments?.find(p=>p.jugador===player?.name);
   const cuotaOk    = !miPago || miPago.estado==="pagado";
-  const convocado  = true; // mock
+  // Si el entrenador no publicó nómina aún, jugadores aptos se muestran como "pendiente"
+  const estaConvocado = convocado === true;
+  const convocadoDefinido = convocado !== null;
   const proximoPar = club?.next;
 
   return (
@@ -316,26 +497,28 @@ function HomeJugador({ player, sportColor, sp, club, payments, partidos, onNavig
       {/* Hero: ¿estoy convocado? */}
       <motion.div initial={{opacity:0,scale:0.97}} animate={{opacity:1,scale:1}} transition={{duration:0.5}}
         style={{...ss.card,padding:"28px 24px",textAlign:"center",
-          border:`1px solid ${convocado?"#1FA04A33":"rgba(192,57,43,0.3)"}`,
-          background:`linear-gradient(135deg,${convocado?"rgba(31,160,74,0.08)":"rgba(192,57,43,0.06)"},transparent)`}}>
+          border:`1px solid ${!convocadoDefinido?"rgba(100,100,100,0.3)":estaConvocado?"#1FA04A33":"rgba(192,57,43,0.3)"}`,
+          background:`linear-gradient(135deg,${!convocadoDefinido?"rgba(80,80,80,0.04)":estaConvocado?"rgba(31,160,74,0.08)":"rgba(192,57,43,0.06)"},transparent)`}}>
         <motion.div initial={{scale:0}} animate={{scale:1}} transition={{type:"spring",stiffness:260,damping:20,delay:0.2}}
           style={{width:"72px",height:"72px",borderRadius:"50%",margin:"0 auto 16px",
-            background:`linear-gradient(135deg,${convocado?"#1FA04A":"#C0392B"}33,${convocado?"#1FA04A":"#C0392B"}11)`,
-            border:`3px solid ${convocado?"#1FA04A":"#C0392B"}55`,
+            background:`linear-gradient(135deg,${!convocadoDefinido?"#555":estaConvocado?"#1FA04A":"#C0392B"}33,transparent)`,
+            border:`3px solid ${!convocadoDefinido?"#55555555":estaConvocado?"#1FA04A55":"#C0392B55"}`,
             display:"flex",alignItems:"center",justifyContent:"center",fontSize:"32px",
-            boxShadow:`0 0 32px ${convocado?"#1FA04A":"#C0392B"}44`}}>
-          {convocado?"🎽":"⏳"}
+            boxShadow:`0 0 32px ${!convocadoDefinido?"#55555533":estaConvocado?"#1FA04A44":"#C0392B44"}`}}>
+          {!convocadoDefinido?"📋":estaConvocado?"🎽":"⏳"}
         </motion.div>
         <div style={{fontWeight:900,fontSize:"22px",marginBottom:"6px",
-          color:convocado?"#1FA04A":"#C0392B"}}>
-          {convocado?"¡Estás convocado!":"No estás convocado"}
+          color:!convocadoDefinido?"var(--text-2)":estaConvocado?"#1FA04A":"#C0392B"}}>
+          {!convocadoDefinido?"Nómina no publicada aún":estaConvocado?"¡Estás convocado!":"No estás convocado"}
         </div>
         <div style={{fontSize:"13px",color:"var(--text-2)",marginBottom:"16px"}}>
-          {convocado
-            ? `Próximo partido vs ${proximoPar?.rival||"rival"} — ${proximoPar?.dia||"próximamente"}`
-            : "Sigue entrenando. Habla con tu entrenador."}
+          {!convocadoDefinido
+            ? "El entrenador publicará la nómina antes del partido."
+            : estaConvocado
+              ? `Próximo partido vs ${proximoPar?.rival||"rival"} — ${proximoPar?.dia||"próximamente"}`
+              : "Sigue entrenando. Habla con tu entrenador."}
         </div>
-        {convocado && (
+        {estaConvocado && (
           <motion.button whileHover={{scale:1.04}} whileTap={{scale:0.96}}
             onClick={()=>onNavigate("miconvocatoria")}
             style={{...ss.btn,background:"linear-gradient(135deg,#1FA04A,#2DC05A)",color:"#fff",
@@ -371,7 +554,7 @@ function HomeJugador({ player, sportColor, sp, club, payments, partidos, onNavig
 
 // ── Export principal ──────────────────────────────────────────────────────
 
-export default function HomeView({ role, players, sportColor, club, sp, countryData, payments, partidos, onNavigate, currentUser }) {
+export default function HomeView({ role, players, sportColor, club, sp, countryData, payments, partidos, onNavigate, currentUser, convocado=null, clubId=null }) {
   const greeting = () => {
     const h = new Date().getHours();
     if (h < 12) return "Buenos días";
@@ -395,9 +578,9 @@ export default function HomeView({ role, players, sportColor, club, sp, countryD
 
       {/* Contenido por rol */}
       {role==="admin"      && <HomeAdmin      players={players} sportColor={sportColor} club={club} sp={sp} countryData={countryData} payments={payments} partidos={partidos} onNavigate={onNavigate}/>}
-      {role==="entrenador" && <HomeEntrenador players={players} sportColor={sportColor} club={club} sp={sp} partidos={partidos} onNavigate={onNavigate}/>}
+      {role==="entrenador" && <HomeEntrenador players={players} sportColor={sportColor} club={club} sp={sp} partidos={partidos} onNavigate={onNavigate} clubId={clubId}/>}
       {role==="preparador" && <HomePreparador players={players} sportColor={sportColor} sp={sp} onNavigate={onNavigate}/>}
-      {role==="jugador"    && <HomeJugador    player={players[0]} sportColor={sportColor} sp={sp} club={club} payments={payments} partidos={partidos} onNavigate={onNavigate}/>}
+      {role==="jugador"    && <HomeJugador    player={players[0]} sportColor={sportColor} sp={sp} club={club} payments={payments} partidos={partidos} onNavigate={onNavigate} convocado={convocado}/>}
       {role==="superadmin" && (
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px"}}>
           <HeroStat icon="🏢" value="24" label="Clubes activos" sub="En SportOS" color={sportColor} onClick={()=>onNavigate("clubes")}/>
