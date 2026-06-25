@@ -1,60 +1,62 @@
 /* ═══════════════════════════════════════════════════════════
    SportOS · Design System & Global Styles
-   Dark · Immersive · Athletic
+   Dark · Immersive · Athletic · Performance
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* Surfaces — base negro cálido, sin azul */
-  --bg-base:        #0A0808;
-  --bg-elev-1:      rgba(255, 255, 255, 0.020);
-  --bg-elev-2:      rgba(255, 255, 255, 0.038);
-  --bg-elev-3:      rgba(255, 255, 255, 0.062);
-  --bg-glass:       rgba(20, 12, 12, 0.62);
-  --bg-glass-strong:rgba(20, 12, 12, 0.84);
+  /* Surfaces — negro profundo, sin azul */
+  --bg-base:          #080606;
+  --bg-elev-1:        rgba(255, 255, 255, 0.025);
+  --bg-elev-2:        rgba(255, 255, 255, 0.048);
+  --bg-elev-3:        rgba(255, 255, 255, 0.075);
+  --bg-glass:         rgba(16, 10, 10, 0.72);
+  --bg-glass-strong:  rgba(16, 10, 10, 0.90);
 
-  /* Borders — tinte cálido sutil */
-  --border-soft:    rgba(255, 200, 200, 0.055);
-  --border-mid:     rgba(255, 200, 200, 0.095);
-  --border-strong:  rgba(255, 200, 200, 0.16);
+  /* Borders — definidos y limpios */
+  --border-soft:   rgba(255, 210, 210, 0.07);
+  --border-mid:    rgba(255, 210, 210, 0.12);
+  --border-strong: rgba(255, 210, 210, 0.22);
 
-  /* Text — blanco cálido, no azulado */
-  --text-1:         #F0EDED;
-  --text-2:         #A89898;
-  --text-3:         #6B5A5A;
-  --text-4:         #433535;
+  /* Text — blanco cálido */
+  --text-1:  #F2EEEE;
+  --text-2:  #A09090;
+  --text-3:  #5E4E4E;
+  --text-4:  #3C2C2C;
 
-  /* Sport palette — más apagados/mate */
-  --sport-rugby:        #1FA04A;
-  --sport-rugby-soft:   rgba(31, 160, 74, 0.16);
-  --sport-futbol:       #0896B0;
-  --sport-futbol-soft:  rgba(8, 150, 176, 0.16);
-  --sport-handball:     #C98408;
-  --sport-handball-soft:rgba(201, 132, 8, 0.16);
-  --sport-basketball:   #C0392B;
-  --sport-basketball-soft:rgba(192, 57, 43, 0.16);
-  --sport-hockey:       #8040CC;
-  --sport-hockey-soft:  rgba(128, 64, 204, 0.16);
+  /* Sport palette — vibrante, saturado */
+  --sport-rugby:          #18C44E;
+  --sport-rugby-soft:     rgba(24, 196, 78, 0.14);
+  --sport-futbol:         #07A8C8;
+  --sport-futbol-soft:    rgba(7, 168, 200, 0.14);
+  --sport-handball:       #E69200;
+  --sport-handball-soft:  rgba(230, 146, 0, 0.14);
+  --sport-basketball:     #E03020;
+  --sport-basketball-soft:rgba(224, 48, 32, 0.14);
+  --sport-hockey:         #9248E0;
+  --sport-hockey-soft:    rgba(146, 72, 224, 0.14);
 
-  /* Aurora — tonos rojo y granate apagados */
-  --aurora-1: #8B1A1A;
-  --aurora-2: #C0392B;
-  --aurora-3: #4A0808;
-  --aurora-4: #9B2335;
+  /* Aurora — rojos más intensos */
+  --aurora-1: #9E1A1A;
+  --aurora-2: #C8321E;
+  --aurora-3: #5C0A0A;
+  --aurora-4: #A01E30;
 
-  /* Radius & shadows */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 18px;
-  --r-xl: 24px;
-  --shadow-sm: 0 2px 6px rgba(0,0,0,0.25);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.35);
-  --shadow-lg: 0 20px 50px rgba(0,0,0,0.45);
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  /* Shadows — más profundas */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-md: 0 8px 28px rgba(0,0,0,0.45);
+  --shadow-lg: 0 20px 56px rgba(0,0,0,0.55);
   --glow-sport: 0 0 32px var(--sport-current-soft, rgba(110,91,255,0.35));
 
   /* Motion */
-  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out:cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -100,82 +102,97 @@ body {
 .aurora-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(110px);
-  opacity: 0.28;
+  filter: blur(90px);
+  opacity: 0.38;
   mix-blend-mode: screen;
   will-change: transform, opacity;
 }
 
 .aurora-blob.b1 {
-  width: 520px; height: 520px;
+  width: 600px; height: 600px;
   background: var(--aurora-1);
-  top: -120px; left: -120px;
+  top: -160px; left: -160px;
   animation: aurora-drift-1 22s var(--ease-in-out) infinite;
 }
 .aurora-blob.b2 {
-  width: 460px; height: 460px;
+  width: 500px; height: 500px;
   background: var(--aurora-2);
-  top: 30%; right: -120px;
+  top: 30%; right: -150px;
   animation: aurora-drift-2 26s var(--ease-in-out) infinite;
 }
 .aurora-blob.b3 {
-  width: 480px; height: 480px;
+  width: 520px; height: 520px;
   background: var(--aurora-3);
-  bottom: -150px; left: 30%;
+  bottom: -180px; left: 30%;
   animation: aurora-drift-3 30s var(--ease-in-out) infinite;
 }
 .aurora-blob.b4 {
-  width: 380px; height: 380px;
+  width: 420px; height: 420px;
   background: var(--aurora-4);
-  top: 55%; left: 8%;
+  top: 55%; left: 6%;
   animation: aurora-drift-4 28s var(--ease-in-out) infinite;
 }
 
+/* Grid estilo cancha — más visible */
 .aurora-grid {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 75%);
+    linear-gradient(rgba(255,255,255,0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.032) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, transparent 80%);
+}
+
+/* Línea de velocidad diagonal — detalle deportivo */
+.aurora-streak {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 120px,
+    rgba(255,255,255,0.008) 120px,
+    rgba(255,255,255,0.008) 122px
+  );
 }
 
 @keyframes aurora-drift-1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(120px, 80px) scale(1.1); }
-  66%      { transform: translate(-60px, 140px) scale(0.95); }
+  33%      { transform: translate(130px, 90px) scale(1.12); }
+  66%      { transform: translate(-70px, 150px) scale(0.96); }
 }
 @keyframes aurora-drift-2 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(-100px, 120px) scale(1.15); }
+  50%      { transform: translate(-110px, 130px) scale(1.18); }
 }
 @keyframes aurora-drift-3 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(80px, -100px) scale(0.9); }
-  66%      { transform: translate(-120px, -60px) scale(1.1); }
+  33%      { transform: translate(90px, -110px) scale(0.9); }
+  66%      { transform: translate(-130px, -70px) scale(1.12); }
 }
 @keyframes aurora-drift-4 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(140px, -80px) scale(1.2); }
+  50%      { transform: translate(150px, -90px) scale(1.22); }
 }
 
 /* ══════════════ SCROLLBAR ══════════════ */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.08);
-  border-radius: 4px;
-  transition: background 0.2s;
+  background: var(--border-mid);
+  border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
 /* ══════════════ SELECTION ══════════════ */
 ::selection {
-  background: rgba(192,57,43,0.45);
+  background: rgba(224, 48, 32, 0.5);
   color: #fff;
 }
 
@@ -184,8 +201,16 @@ select {
   color-scheme: dark;
 }
 select option {
-  background: #1a1414;
-  color: #f0eded;
+  background: #140E0E;
+  color: #f2eeee;
+}
+
+/* ══════════════ SPORT HEADING — Bebas Neue ══════════════ */
+.sport-heading {
+  font-family: 'Bebas Neue', 'Inter', sans-serif;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 /* ══════════════ GLOBAL KEYFRAMES ══════════════ */
@@ -194,19 +219,19 @@ select option {
   to   { opacity: 1; }
 }
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-12px); }
+  from { opacity: 0; transform: translateY(-14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.94); }
+  from { opacity: 0; transform: scale(0.93); }
   to   { opacity: 1; transform: scale(1); }
 }
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(40px); }
+  from { opacity: 0; transform: translateX(44px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes shimmer {
@@ -219,7 +244,7 @@ select option {
 }
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.85; transform: scale(1.02); }
+  50%      { opacity: 0.82; transform: scale(1.02); }
 }
 @keyframes pulse-ring {
   0%   { box-shadow: 0 0 0 0 currentColor; opacity: 0.7; }
@@ -255,39 +280,68 @@ select option {
 @keyframes progress-fill {
   from { width: 0%; }
 }
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--sport-current, #18C44E); }
+  50%      { box-shadow: 0 0 28px var(--sport-current, #18C44E); }
+}
 
 /* ══════════════ UTILITY CLASSES ══════════════ */
 .glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
   border: 1px solid var(--border-soft);
 }
 .glass-strong {
   background: var(--bg-glass-strong);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
   border: 1px solid var(--border-mid);
 }
 .text-gradient {
-  background: linear-gradient(135deg, #fff 0%, #A8B3CF 100%);
+  background: linear-gradient(135deg, #fff 0%, #BFC8D8 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 .sport-gradient {
-  background: linear-gradient(135deg, var(--sport-current, #6E5BFF) 0%, var(--sport-current-2, #21D4FD) 100%);
+  background: linear-gradient(135deg, var(--sport-current, #18C44E) 0%, var(--sport-current-2, #21D4FD) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Sport accent: applies glow + border tint to descendants */
-[data-sport="rugby"]      { --sport-current:#1FA04A; --sport-current-soft:rgba(31,160,74,0.16);   --sport-current-2:#2DC05A; }
-[data-sport="futbol"]     { --sport-current:#0896B0; --sport-current-soft:rgba(8,150,176,0.16);   --sport-current-2:#10AEC8; }
-[data-sport="handball"]   { --sport-current:#C98408; --sport-current-soft:rgba(201,132,8,0.16);   --sport-current-2:#E09A10; }
-[data-sport="basketball"] { --sport-current:#C0392B; --sport-current-soft:rgba(192,57,43,0.16);   --sport-current-2:#D94035; }
-[data-sport="hockey"]     { --sport-current:#8040CC; --sport-current-soft:rgba(128,64,204,0.16);  --sport-current-2:#9B55E0; }
+/* Franja diagonal decorativa — reutilizable en secciones hero */
+.sport-stripe {
+  background: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 8px,
+    rgba(255,255,255,0.025) 8px,
+    rgba(255,255,255,0.025) 10px
+  );
+}
+
+/* Card con borde izquierdo de acento */
+.card-sport-accent {
+  border-left: 3px solid var(--sport-current, #18C44E) !important;
+}
+
+/* Separador horizontal con acento de color */
+.sport-divider {
+  height: 2px;
+  background: linear-gradient(90deg, var(--sport-current, #18C44E), transparent);
+  border: none;
+  margin: 12px 0;
+  opacity: 0.5;
+}
+
+/* Sport accent: variables de color para cada deporte */
+[data-sport="rugby"]      { --sport-current:#18C44E; --sport-current-soft:rgba(24,196,78,0.14);   --sport-current-2:#2DDC60; }
+[data-sport="futbol"]     { --sport-current:#07A8C8; --sport-current-soft:rgba(7,168,200,0.14);   --sport-current-2:#12C0E0; }
+[data-sport="handball"]   { --sport-current:#E69200; --sport-current-soft:rgba(230,146,0,0.14);   --sport-current-2:#F8A800; }
+[data-sport="basketball"] { --sport-current:#E03020; --sport-current-soft:rgba(224,48,32,0.14);   --sport-current-2:#F04030; }
+[data-sport="hockey"]     { --sport-current:#9248E0; --sport-current-soft:rgba(146,72,224,0.14);  --sport-current-2:#A862F0; }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
@@ -301,28 +355,23 @@ select option {
 
 /* ══════════════ RESPONSIVE MOBILE ══════════════ */
 
-/* Sidebar se oculta en mobile — navegación va abajo */
 @media (max-width: 768px) {
   body { overflow: auto; }
   #root { overflow: auto; }
 
-  /* Layout principal */
   .sportos-wrap {
     height: auto !important;
     min-height: 100dvh !important;
     overflow: visible !important;
   }
 
-  /* Topbar compacto */
   .sportos-topbar {
     padding: 0 12px !important;
     height: 52px !important;
     gap: 6px !important;
   }
-  /* Ocultar selector de categoría y bandera en mobile */
   .sportos-topbar .hide-mobile { display: none !important; }
 
-  /* Sidebar se convierte en nav inferior */
   .sportos-sidebar {
     width: 100% !important;
     height: 60px !important;
@@ -339,11 +388,9 @@ select option {
     z-index: 50 !important;
     flex-shrink: 0 !important;
   }
-  /* Ocultar bloques extra del sidebar en mobile */
   .sportos-sidebar .sidebar-profile,
   .sportos-sidebar .sidebar-plan,
   .sportos-sidebar .sidebar-roles { display: none !important; }
-  /* Módulos en fila horizontal */
   .sportos-sidebar .sidebar-modules {
     display: flex !important;
     flex-direction: row !important;
@@ -368,27 +415,22 @@ select option {
     white-space: nowrap !important;
   }
 
-  /* Body flex: column para que la nav inferior quede al fondo */
   .sportos-body {
     flex-direction: column !important;
     overflow: visible !important;
   }
 
-  /* Main area */
   .sportos-main {
     padding: 16px 14px !important;
     overflow-y: visible !important;
   }
 
-  /* Tablas con scroll horizontal */
   table { min-width: 480px; }
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-  /* Grids adaptables */
   .grid-3 { grid-template-columns: 1fr 1fr !important; }
   .grid-2 { grid-template-columns: 1fr !important; }
 
-  /* Banner demo */
   .sportos-demo-banner { flex-direction: column !important; gap: 6px !important; padding: 8px 12px !important; }
   .sportos-demo-banner .roles-row { flex-wrap: wrap !important; gap: 4px !important; }
 }
@@ -399,14 +441,10 @@ select option {
   .grid-3         { grid-template-columns: 1fr !important; }
 }
 
-/* ── Mejoras mobile para secciones específicas ── */
+/* Mejoras mobile para secciones específicas */
 @media (max-width: 768px) {
-  /* Stats hero: 2 columnas en mobile */
-  .stats-hero-4 { grid-template-columns: 1fr 1fr !important; }
-  /* Cards lado a lado en home → apiladas en mobile */
-  .home-2col    { grid-template-columns: 1fr !important; }
-  /* Formulario jugador: 1 columna en mobile */
+  .stats-hero-4  { grid-template-columns: 1fr 1fr !important; }
+  .home-2col     { grid-template-columns: 1fr !important; }
   .player-form-grid { grid-template-columns: 1fr !important; }
-  /* Foto jugador en form: columna */
   .player-photo-row { flex-direction: column !important; align-items: flex-start !important; }
 }

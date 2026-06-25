@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 export default function Token({x, y, num, player, pos, color, onDrop, onClick, dragging, mine}) {
   const filled = !!player;
   const surname = player ? player.name.split(" ").slice(-1)[0] : pos;
+  const hasPhoto = filled && !!player.avatar_url;
   const borderEmpty = dragging ? `2px dashed ${color}` : "1.5px dashed rgba(255,255,255,0.25)";
   const circleBorder = filled ? (mine ? "2px solid #F59E0B" : `2px solid ${color}`) : borderEmpty;
   const circleShadow = filled
@@ -19,8 +20,11 @@ export default function Token({x, y, num, player, pos, color, onDrop, onClick, d
       whileTap={onClick?{scale:0.95}:{}}
       style={{position:"absolute",left:`${x}%`,top:`${y}%`,transform:"translate(-50%,-50%)",textAlign:"center",width:"50px",zIndex:mine?3:2,cursor:onClick?"pointer":"default"}}
     >
-      <div style={{width:"30px",height:"30px",borderRadius:"50%",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:700,background:filled?(mine?"#F59E0B":color):(dragging?color+"33":"rgba(255,255,255,0.06)"),color:filled?"#fff":"var(--text-2)",border:circleBorder,boxShadow:circleShadow,transition:"all 0.2s var(--ease-out)"}}>
-        {num}
+      <div style={{width:"34px",height:"34px",borderRadius:"50%",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:700,background:hasPhoto?"transparent":(filled?(mine?"#F59E0B":color):(dragging?color+"33":"rgba(255,255,255,0.06)")),color:filled?"#fff":"var(--text-2)",border:circleBorder,boxShadow:circleShadow,transition:"all 0.2s var(--ease-out)",overflow:"hidden",position:"relative"}}>
+        {hasPhoto
+          ? <img src={player.avatar_url} alt={surname} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>
+          : num
+        }
       </div>
       <div style={{fontSize:"8px",marginTop:"3px",color:filled?(mine?"#F59E0B":"var(--text-1)"):"var(--text-4)",fontWeight:filled?600:400,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:filled?"0 1px 2px rgba(0,0,0,0.6)":"none"}}>{surname}{mine?" ⭐":""}</div>
     </motion.div>

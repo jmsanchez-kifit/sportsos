@@ -30,6 +30,7 @@ import PreparadorView from "./views/PreparadorView";
 import JugadorView from "./views/JugadorView";
 import HomeView from "./views/HomeView";
 import PerfilView from "./views/PerfilView";
+import NewPasswordScreen from "./views/NewPasswordScreen";
 
 const ROLES = [
   {id:"superadmin",label:"Super Admin",icon:"⚡"},
@@ -132,6 +133,10 @@ export default function SportOS() {
   // Detecta sesión de Supabase al cargar (OAuth redirect o sesión guardada)
   useEffect(()=>{
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setScreen("newpassword");
+        return;
+      }
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user && !currentUser) {
         const u = session.user;
         // Buscar perfil en tabla profiles
@@ -164,6 +169,7 @@ export default function SportOS() {
           club_id: profile?.club_id || null,
           sport: profile?.clubs?.sport || "rugby",
           plan: planEfectivo,
+          onboarding_done: profile?.onboarding_done || false,
           cats: [],
           isReal: true,
         };
@@ -192,6 +198,11 @@ export default function SportOS() {
         window.history.replaceState({},"","/");
       }}
     />
+  );
+
+  // Pantalla de nueva contraseña (viene del link de recuperación por email)
+  if(screen==="newpassword") return (
+    <NewPasswordScreen onSuccess={()=>setScreen("login")}/>
   );
 
   // Landing pública
@@ -251,6 +262,8 @@ export default function SportOS() {
         sportColor={sportColor}
         role={role}
         userKey={currentUser?.email || "demo"}
+        onboardingDone={currentUser?.onboarding_done || false}
+        userId={currentUser?.id || null}
         onNavigate={(moduleId)=>navigateTo(moduleId)}
       />}
       {whatsappModal&&<WhatsAppModal onClose={()=>setWhatsappModal(false)} team={club.name} rival={club.next.rival} date={club.next.dia}
@@ -285,16 +298,19 @@ export default function SportOS() {
       )}
 
       {/* ── Topbar ── */}
-      <div style={ss.topbar} className="sportos-topbar">
-        {/* Botón volver — historial de módulos o salida a landing */}
+      <div style={{...ss.topbar, borderBottom:`1px solid ${sportColor}44`, boxShadow:`0 1px 0 ${sportColor}22`}} className="sportos-topbar">
+        {/* Botón volver */}
         <motion.button
           whileHover={{x:-3,scale:1.05}} whileTap={{scale:0.95}}
           onClick={goBack}
           title={moduleHistory.length>0?"Módulo anterior":"Ir al inicio"}
-          style={{background:"transparent",border:"1px solid var(--border-soft)",color:"var(--text-3)",borderRadius:"var(--r-sm)",padding:"5px 10px",cursor:"pointer",fontSize:"16px",lineHeight:1,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          style={{background:"var(--bg-elev-2)",border:"1px solid var(--border-mid)",color:"var(--text-2)",borderRadius:"var(--r-sm)",padding:"5px 11px",cursor:"pointer",fontSize:"15px",lineHeight:1,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>
           ←
         </motion.button>
-        <motion.div initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.4}} style={{fontWeight:800,fontSize:"16px",color:sportColor,marginRight:"8px",whiteSpace:"nowrap",letterSpacing:"-0.01em",display:"flex",alignItems:"center",gap:"6px",filter:`drop-shadow(0 0 12px ${sportColor}66)`}}>⚡ SportOS</motion.div>
+        <motion.div initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.4}}
+          style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"22px",color:sportColor,marginRight:"8px",whiteSpace:"nowrap",letterSpacing:"0.08em",display:"flex",alignItems:"center",gap:"6px",filter:`drop-shadow(0 0 14px ${sportColor}88)`}}>
+          ⚡ SportOS
+        </motion.div>
         {/* Selector de deporte y categoría: oculto para jugador real */}
         {(isDemo || role !== "jugador") && <>
           <div className="hide-mobile" style={{display:"flex",gap:"2px",background:"var(--bg-elev-2)",borderRadius:"var(--r-md)",padding:"3px",overflowX:"auto"}}>
@@ -329,10 +345,10 @@ export default function SportOS() {
       <div className="sportos-body" style={{display:"flex",flex:1,overflow:"hidden"}}>
         {/* Sidebar */}
         <motion.div {...fadeUp} className="sportos-sidebar" style={ss.sidebar}>
-          <div className="sidebar-profile" style={{padding:"18px 14px",borderBottom:"1px solid var(--border-soft)",textAlign:"center"}}>
-            <motion.div whileHover={{scale:1.05,rotate:5}} style={{width:"52px",height:"52px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",border:`2.5px solid ${sportColor}66`,margin:"0 auto 10px",boxShadow:`0 0 20px ${sportColor}55`}}>{sp.icon}</motion.div>
-            <div style={{fontWeight:700,fontSize:"14px",letterSpacing:"-0.01em"}}>{club.name}</div>
-            <div style={{...ss.muted,fontSize:"11px",marginTop:"3px"}}>{countryData.flag} {countryData.name}</div>
+          <div className="sidebar-profile sport-stripe" style={{padding:"18px 14px",borderBottom:`1px solid ${sportColor}33`,textAlign:"center",background:`linear-gradient(180deg,${sportColor}14 0%,transparent 100%)`}}>
+            <motion.div whileHover={{scale:1.05}} style={{width:"54px",height:"54px",borderRadius:"var(--r-md)",background:`linear-gradient(135deg,${sportColor}55,${sportColor}22)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",border:`2px solid ${sportColor}88`,margin:"0 auto 10px",boxShadow:`0 0 24px ${sportColor}66, inset 0 1px 0 ${sportColor}44`}}>{sp.icon}</motion.div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"17px",letterSpacing:"0.07em",color:"var(--text-1)"}}>{club.name}</div>
+            <div style={{...ss.muted,fontSize:"10px",marginTop:"3px",letterSpacing:"0.08em",textTransform:"uppercase"}}>{countryData.flag} {countryData.name}</div>
           </div>
 
           {/* Perfil del usuario */}
@@ -367,17 +383,33 @@ export default function SportOS() {
             </div>
           )}
 
-          <div className="sidebar-modules" style={{padding:"12px 8px 4px",flex:1}}>
-            <div className="hide-mobile" style={{...ss.label,paddingLeft:"8px"}}>Módulos</div>
+          <div className="sidebar-modules" style={{padding:"10px 8px 4px",flex:1}}>
+            <div className="hide-mobile" style={{...ss.label,paddingLeft:"10px",marginBottom:"8px"}}>Módulos</div>
             {sportModules.map(m=>{
               const locked = !canAccess(userPlan, m.id);
+              const active = module===m.id;
               return (
-                <motion.button key={m.id} whileHover={{x:locked?0:3}} whileTap={{scale:0.97}}
+                <motion.button key={m.id} whileHover={{x:locked?0:4}} whileTap={{scale:0.97}}
                   onClick={()=>{ if(m.id!==module) navigateTo(m.id); }}
-                  style={{display:"flex",alignItems:"center",gap:"8px",padding:"9px 10px",borderRadius:"var(--r-sm)",border:"none",cursor:"pointer",background:module===m.id?`linear-gradient(135deg,${sportColor}22,${sportColor}08)`:"transparent",color:module===m.id?sportColor:locked?"var(--text-4)":"var(--text-2)",width:"100%",textAlign:"left",fontSize:"12px",fontWeight:module===m.id?700:500,marginBottom:"3px",transition:"all 0.2s",boxShadow:module===m.id?`0 0 12px ${sportColor}33`:"none",opacity:locked?0.6:1}}>
-                  <span style={{width:"4px",height:"16px",borderRadius:"2px",background:module===m.id?sportColor:"transparent",transition:"all 0.2s"}}/>
-                  <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{m.label}</span>
-                  {locked && <span style={{fontSize:"10px",flexShrink:0}}>🔒</span>}
+                  style={{
+                    display:"flex",alignItems:"center",gap:"9px",
+                    padding:"9px 10px 9px 12px",
+                    borderRadius:"var(--r-sm)",border:"none",
+                    borderLeft: active ? `3px solid ${sportColor}` : "3px solid transparent",
+                    cursor:"pointer",
+                    background: active
+                      ? `linear-gradient(90deg,${sportColor}28,${sportColor}08)`
+                      : "transparent",
+                    color: active ? sportColor : locked ? "var(--text-4)" : "var(--text-2)",
+                    width:"100%",textAlign:"left",
+                    fontSize:"12px",fontWeight: active ? 700 : 500,
+                    marginBottom:"2px",transition:"all 0.18s",
+                    boxShadow: active ? `inset 0 0 20px ${sportColor}18` : "none",
+                    opacity: locked ? 0.55 : 1,
+                  }}>
+                  <span style={{fontSize:"15px",width:"18px",flexShrink:0,textAlign:"center",filter:active?`drop-shadow(0 0 6px ${sportColor})`:"none"}}>{m.icon}</span>
+                  <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,letterSpacing:"0.01em"}}>{m.label}</span>
+                  {locked && (()=>{ const req=requiredPlan(m.id); const p=PLANS[req]; return <span style={{fontSize:"9px",flexShrink:0,background:`${p.color}22`,color:p.color,border:`1px solid ${p.color}44`,borderRadius:"99px",padding:"2px 6px",fontWeight:700,whiteSpace:"nowrap"}}>{p.icon} {p.label}</span>; })()}
                 </motion.button>
               );
             })}

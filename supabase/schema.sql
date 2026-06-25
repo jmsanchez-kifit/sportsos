@@ -60,8 +60,12 @@ create table if not exists players (
   hia_reason  text,
   cuota_status text default 'ok',     -- ok | vencida
   profile_id  uuid references profiles(id),
+  avatar_url  text,
   created_at  timestamptz default now()
 );
+
+-- Si la tabla ya existe, agregar la columna avatar_url si falta
+alter table players add column if not exists avatar_url text;
 
 -- ─── TEAMS (equipos dentro de un club) ───────────────────────
 create table if not exists teams (

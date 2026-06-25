@@ -5,5 +5,6 @@ export default function AuroraBg() {
       <div className="aurora-blob b3"/><div className="aurora-blob b4"/>
     </div>
     <div className="aurora-grid"/>
+    <div className="aurora-streak"/>
   </>;
 }

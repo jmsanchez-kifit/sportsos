@@ -86,11 +86,17 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
     const file = e.target.files?.[0];
     if (!file || !currentUser?.id) return;
     setUploadingPhoto(true);
+    const path = `${currentUser.id}.jpg`;
     const { error } = await supabase.storage.from("avatars")
-      .upload(`${currentUser.id}.jpg`, file, { upsert: true, contentType: file.type });
+      .upload(path, file, { upsert: true, contentType: file.type });
     if (!error) {
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(`${currentUser.id}.jpg`);
-      setAvatarUrl(urlData.publicUrl + "?t=" + Date.now());
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const cleanUrl = urlData.publicUrl;
+      setAvatarUrl(cleanUrl + "?t=" + Date.now());
+      // Guardar en la tabla profiles
+      await supabase.from("profiles").update({ avatar_url: cleanUrl }).eq("id", currentUser.id);
+      // Actualizar el registro de players vinculado (si existe)
+      await supabase.from("players").update({ avatar_url: cleanUrl }).eq("profile_id", currentUser.id);
     }
     setUploadingPhoto(false);
   };
