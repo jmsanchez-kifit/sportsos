@@ -63,7 +63,9 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
     // Incluye club_id real para vincular al jugador al club correcto en Supabase
     const clubParam = clubId || club.name.toLowerCase().replace(/\s+/g,"-");
     const nameParam = encodeURIComponent(club.name);
-    setInvLink(`${base}/?token=${token}&rol=${invRol}&club=${clubParam}&name=${nameParam}&sport=${sport}&cats=${catsParam}`);
+    const inviterParam = currentUser?.id ? `&inviter=${currentUser.id}` : "";
+    const exp = Date.now() + 48 * 60 * 60 * 1000; // expira en 48 horas
+    setInvLink(`${base}/?token=${token}&rol=${invRol}&club=${clubParam}&name=${nameParam}&sport=${sport}&cats=${catsParam}${inviterParam}&exp=${exp}`);
     setCopied(false);
   };
 
@@ -428,6 +430,17 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
                     <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}}
                       onClick={()=>setPlayerForm({...p})}
                       style={{...ss.btn,background:"transparent",color:sportColor,border:`1px solid ${sportColor}44`,padding:"4px 10px",fontSize:"11px"}}>✏️</motion.button>
+                    <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}}
+                      onClick={()=>{
+                        const base = window.location.origin;
+                        const exp = Date.now() + 48*60*60*1000;
+                        const inviterParam = currentUser?.id ? `&inviter=${currentUser.id}` : "";
+                        const link = `${base}/?rol=jugador&club=${clubId||""}&name=${encodeURIComponent(club?.name||"")}&sport=${sport}&cats=${encodeURIComponent(p.cat||"")}&pid=${p.id}${inviterParam}&exp=${exp}`;
+                        navigator.clipboard.writeText(link);
+                        showToast(`Link para ${p.name} copiado ✅`,"success");
+                      }}
+                      title="Copiar link de invitación para este jugador"
+                      style={{...ss.btn,background:"transparent",color:"#3B82F6",border:"1px solid #3B82F644",padding:"4px 10px",fontSize:"11px"}}>🔗</motion.button>
                     <motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}}
                       onClick={()=>startDelete(p)}
                       style={{...ss.btn,background:"transparent",color:"#EF4444",border:"1px solid #EF444444",padding:"4px 10px",fontSize:"11px"}}>🗑️</motion.button>

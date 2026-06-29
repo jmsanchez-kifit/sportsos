@@ -15,13 +15,41 @@ const ROL_INFO = {
 };
 
 export default function InvitationScreen({ params, onComplete, onBack }) {
-  const rol      = params.get("rol")    || "jugador";
-  const clubId   = params.get("club")   || null;
-  const clubName = params.get("name")   || "Tu Club";
-  const sport    = params.get("sport")  || "rugby";
-  const catsRaw  = params.get("cats")   || "";
-  const cats     = catsRaw ? decodeURIComponent(catsRaw).split(",").map(c=>c.trim()).filter(Boolean) : [];
-  const info     = ROL_INFO[rol] || ROL_INFO.jugador;
+  const rol       = params.get("rol")     || "jugador";
+  const clubId    = params.get("club")    || null;
+  const clubName  = params.get("name")    || "Tu Club";
+  const sport     = params.get("sport")   || "rugby";
+  const catsRaw   = params.get("cats")    || "";
+  const cats      = catsRaw ? decodeURIComponent(catsRaw).split(",").map(c=>c.trim()).filter(Boolean) : [];
+  const inviterId = params.get("inviter") || null;
+  const playerId  = params.get("pid")     || null;
+  const expiry    = parseInt(params.get("exp") || "0", 10);
+  const info      = ROL_INFO[rol] || ROL_INFO.jugador;
+
+  // Link expirado (solo si viene con &exp= y ya pasó el tiempo)
+  const isExpired = expiry > 0 && Date.now() > expiry;
+  if (isExpired) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
+      <AuroraBg/>
+      <motion.div {...scaleIn} style={{...ss.card,maxWidth:"400px",width:"90%",textAlign:"center",padding:"40px 32px",position:"relative",zIndex:1}}>
+        <div style={{fontSize:"48px",marginBottom:"16px"}}>⏰</div>
+        <div style={{fontWeight:800,fontSize:"20px",marginBottom:"8px"}}>Link expirado</div>
+        <div style={{fontSize:"13px",color:"var(--text-3)",lineHeight:1.7,marginBottom:"24px"}}>
+          Este link de invitación ya no es válido.<br/>
+          Los links expiran a las <strong>48 horas</strong> de ser generados.
+        </div>
+        <div style={{fontSize:"12px",color:"var(--text-3)",padding:"12px 16px",borderRadius:"var(--r-md)",background:"rgba(192,57,43,0.06)",border:"1px solid rgba(192,57,43,0.2)",marginBottom:"24px"}}>
+          Pídele al administrador del club que genere un nuevo link de invitación.
+        </div>
+        {onBack && (
+          <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}} onClick={onBack}
+            style={{...ss.btn,background:"transparent",color:"var(--text-2)",border:"1px solid var(--border-soft)",fontSize:"13px",padding:"10px 24px"}}>
+            ← Volver al inicio
+          </motion.button>
+        )}
+      </motion.div>
+    </div>
+  );
 
   const [form, setForm]     = useState({ nombre:"", email:"", password:"" });
   const [step, setStep]     = useState("form"); // "form" | "success"
@@ -55,13 +83,22 @@ export default function InvitationScreen({ params, onComplete, onBack }) {
       const userId = authData.user?.id;
       if (!userId) throw new Error("No se obtuvo ID de usuario");
 
-      // 2. Actualizar perfil con rol y club
+      // 2. Actualizar perfil con rol, club e invitador (para heredar su membresía)
       if (clubId) {
+        const profileData = { nombre: form.nombre.trim(), rol, club_id: clubId };
+        if (inviterId) profileData.invited_by = inviterId;
         const { error: profileError } = await supabase
           .from("profiles")
-          .update({ nombre: form.nombre.trim(), rol, club_id: clubId })
+          .update(profileData)
           .eq("id", userId);
         if (profileError) console.warn("Profile update parcial:", profileError.message);
+      }
+
+      // 3. Si la invitación es para un jugador específico, vincular su cuenta
+      if (playerId) {
+        await supabase.from("players")
+          .update({ profile_id: userId })
+          .eq("id", playerId);
       }
 
       setLoading(false);

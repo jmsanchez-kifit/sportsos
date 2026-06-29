@@ -47,6 +47,7 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
   const [tab, setTab] = useState("personal");
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoLinkedWarn, setPhotoLinkedWarn] = useState(false);
 
   // Edad calculada
   const edad = form.fecha_nacimiento
@@ -93,10 +94,32 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const cleanUrl = urlData.publicUrl;
       setAvatarUrl(cleanUrl + "?t=" + Date.now());
-      // Guardar en la tabla profiles
+      // Guardar en profiles
       await supabase.from("profiles").update({ avatar_url: cleanUrl }).eq("id", currentUser.id);
-      // Actualizar el registro de players vinculado (si existe)
-      await supabase.from("players").update({ avatar_url: cleanUrl }).eq("profile_id", currentUser.id);
+      // Actualizar players por profile_id (funciona si el admin usó el botón 🔗 Invitar)
+      const { data: updated } = await supabase
+        .from("players")
+        .update({ avatar_url: cleanUrl })
+        .eq("profile_id", currentUser.id)
+        .select("id");
+      // Fallback: si no se vinculó por profile_id, buscar por club_id + sin cuenta vinculada
+      // y vincular automáticamente si hay exactamente uno que coincide por nombre
+      if ((!updated || updated.length === 0) && currentUser.club_id) {
+        const { data: candidates } = await supabase
+          .from("players")
+          .select("id, name")
+          .eq("club_id", currentUser.club_id)
+          .is("profile_id", null);
+        if (candidates?.length === 1) {
+          // Solo un jugador sin vincular en el club → vincular automáticamente
+          await supabase.from("players")
+            .update({ avatar_url: cleanUrl, profile_id: currentUser.id })
+            .eq("id", candidates[0].id);
+        } else {
+          // Varios jugadores sin vincular → no podemos saber cuál es → avisar
+          setPhotoLinkedWarn(true);
+        }
+      }
     }
     setUploadingPhoto(false);
   };
@@ -226,6 +249,11 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
           </label>
           <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload}
             style={{ display:"none" }}/>
+          {photoLinkedWarn && (
+            <div style={{ fontSize:"10px", color:"#F59E0B", textAlign:"center", maxWidth:"100px", lineHeight:1.4 }}>
+              ⚠️ Foto guardada. El admin debe enviarte el link de invitación personal para que aparezca en el equipo.
+            </div>
+          )}
         </div>
         <div>
           <div style={{ fontSize:"20px", fontWeight:800 }}>{form.nombre || "Mi Perfil"}</div>
