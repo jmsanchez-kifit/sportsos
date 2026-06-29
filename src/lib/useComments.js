@@ -23,10 +23,10 @@ export function useComments(postId, clubId) {
   useEffect(() => { load(); }, [load]);
 
   const addComment = async ({ authorName, text, authorId = null }) => {
-    if (!text.trim()) return;
+    if (!text.trim()) return { ok: false };
     if (!isReal) {
       setComments(prev => [...prev, { id: Date.now(), author: authorName || "Yo", text, time: "Ahora" }]);
-      return;
+      return { ok: true };
     }
     const { data, error } = await supabase.from("post_comments").insert({
       post_id: postId,
@@ -37,7 +37,9 @@ export function useComments(postId, clubId) {
     }).select().single();
     if (!error && data) {
       setComments(prev => [...prev, { id: data.id, author: data.author_name, text: data.text, time: "Ahora" }]);
+      return { ok: true };
     }
+    return { ok: false, error };
   };
 
   return { comments, addComment };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../lib/supabase";
 
 const TIPS_BY_ROLE = {
   admin: [
@@ -30,28 +31,31 @@ const TIPS_BY_ROLE = {
   ],
 };
 
-export default function OnboardingTip({ sportColor="#22C55E", role="entrenador", userKey="demo", onNavigate }) {
+export default function OnboardingTip({ sportColor="#22C55E", role="entrenador", userKey="demo", onboardingDone=false, userId=null, onNavigate }) {
   const [visible, setVisible] = useState(false);
   const [step, setStep]       = useState(0);
 
-  // Clave única por usuario + rol
-  const storageKey = `sportos_onboarding_${userKey}_${role}`;
   const TIPS = TIPS_BY_ROLE[role] || TIPS_BY_ROLE.entrenador;
 
   useEffect(() => {
     setStep(0);
-    // Si no hay usuario real todavía, no mostrar
+    // Solo mostrar para usuarios reales que nunca completaron el onboarding
     if (!userKey || userKey === "demo") return;
-    const done = localStorage.getItem(storageKey);
-    if (!done) {
-      const t = setTimeout(() => setVisible(true), 1400);
-      return () => clearTimeout(t);
-    }
-  }, [storageKey, userKey]);
+    if (onboardingDone) return;
+    const localDone = localStorage.getItem(`sportos_onboarding_${userKey}`);
+    if (localDone) return;
+    const t = setTimeout(() => setVisible(true), 1400);
+    return () => clearTimeout(t);
+  }, [userKey, onboardingDone]);
 
-  const dismiss = () => {
-    localStorage.setItem(storageKey, "1");
+  const dismiss = async () => {
     setVisible(false);
+    // Guardar en localStorage (respaldo instantáneo)
+    localStorage.setItem(`sportos_onboarding_${userKey}`, "1");
+    // Guardar en Supabase para que no vuelva a aparecer en ningún dispositivo
+    if (userId) {
+      await supabase.from("profiles").update({ onboarding_done: true }).eq("id", userId);
+    }
   };
 
   const next = () => {

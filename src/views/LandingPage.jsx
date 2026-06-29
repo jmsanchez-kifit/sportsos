@@ -130,7 +130,7 @@ function SectionHeading({ title, sub }) {
 
 // ── Landing principal ─────────────────────────────────────────────────────
 
-export default function LandingPage({ onLogin, onRegister }) {
+export default function LandingPage({ onLogin, onRegister, onJoinRequest }) {
   const [activeSport, setActiveSport] = useState(0);
   const [activeRole,  setActiveRole]  = useState("entrenador");
   const [openFaq,     setOpenFaq]     = useState(null);
@@ -163,6 +163,13 @@ export default function LandingPage({ onLogin, onRegister }) {
               border:"1px solid var(--border-soft)", fontSize:"13px" }}>
             Ingresar
           </motion.button>
+          {onJoinRequest && (
+            <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={onJoinRequest}
+              style={{ ...ss.btn, background:"transparent", color:"var(--text-2)",
+                border:`1px solid ${sport.color}55`, fontSize:"13px", color:sport.color }}>
+              🔑 Tengo un código
+            </motion.button>
+          )}
           <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={onRegister}
             style={{ ...ss.btn, background:`linear-gradient(135deg,${sport.color},${sport.color}cc)`,
               color:"#fff", fontSize:"13px", boxShadow:`0 4px 14px ${sport.color}44` }}>

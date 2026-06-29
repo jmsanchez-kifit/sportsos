@@ -28,13 +28,33 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
   const [copied, setCopied] = useState(false);
   const [invCats, setInvCats] = useState([]);
   const [invPlantel, setInvPlantel] = useState("");
-  const [members, setMembers] = useState([]);
+  const [members, setMembers]           = useState([]);
+  const [joinCode, setJoinCode]         = useState("");
+  const [joinCopied, setJoinCopied]     = useState(false);
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [jugTab, setJugTab]             = useState("plantel");
+  const [approvedReq, setApprovedReq]   = useState(null);
 
   // Cargar miembros del club desde Supabase
   useEffect(() => {
     if (!clubId) return;
     supabase.from("profiles").select("id,nombre,rol,created_at").eq("club_id", clubId)
       .then(({ data }) => { if (data) setMembers(data); });
+  }, [clubId]);
+
+  // Cargar código de club
+  useEffect(() => {
+    if (!clubId) return;
+    supabase.from("clubs").select("join_code").eq("id", clubId).single()
+      .then(({ data }) => { if (data?.join_code) setJoinCode(data.join_code); });
+  }, [clubId]);
+
+  // Cargar solicitudes de unión
+  useEffect(() => {
+    if (!clubId) return;
+    supabase.from("join_requests").select("*").eq("club_id", clubId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setJoinRequests(data); });
   }, [clubId]);
 
   const ROL_OPTS = [
@@ -83,6 +103,35 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
     window.open(`https://wa.me/?text=${msg}`,"_blank");
   };
 
+  const regenCode = async () => {
+    if (!clubId) return;
+    const prefixes = { rugby:"RUGBY", futbol:"FUTBOL", basketball:"BASKET", handball:"HAND", hockey:"HOCKEY" };
+    const prefix   = prefixes[sport] || "CLUB";
+    const newCode  = `${prefix}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+    await supabase.from("clubs").update({ join_code: newCode }).eq("id", clubId);
+    setJoinCode(newCode);
+    showToast("Código regenerado ✅", "success");
+  };
+
+  const approveRequest = async (req) => {
+    const base       = window.location.origin;
+    const catsParam  = encodeURIComponent(req.categoria || "");
+    const nameParam  = encodeURIComponent(club?.name || "");
+    const invParam   = currentUser?.id ? `&inviter=${currentUser.id}` : "";
+    const exp        = Date.now() + 48 * 60 * 60 * 1000;
+    const token      = Math.random().toString(36).slice(2,8).toUpperCase();
+    const invLink    = `${base}/?token=${token}&rol=jugador&club=${clubId||""}&name=${nameParam}&sport=${sport}&cats=${catsParam}${invParam}&exp=${exp}`;
+    await supabase.from("join_requests").update({ status:"aprobado" }).eq("id", req.id);
+    setJoinRequests(prev => prev.filter(r => r.id !== req.id));
+    setApprovedReq({ request: req, invLink });
+  };
+
+  const rejectRequest = async (req) => {
+    await supabase.from("join_requests").update({ status:"rechazado" }).eq("id", req.id);
+    setJoinRequests(prev => prev.filter(r => r.id !== req.id));
+    showToast(`Solicitud de ${req.nombre} rechazada`, "warning");
+  };
+
   if(module==="miclub") return (
     <div>
       <SectionTitle title="Configuración del Club" sub="Deportes activos, colores y métodos de pago"/>
@@ -124,6 +173,37 @@ export default function AdminView({module, sport, sp, club, activeClubs, setActi
           </motion.div>
         </div>
       </div>
+
+      {/* ── Código de solicitud del club ── */}
+      <motion.div {...fadeUp} transition={{delay:0.22}} style={{...ss.card, marginTop:"20px", border:"1px solid rgba(59,130,246,0.25)", background:"linear-gradient(135deg,rgba(59,130,246,0.06),transparent)"}}>
+        <div style={{fontWeight:700,fontSize:"14px",marginBottom:"8px",display:"flex",alignItems:"center",gap:"8px"}}>
+          🔑 Código de solicitud del club
+        </div>
+        <div style={{fontSize:"12px",color:"var(--text-3)",marginBottom:"14px"}}>
+          Comparte este código con jugadores para que puedan solicitar unirse desde la pantalla de inicio. Cuando lo apruebas, les envías el link de acceso.
+        </div>
+        {joinCode ? (
+          <div style={{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap"}}>
+            <div style={{flex:1,fontFamily:"monospace",fontSize:"22px",fontWeight:900,letterSpacing:"0.12em",color:"#3B82F6",padding:"14px 16px",background:"rgba(59,130,246,0.1)",borderRadius:"var(--r-md)",border:"1px solid rgba(59,130,246,0.25)",textAlign:"center",minWidth:"160px"}}>
+              {joinCode}
+            </div>
+            <div style={{display:"flex",gap:"6px",flexShrink:0}}>
+              <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+                onClick={()=>{ navigator.clipboard.writeText(joinCode); setJoinCopied(true); setTimeout(()=>setJoinCopied(false),2000); showToast("Código copiado ✅","success"); }}
+                style={{...ss.btn,background:joinCopied?"rgba(34,197,94,0.2)":"var(--bg-elev-2)",color:joinCopied?"#22C55E":"var(--text-1)",border:`1px solid ${joinCopied?"rgba(34,197,94,0.4)":"var(--border-soft)"}`,fontSize:"12px",padding:"10px 14px",fontWeight:joinCopied?700:400}}>
+                {joinCopied?"✅ Copiado":"📋 Copiar"}
+              </motion.button>
+              <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={regenCode}
+                title="Regenerar (el código anterior dejará de funcionar)"
+                style={{...ss.btn,background:"var(--bg-elev-2)",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"12px",padding:"10px 12px"}}>
+                🔄
+              </motion.button>
+            </div>
+          </div>
+        ) : (
+          <div style={{fontSize:"12px",color:"var(--text-3)"}}>Cargando código...</div>
+        )}
+      </motion.div>
 
       {/* ── Generador de invitaciones ── */}
       <motion.div {...fadeUp} transition={{delay:0.25}} style={{...ss.card, marginTop:"20px", border:"1px solid rgba(34,197,94,0.25)", background:"linear-gradient(135deg,rgba(34,197,94,0.06),transparent)"}}>

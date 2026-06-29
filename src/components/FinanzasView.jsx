@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { fadeUp } from "../styles/motion";
 import { ss } from "../styles/tokens";
+import EmptyState from "./EmptyState";
 
 // ── Categorías predefinidas ───────────────────────────────────────────────
 
@@ -401,6 +402,10 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
                   <span style={{ fontWeight:700, color:"#1FA04A" }}>+{fmt(m.monto,sym)}</span>
                 </motion.div>
               ))}
+              {payments.length === 0 && movimientos.filter(m=>m.tipo==="ingreso").length === 0 && (
+                <EmptyState icon="💰" title="Sin ingresos aún" desc="Registra el primer ingreso del club para llevar el control financiero." color="#1FA04A"
+                  action={()=>{ setFormMov({...emptyMov,tipo:"ingreso"}); setModalMov(true); }} actionLabel="+ Registrar primer ingreso"/>
+              )}
             </div>
           </motion.div>
         )}
@@ -430,6 +435,10 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
                   </div>
                 </motion.div>
               ))}
+              {movimientos.filter(m=>m.tipo==="egreso").length === 0 && (
+                <EmptyState icon="📤" title="Sin egresos registrados" desc="Registra los pagos y gastos del club para controlar el presupuesto." color="#C0392B"
+                  action={()=>{ setFormMov({...emptyMov,tipo:"egreso"}); setModalMov(true); }} actionLabel="+ Registrar primer egreso"/>
+              )}
             </div>
           </motion.div>
         )}
@@ -451,6 +460,10 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
                 <span style={{ fontWeight:700, fontSize:"13px" }}>Nómina de sueldos</span>
                 <span style={{ fontWeight:800, color:"#C98408" }}>{fmt(totalSueldos,sym)} / mes</span>
               </div>
+              {sueldos.length === 0 && (
+                <EmptyState icon="👤" title="Sin personas en nómina" desc="Agrega al staff del club para controlar los sueldos mensuales." color="#C98408"
+                  action={()=>{ setFormSueldo(emptySueldo); setEditSueldo(null); setModalSueldo(true); }} actionLabel="+ Agregar primera persona"/>
+              )}
               {sueldos.map((s,i) => (
                 <motion.div key={s.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.05}}
                   style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px",
@@ -506,6 +519,10 @@ export default function FinanzasView({ countryData, payments=[], sportColor, sho
                 <span style={{ fontWeight:700, fontSize:"13px" }}>Gastos administrativos fijos</span>
                 <span style={{ fontWeight:800, color:"#C0392B" }}>{fmt(totalGastosAdmin,sym)} / mes</span>
               </div>
+              {gastosAdmin.length === 0 && (
+                <EmptyState icon="💼" title="Sin gastos fijos registrados" desc="Agrega los gastos recurrentes del club: alquiler, servicios, seguros, etc." color={sportColor}
+                  action={()=>{ setFormAdmin(emptyAdmin); setEditAdmin(null); setModalAdmin(true); }} actionLabel="+ Agregar primer gasto"/>
+              )}
               {gastosAdmin.map((g,i) => (
                 <motion.div key={g.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.05}}
                   style={{ display:"flex", alignItems:"center", gap:"12px", padding:"14px 16px",

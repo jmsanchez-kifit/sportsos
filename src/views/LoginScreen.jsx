@@ -137,6 +137,8 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
   const [step, setStep]         = useState("login");
   const [loggedUser, setLoggedUser] = useState(null);
   const [tab, setTab]           = useState("login"); // "login" | "planes"
+  const [loginMode, setLoginMode] = useState("form"); // "form" | "reset"
+  const [resetSent, setResetSent] = useState(false);
 
   const handleLogin = async () => {
     setError("");
@@ -151,16 +153,31 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
         if (authError) throw authError;
         const { data: profile } = await supabase
           .from("profiles").select("*").eq("id", data.user.id).single();
+
+        const rolPerfil = profile?.rol || "jugador";
+        let planEfectivo = profile?.plan || "free";
+        // Usuarios no-admin heredan el plan del admin de su club
+        if (profile?.club_id && !["admin","superadmin"].includes(rolPerfil)) {
+          const { data: adminClub } = await supabase
+            .from("profiles")
+            .select("plan")
+            .eq("club_id", profile.club_id)
+            .eq("rol", "admin")
+            .single();
+          if (adminClub?.plan) planEfectivo = adminClub.plan;
+        }
+
         setLoading(false);
         const user = {
           id: data.user.id,
           nombre: profile?.nombre || data.user.email,
           email: data.user.email,
-          rol: profile?.rol || "jugador",
+          rol: rolPerfil,
           club: profile?.clubs?.name || "Club",
           sport: profile?.clubs?.sport || "rugby",
           club_id: profile?.club_id || null,
-          plan: profile?.plan || "free",
+          plan: planEfectivo,
+          onboarding_done: profile?.onboarding_done || false,
           cats: [],
           isReal: true,
         };
@@ -183,7 +200,18 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
     }, 900);
   };
 
-  const handleKey = (e) => { if (e.key==="Enter") handleLogin(); };
+  const handleKey = (e) => { if (e.key==="Enter" && loginMode==="form") handleLogin(); };
+
+  const handleReset = async () => {
+    if (!email.trim()) { setError("Escribe tu email"); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    });
+    setLoading(false);
+    if (err) { setError("Error: " + err.message); return; }
+    setResetSent(true);
+  };
 
   const handleGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -341,6 +369,10 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
               {/* Columna derecha — formulario */}
               <div style={{flex:1,minWidth:0}}>
                 <motion.div {...fadeUp} transition={{delay:0.05}} style={{...ss.card,padding:"28px 24px",marginBottom:"14px"}}>
+                  <AnimatePresence mode="wait">
+
+                  {loginMode==="form" && (
+                    <motion.div key="form" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.15}}>
                   <div style={{fontWeight:800,fontSize:"18px",marginBottom:"4px",letterSpacing:"-0.01em"}}>Iniciar sesión</div>
                   <div style={{...ss.muted,fontSize:"11px",marginBottom:"22px"}}>Accede con tu cuenta de SportOS</div>
 
@@ -351,7 +383,7 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
                       style={{...ss.input,borderColor:error?"#C0392B":"var(--border-soft)"}}/>
                   </div>
 
-                  <div style={{marginBottom:"20px"}}>
+                  <div style={{marginBottom:"6px"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={ss.label}>Contraseña</div>
                       <span onClick={()=>setShowPass(p=>!p)} style={{fontSize:"10px",color:"#C0392B",cursor:"pointer",fontWeight:600}}>
@@ -362,6 +394,13 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
                       onChange={e=>{setPassword(e.target.value);setError("");}}
                       onKeyDown={handleKey} placeholder="••••••••" autoComplete="current-password"
                       style={{...ss.input,borderColor:error?"#C0392B":"var(--border-soft)"}}/>
+                  </div>
+
+                  <div style={{textAlign:"right",marginBottom:"16px"}}>
+                    <span onClick={()=>{setLoginMode("reset");setError("");setResetSent(false);}}
+                      style={{fontSize:"11px",color:"#C0392B",cursor:"pointer",fontWeight:600}}>
+                      ¿Olvidaste tu contraseña?
+                    </span>
                   </div>
 
                   <AnimatePresence>
@@ -405,6 +444,68 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
                       🎮 Probar en modo demo
                     </motion.button>
                   </div>
+                  </motion.div>
+                  )}
+
+                  {loginMode==="reset" && (
+                    <motion.div key="reset" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.15}}>
+                    {resetSent ? (
+                      <div style={{textAlign:"center",padding:"16px 0"}}>
+                        <div style={{fontSize:"40px",marginBottom:"12px"}}>📧</div>
+                        <div style={{fontWeight:800,fontSize:"16px",marginBottom:"8px"}}>Revisa tu email</div>
+                        <div style={{fontSize:"12px",color:"var(--text-3)",lineHeight:1.7,marginBottom:"8px"}}>
+                          Enviamos un link a <strong style={{color:"var(--text-1)"}}>{email}</strong>.
+                        </div>
+                        <div style={{fontSize:"12px",color:"var(--text-3)",lineHeight:1.7,marginBottom:"20px"}}>
+                          Haz clic en el link del email para crear tu nueva contraseña.
+                        </div>
+                        <div style={{fontSize:"11px",color:"var(--text-4)",marginBottom:"20px"}}>
+                          ¿No llegó? Revisa la carpeta de spam o espera unos minutos.
+                        </div>
+                        <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}}
+                          onClick={()=>{setLoginMode("form");setResetSent(false);setError("");}}
+                          style={{...ss.btn,background:"transparent",color:"#C0392B",border:"1px solid rgba(192,57,43,0.35)",fontSize:"12px",padding:"10px 24px",fontWeight:600}}>
+                          ← Volver al inicio de sesión
+                        </motion.button>
+                      </div>
+                    ) : (
+                      <>
+                      <div style={{fontWeight:800,fontSize:"18px",marginBottom:"4px",letterSpacing:"-0.01em"}}>Recuperar contraseña</div>
+                      <div style={{...ss.muted,fontSize:"11px",marginBottom:"22px"}}>Te enviamos un link para crear una nueva contraseña</div>
+
+                      <div style={{marginBottom:"14px"}}>
+                        <div style={ss.label}>Email de tu cuenta</div>
+                        <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setError("");}}
+                          onKeyDown={e=>{if(e.key==="Enter")handleReset();}} placeholder="tu@email.com" autoComplete="email" autoFocus
+                          style={{...ss.input,borderColor:error?"#C0392B":"var(--border-soft)"}}/>
+                      </div>
+
+                      <AnimatePresence>
+                        {error && (
+                          <motion.div initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}}
+                            style={{fontSize:"12px",color:"#C0392B",marginBottom:"14px",padding:"8px 12px",borderRadius:"var(--r-sm)",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.25)"}}>
+                            ⚠️ {error}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <motion.button whileHover={!loading?{scale:1.02,y:-2}:{}} whileTap={!loading?{scale:0.98}:{}}
+                        onClick={handleReset} disabled={loading}
+                        style={{...ss.btn,width:"100%",padding:"13px",fontSize:"14px",fontWeight:700,background:loading?"rgba(255,255,255,0.06)":"linear-gradient(135deg,#C0392B,#9B2335)",color:loading?"var(--text-3)":"#fff",boxShadow:loading?"none":"0 8px 24px rgba(192,57,43,0.4)",cursor:loading?"not-allowed":"pointer",marginBottom:"12px"}}>
+                        {loading?"⏳ Enviando...":"Enviar link de recuperación →"}
+                      </motion.button>
+
+                      <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.97}}
+                        onClick={()=>{setLoginMode("form");setError("");}}
+                        style={{...ss.btn,background:"transparent",color:"var(--text-3)",border:"1px solid var(--border-soft)",fontSize:"12px",padding:"9px 20px",width:"100%"}}>
+                        ← Volver
+                      </motion.button>
+                      </>
+                    )}
+                    </motion.div>
+                  )}
+
+                  </AnimatePresence>
                 </motion.div>
 
                 {/* Cuentas de demo */}

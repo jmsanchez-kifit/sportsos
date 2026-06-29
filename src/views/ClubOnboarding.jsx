@@ -6,16 +6,18 @@ import { ss } from "../styles/tokens";
 import BackButton from "../components/BackButton";
 import { supabase } from "../lib/supabase";
 
-const STEPS = ["Tu cuenta", "Tu club", "Tu deporte"];
+const STEPS_NUEVO    = ["Tu cuenta", "Tu club", "Tu deporte"];
+const STEPS_EXISTENTE = ["Tu club", "Tu deporte"];
 
-export default function ClubOnboarding({ onComplete, onBack }) {
+export default function ClubOnboarding({ onComplete, onBack, existingUser = null }) {
+  const STEPS = existingUser ? STEPS_EXISTENTE : STEPS_NUEVO;
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Paso 0: cuenta
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail]   = useState("");
+  // Paso "Tu cuenta" (solo usuarios nuevos)
+  const [nombre, setNombre] = useState(existingUser?.nombre || "");
+  const [email, setEmail]   = useState(existingUser?.email  || "");
   const [pass, setPass]     = useState("");
 
   // Paso 1: club
@@ -28,21 +30,54 @@ export default function ClubOnboarding({ onComplete, onBack }) {
   const sp       = SPORTS_CONFIG[sport];
   const accentColor = sp?.color || "#A855F7";
 
+  const isLastStep  = step === STEPS.length - 1;
+  const isClubStep  = existingUser ? step === 0 : step === 1;
+  const isAcctStep  = !existingUser && step === 0;
+
   const next = async () => {
     setError("");
-    if (step === 0) {
+
+    if (isAcctStep) {
       if (!nombre.trim() || !email.trim() || pass.length < 6) {
         setError("Completa todos los campos. La contraseña debe tener al menos 6 caracteres."); return;
       }
-      setStep(1);
-    } else if (step === 1) {
+      setStep(s => s + 1);
+      return;
+    }
+
+    if (isClubStep) {
       if (!clubName.trim()) { setError("Escribe el nombre del club."); return; }
-      setStep(2);
-    } else {
-      // Paso final: crear cuenta + club en Supabase
-      setBusy(true);
+      setStep(s => s + 1);
+      return;
+    }
+
+    // Paso final: crear club en Supabase
+    setBusy(true);
+    try {
+      let clubId = null;
       try {
-        // 1. Crear usuario en Supabase Auth
+        const prefixes = { rugby:"RUGBY", futbol:"FUTBOL", basketball:"BASKET", handball:"HAND", hockey:"HOCKEY" };
+        const prefix   = prefixes[sport] || "CLUB";
+        const join_code = `${prefix}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+        const { data: clubData } = await supabase
+          .from("clubs")
+          .insert({ name: clubName.trim(), country, sport, join_code })
+          .select().single();
+        clubId = clubData?.id ?? null;
+      } catch (_) { /* continuar sin club_id */ }
+
+      if (existingUser) {
+        // Usuario ya autenticado (Google): solo actualizar su perfil
+        if (existingUser.id && clubId) {
+          try {
+            await supabase.from("profiles")
+              .update({ nombre: existingUser.nombre, rol: "admin", club_id: clubId })
+              .eq("id", existingUser.id);
+          } catch (_) { /* no crítico */ }
+        }
+        onComplete({ ...existingUser, rol: "admin", club: clubName.trim(), club_id: clubId, sport, cats: [] });
+      } else {
+        // Usuario nuevo: crear cuenta Supabase
         const { data: authData, error: authErr } = await supabase.auth.signUp({
           email: email.trim(),
           password: pass,
@@ -51,45 +86,23 @@ export default function ClubOnboarding({ onComplete, onBack }) {
         if (authErr) throw authErr;
 
         const userId = authData.user?.id;
-        let clubId = null;
-
-        // 2. Crear club (si falla, igual continuamos)
-        try {
-          const { data: clubData } = await supabase
-            .from("clubs")
-            .insert({ name: clubName.trim(), country, sport })
-            .select().single();
-          clubId = clubData?.id ?? null;
-        } catch (_) { /* continuar sin club_id */ }
-
-        // 3. Actualizar perfil con rol admin (el trigger ya lo creó, solo actualizamos)
-        if (userId) {
+        if (userId && clubId) {
           try {
             await supabase.from("profiles")
               .update({ nombre: nombre.trim(), rol: "admin", club_id: clubId })
               .eq("id", userId);
           } catch (_) { /* no crítico */ }
         }
-
-        onComplete({
-          nombre: nombre.trim(),
-          email: email.trim(),
-          rol: "admin",
-          club: clubName.trim(),
-          club_id: clubId,
-          sport,
-          cats: [],
-        });
-      } catch (e) {
-        // Si falla el signUp pero es un error de red/config, entrar igual en demo
-        if (e.message?.includes("fetch") || e.message?.includes("URL") || e.message?.includes("Failed")) {
-          onComplete({ nombre: nombre.trim(), email: email.trim(), rol: "admin", club: clubName.trim(), club_id: null, sport, cats: [] });
-        } else {
-          setError(e.message);
-        }
-      } finally {
-        setBusy(false);
+        onComplete({ nombre: nombre.trim(), email: email.trim(), rol: "admin", club: clubName.trim(), club_id: clubId, sport, cats: [] });
       }
+    } catch (e) {
+      if (!existingUser && (e.message?.includes("fetch") || e.message?.includes("URL") || e.message?.includes("Failed"))) {
+        onComplete({ nombre: nombre.trim(), email: email.trim(), rol: "admin", club: clubName.trim(), club_id: null, sport, cats: [] });
+      } else {
+        setError(e.message);
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -135,8 +148,8 @@ export default function ClubOnboarding({ onComplete, onBack }) {
         {/* Card del paso */}
         <div style={{ ...ss.card, border: `1px solid ${accentColor}33`, background: `linear-gradient(135deg,${accentColor}08,var(--bg-glass))` }}>
           <AnimatePresence mode="wait">
-            {step === 0 && (
-              <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            {isAcctStep && (
+              <motion.div key="s-acct" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "6px" }}>Crea tu cuenta</div>
                 <div style={{ color: "var(--text-2)", fontSize: "13px", marginBottom: "24px" }}>El admin del club. Podrás invitar a más personas después.</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -156,8 +169,13 @@ export default function ClubOnboarding({ onComplete, onBack }) {
               </motion.div>
             )}
 
-            {step === 1 && (
-              <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            {isClubStep && (
+              <motion.div key="s-club" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                {existingUser && (
+                  <div style={{ marginBottom: "16px", padding: "10px 14px", borderRadius: "var(--r-sm)", background: `${accentColor}18`, border: `1px solid ${accentColor}44`, color: accentColor, fontSize: "12px", fontWeight: 600 }}>
+                    Hola, {existingUser.nombre}. Ya tienes cuenta. Ahora configura tu club.
+                  </div>
+                )}
                 <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "6px" }}>Tu club</div>
                 <div style={{ color: "var(--text-2)", fontSize: "13px", marginBottom: "24px" }}>Así aparecerá en la plataforma.</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -177,7 +195,7 @@ export default function ClubOnboarding({ onComplete, onBack }) {
               </motion.div>
             )}
 
-            {step === 2 && (
+            {isLastStep && (
               <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "6px" }}>¿Qué deporte?</div>
                 <div style={{ color: "var(--text-2)", fontSize: "13px", marginBottom: "20px" }}>Puedes agregar más deportes después.</div>
@@ -202,12 +220,12 @@ export default function ClubOnboarding({ onComplete, onBack }) {
 
           <motion.button disabled={busy} whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.98 }} onClick={next}
             style={{ ...ss.btn, width: "100%", marginTop: "24px", padding: "14px", fontSize: "14px", fontWeight: 700, background: `linear-gradient(135deg,${accentColor},${accentColor}cc)`, color: "#fff", boxShadow: `0 8px 24px ${accentColor}44`, opacity: busy ? 0.6 : 1 }}>
-            {busy ? "Creando tu club..." : step < 2 ? "Continuar →" : `Crear mi club de ${sp.name} ✓`}
+            {busy ? "Creando tu club..." : !isLastStep ? "Continuar →" : `Crear mi club de ${sp.name} ✓`}
           </motion.button>
         </div>
 
-        {/* O continuar con Google */}
-        <div style={{marginTop:"16px",textAlign:"center"}}>
+        {/* O continuar con Google — solo para usuarios nuevos, no para quien ya usó OAuth */}
+        {!existingUser && <div style={{marginTop:"16px",textAlign:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"}}>
             <div style={{flex:1,height:"1px",background:"var(--border-soft)"}}/>
             <span style={{fontSize:"11px",color:"var(--text-4)"}}>o más rápido</span>
@@ -225,12 +243,14 @@ export default function ClubOnboarding({ onComplete, onBack }) {
             <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
             Registrarme con Google
           </motion.button>
-        </div>
+        </div>}
 
-        <div style={{ textAlign: "center", marginTop: "16px", fontSize: "12px", color: "var(--text-3)" }}>
-          ¿Ya tienes cuenta?{" "}
-          <span onClick={() => onComplete(null)} style={{ color: accentColor, cursor: "pointer", fontWeight: 600 }}>Ingresar</span>
-        </div>
+        {!existingUser && (
+          <div style={{ textAlign: "center", marginTop: "16px", fontSize: "12px", color: "var(--text-3)" }}>
+            ¿Ya tienes cuenta?{" "}
+            <span onClick={() => onComplete(null)} style={{ color: accentColor, cursor: "pointer", fontWeight: 600 }}>Ingresar</span>
+          </div>
+        )}
       </motion.div>
     </div>
   );

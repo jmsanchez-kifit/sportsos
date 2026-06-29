@@ -23,6 +23,7 @@ import InvitationScreen from "./views/InvitationScreen";
 import LoginScreen from "./views/LoginScreen";
 import LandingPage from "./views/LandingPage";
 import ClubOnboarding from "./views/ClubOnboarding";
+import JoinRequestScreen from "./views/JoinRequestScreen";
 import SuperAdminView from "./views/SuperAdminView";
 import AdminView from "./views/AdminView";
 import EntrenadorView from "./views/EntrenadorView";
@@ -79,6 +80,8 @@ export default function SportOS() {
 
   // null = modo demo | { nombre, email, rol, club, cats[], club_id, plan } = usuario real
   const [currentUser,setCurrentUser]     = useState(null);
+  // Usuario ya autenticado (ej. Google OAuth) que aún no tiene club_id asignado
+  const [pendingUser,setPendingUser]     = useState(null);
   const [searchOpen,setSearchOpen]       = useState(false);
   const [upgradeFor,setUpgradeFor]       = useState(null); // id de feature bloqueada
 
@@ -173,10 +176,17 @@ export default function SportOS() {
           cats: [],
           isReal: true,
         };
-        setCurrentUser(usuario);
         setRole(usuario.rol);
         if (usuario.sport) setSport(usuario.sport);
-        setScreen("app");
+
+        // Admin recién creado (ej. Google OAuth) sin club: mandar a configurar su club
+        if (rolPerfil === "admin" && !esSuperAdmin && !profile?.club_id) {
+          setPendingUser({ id: u.id, nombre: usuario.nombre, email: u.email });
+          setScreen("club-onboarding");
+        } else {
+          setCurrentUser(usuario);
+          setScreen("app");
+        }
       }
     });
     return () => subscription.unsubscribe();
@@ -205,22 +215,30 @@ export default function SportOS() {
     <NewPasswordScreen onSuccess={()=>setScreen("login")}/>
   );
 
+  // Solicitud de jugador con código de club
+  if(screen==="join-request") return (
+    <JoinRequestScreen onBack={()=>setScreen("landing")}/>
+  );
+
   // Landing pública
   if(screen==="landing") return (
     <LandingPage
       onLogin={()=>setScreen("login")}
       onDemo={()=>setScreen("onboarding")}
       onRegister={()=>setScreen("club-onboarding")}
+      onJoinRequest={()=>setScreen("join-request")}
     />
   );
 
   // Onboarding nuevo club
   if(screen==="club-onboarding") return (
     <ClubOnboarding
-      onBack={()=>setScreen("login")}
+      onBack={()=>{ setPendingUser(null); setScreen("login"); }}
+      existingUser={pendingUser}
       onComplete={(usuario)=>{
-        if(!usuario) { setScreen("login"); return; }
-        setCurrentUser({nombre:usuario.nombre, email:usuario.email, rol:usuario.rol, club:usuario.club, club_id:usuario.club_id, cats:usuario.cats});
+        if(!usuario) { setPendingUser(null); setScreen("login"); return; }
+        setPendingUser(null);
+        setCurrentUser({ nombre:usuario.nombre, email:usuario.email, rol:usuario.rol, club:usuario.club, club_id:usuario.club_id, cats:usuario.cats||[], plan:"free", isReal:true });
         setRole(usuario.rol);
         setSport(usuario.sport||"rugby");
         setScreen("app");
