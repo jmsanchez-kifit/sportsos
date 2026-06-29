@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeUp, scaleIn } from "../styles/motion";
 import { ss } from "../styles/tokens";
@@ -6,6 +6,7 @@ import { FORMATIONS, TEAMS } from "../data/sports";
 import { usePosts } from "../lib/usePosts";
 import { useAttendance } from "../lib/useAttendance";
 import { useComments } from "../lib/useComments";
+import { getLineups, saveLineup, saveMatch, matchToPartido, saveNotification, getMatches } from "../lib/db";
 import SectionTitle from "../components/SectionTitle";
 import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
@@ -16,7 +17,7 @@ import Cancha from "../components/Cancha";
 import WhatsAppModal from "../components/WhatsAppModal";
 
 /* ── NominaDND ─────────────────────────────────────────────── */
-function NominaDND({sport, sp, club, players, sportColor, showToast}) {
+function NominaDND({sport, sp, club, players, sportColor, showToast, clubId}) {
   const forms = FORMATIONS[sport];
   const [fKey, setFKey] = useState(forms[0].key);
   const [teamId, setTeamId] = useState(TEAMS[0].id);
@@ -24,7 +25,24 @@ function NominaDND({sport, sp, club, players, sportColor, showToast}) {
   const [benchStore, setBenchStore] = useState({});
   const [dragged, setDragged] = useState(null);
   const [wa, setWa] = useState(false);
+  const [saving, setSaving] = useState(false);
   useEffect(()=>{setFKey(FORMATIONS[sport][0].key);},[sport]);
+
+  // Cargar nómina guardada desde Supabase al cambiar equipo o formación
+  useEffect(() => {
+    if (!clubId || !teamId) return;
+    getLineups(clubId, teamId).then(saved => {
+      if (!saved) return;
+      const sk = `${sport}|${teamId}|${saved.formation}`;
+      const bk = `${sport}|${teamId}`;
+      // Reconstruir objetos de jugador a partir de IDs guardados
+      const slots = (saved.slots || []).map(id => players.find(p => p.id === id) || null);
+      const bench  = (saved.bench  || []).map(id => players.find(p => p.id === id)).filter(Boolean);
+      setFKey(saved.formation);
+      setStore(s => ({ ...s, [sk]: slots }));
+      setBenchStore(s => ({ ...s, [bk]: bench }));
+    }).catch(() => {});
+  }, [clubId, teamId, sport, players]);
 
   const formation = forms.find(f=>f.key===fKey)||forms[0];
   const size = formation.positions.length;
@@ -70,7 +88,23 @@ function NominaDND({sport, sp, club, players, sportColor, showToast}) {
     <div onDragEnd={()=>setDragged(null)}>
       <SectionTitle title={`Nómina — ${sp.name}`} sub={`${TEAMS.find(t=>t.id===teamId).name} · arrastra o toca jugadores`}
         action={<div style={{display:"flex",gap:"8px"}}>
-          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>showToast("Push enviado al equipo","success")} style={{...ss.btn,background:"linear-gradient(135deg,#3B82F6,#2563EB)",color:"#fff",fontSize:"12px",boxShadow:"0 4px 12px rgba(59,130,246,0.35)"}}>🔔 Push</motion.button>
+          <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+            disabled={saving}
+            onClick={async () => {
+              if (!starters.length) { showToast("Agrega al menos un titular","warning"); return; }
+              setSaving(true);
+              try {
+                // Guardar nómina con IDs de jugadores
+                await saveLineup({ clubId, teamId, formation: fKey, slots: lineup.map(p=>p?.id??null), bench: bench.map(p=>p.id) });
+                // Crear notificación real en BD
+                await saveNotification({ clubId, type:"nomina", title:"Nómina publicada", body:`${starters.length} titulares convocados para el próximo partido`, data:{ starters: starters.map(s=>s.name), bench: bench.map(b=>b.name) } });
+                showToast("✅ Nómina guardada y notificación enviada al plantel","success");
+              } catch { showToast("Error al guardar","error"); }
+              setSaving(false);
+            }}
+            style={{...ss.btn,background:"linear-gradient(135deg,#3B82F6,#2563EB)",color:"#fff",fontSize:"12px",boxShadow:"0 4px 12px rgba(59,130,246,0.35)",opacity:saving?0.7:1}}>
+            {saving ? "⏳ Guardando..." : "🔔 Guardar y notificar"}
+          </motion.button>
           <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={()=>{if(starters.length>0)setWa(true);else showToast("Agrega al menos un titular","warning");}} style={{...ss.btn,background:"linear-gradient(135deg,#25D366,#128C7E)",color:"#fff",fontSize:"12px",boxShadow:"0 4px 12px rgba(37,211,102,0.35)"}}>📱 WhatsApp</motion.button>
         </div>}
       />
@@ -207,7 +241,7 @@ function MuroInput({sportColor, onPublish, players=[]}) {
 }
 
 /* ── PostCard ─────────────────────────────────────────── */
-function PostCard({post, sportColor, onReact, reactions={}, postLikes, setPostLikes, clubId=null, currentUserId=null, authorName="Yo"}) {
+function PostCard({post, sportColor, onReact, reactions={}, postLikes, setPostLikes, clubId=null, currentUserId=null, authorName="Yo", showToast=()=>{}}) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment]     = useState("");
   const { comments, addComment: saveComment } = useComments(post.id, clubId);
@@ -215,10 +249,12 @@ function PostCard({post, sportColor, onReact, reactions={}, postLikes, setPostLi
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#3B82F6","advertencia":"#EF4444","insignia":"#F59E0B","reto":"#A855F7","general":"#6B7896"};
   const color = postColors[post.type] || "#6B7280";
 
-  const addComment = () => {
+  const addComment = async () => {
     if (!newComment.trim()) return;
-    saveComment({ authorName, text: newComment.trim(), authorId: currentUserId });
     setNewComment("");
+    const result = await saveComment({ authorName, text: newComment.trim(), authorId: currentUserId });
+    if (result?.ok) showToast("Comentario publicado", "success");
+    else if (result?.ok === false && result?.error) showToast("Error al publicar comentario", "error");
   };
 
   const myReactions = reactions[post.id] || {};
@@ -374,6 +410,17 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
   const today = new Date().toISOString().split("T")[0];
   const { present: attendancePresent, saving: attendanceSaving, toggle: attendanceToggle, load: loadAttendance } = useAttendance(clubId, today);
 
+  // Cargar asistencia del día al montar y cuando cambia la fecha/club
+  useEffect(() => { loadAttendance(); }, [loadAttendance]);
+
+  // Cargar partidos desde Supabase si hay club real
+  useEffect(() => {
+    if (!clubId) return;
+    getMatches(clubId).then(rows => {
+      if (rows && rows.length > 0) setPartidos(rows.map(matchToPartido));
+    }).catch(() => {});
+  }, [clubId]);
+
   // En modo real filtra jugadores por las categorías asignadas al entrenador
   const visiblePlayers = isDemo ? players : players.filter(p => userCats.includes(p.cat));
 
@@ -412,7 +459,7 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
 
     const removeTarjeta = (i) => setTarjetas(prev => prev.filter((_,j) => j !== i));
 
-    const publishResultado = () => {
+    const publishResultado = async () => {
       if(!resForm.rival || resForm.golesLocal==="" || resForm.golesVisita==="") {
         showToast("Completa rival y marcador antes de publicar","warning"); return;
       }
@@ -437,7 +484,12 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
         tarjetas,
         videoUrl: null, aiAnalysis: null, aiStatus: null,
       };
-      setPartidos(prev=>[nuevo,...prev]);
+      // Guardar en Supabase si hay club real
+      let partidoGuardado = nuevo;
+      if (clubId) {
+        try { partidoGuardado = matchToPartido(await saveMatch(clubId, nuevo)); } catch {}
+      }
+      setPartidos(prev=>[partidoGuardado,...prev]);
       setResForm({rival:"",golesLocal:"",golesVisita:"",lugar:"Local",resumen:"",destacados:""});
       setTarjetas([]);
       setShowResultForm(false);
@@ -592,7 +644,7 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
           <PostCard key={post.id} post={post} sportColor={sportColor}
             reactions={reactions} onReact={handleReact}
             postLikes={postLikes} setPostLikes={setPostLikes}
-            clubId={clubId} currentUserId={currentUserId}/>
+            clubId={clubId} currentUserId={currentUserId} showToast={showToast}/>
         ))}
       </div>
     );
@@ -617,20 +669,27 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
     const updateFila = (key, field, val) => setNuevos(prev=>prev.map(p=>p._key===key?{...p,[field]:val}:p));
     const removeFila = (key) => setNuevos(prev=>prev.filter(p=>p._key!==key));
 
-    const guardarTodos = () => {
+    const guardarTodos = async () => {
       const validos = nuevos.filter(p=>p.rival.trim() && p.fecha);
       if(!validos.length){ showToast("Completa al menos rival y fecha","warning"); return; }
-      const guardados = validos.map(p=>({
-        id: Date.now() + Math.random(),
+      const preparados = validos.map(p=>({
         cat: p.cat, equipo: p.equipo, rival: p.rival.trim(),
         fecha: p.fecha, hora: p.hora||"00:00", lugar: p.lugar, estado: p.estado,
         golesLocal: p.estado==="jugado"&&p.golesLocal!==""?Number(p.golesLocal):null,
         golesVisita: p.estado==="jugado"&&p.golesVisita!==""?Number(p.golesVisita):null,
-        resultado: p.estado==="jugado" ? (Number(p.golesLocal)>Number(p.golesVisita)?"victoria":Number(p.golesLocal)<Number(p.golesVisita)?"derrota":"empate") : null,
+        resultado: p.estado==="jugado"?(Number(p.golesLocal)>Number(p.golesVisita)?"victoria":Number(p.golesLocal)<Number(p.golesVisita)?"derrota":"empate"):null,
         autor:"Entrenador", resumen:p.resumen||null,
         destacados: p.destacados?p.destacados.split(",").map(d=>d.trim()).filter(Boolean):[],
         videoUrl:null, aiAnalysis:null, aiStatus:null,
       }));
+      let guardados = preparados;
+      if (clubId) {
+        try {
+          guardados = await Promise.all(preparados.map(p => saveMatch(clubId, p).then(row => matchToPartido(row))));
+        } catch { showToast("Error al guardar en BD","error"); }
+      } else {
+        guardados = preparados.map(p => ({ ...p, id: Date.now() + Math.random() }));
+      }
       setPartidos(prev=>[...guardados,...prev]);
       setNuevos([]);
       showToast(`${guardados.length} partido${guardados.length>1?"s":""} guardado${guardados.length>1?"s":""} ✅`,"success");
@@ -784,7 +843,14 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
         {/* Tabla de partidos */}
         <motion.div {...fadeUp} style={{...ss.card,padding:0,overflow:"hidden"}}>
           {partidosFiltrados.length===0 && (
-            <div style={{padding:"32px",textAlign:"center",color:"var(--text-3)",fontSize:"13px"}}>No hay partidos para este filtro.</div>
+            <EmptyState
+              icon="📅"
+              title={partidos.length===0 ? "Sin partidos este año" : "Sin partidos para este filtro"}
+              desc={partidos.length===0 ? "Agrega el primer partido para llevar el historial de la temporada." : "Prueba cambiando los filtros de arriba."}
+              color={sportColor}
+              action={partidos.length===0 ? addFila : null}
+              actionLabel="+ Agregar primer partido"
+            />
           )}
           {partidosFiltrados.map((p,i)=>{
             const esHoy = p.fecha===hoy;
@@ -858,7 +924,7 @@ export default function EntrenadorView({module, sport, sp, club, players, postLi
     </div>
   );
 
-  if(module==="nomina") return <div><CatsBanner/><NominaDND sport={sport} sp={sp} club={club} players={visiblePlayers} sportColor={sportColor} showToast={showToast}/></div>;
+  if(module==="nomina") return <div><CatsBanner/><NominaDND sport={sport} sp={sp} club={club} players={visiblePlayers} sportColor={sportColor} showToast={showToast} clubId={clubId}/></div>;
 
   if(module==="estadisticas") return (
     <div>

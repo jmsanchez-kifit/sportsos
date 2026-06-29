@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeUp, scaleIn } from "../styles/motion";
 import { ss } from "../styles/tokens";
@@ -6,6 +6,7 @@ import { FORMATIONS, TEAMS } from "../data/sports";
 import { GYM_PLAN } from "../data/gymPlan";
 import { MOCK_POSTS } from "../data/mockData";
 import { usePosts } from "../lib/usePosts";
+import { getNotifications } from "../lib/db";
 import SectionTitle from "../components/SectionTitle";
 import Badge from "../components/Badge";
 import Semaforo from "../components/Semaforo";
@@ -223,6 +224,22 @@ export default function JugadorView({module, sport, sp, club, player, players, s
   const { posts: realPosts } = usePosts(clubId);
   const postColors = {"resultado":"#22C55E","médico":"#3B82F6","admin":"#F59E0B","advertencia":"#EF4444"};
 
+  // Notificaciones del club
+  const [notifs, setNotifs] = useState([]);
+  const [notifsVistas, setNotifsVistas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("sportos_notifs_vistas") || "[]"); } catch { return []; }
+  });
+  useEffect(() => {
+    if (!clubId) return;
+    getNotifications(clubId, 10).then(rows => setNotifs(rows || [])).catch(() => {});
+  }, [clubId]);
+  const marcarVistas = () => {
+    const ids = notifs.map(n => n.id);
+    setNotifsVistas(ids);
+    localStorage.setItem("sportos_notifs_vistas", JSON.stringify(ids));
+  };
+  const notifsNuevas = notifs.filter(n => !notifsVistas.includes(n.id));
+
   // El plantel del jugador es su primera categoría asignada (solo una)
   const miPlantel = isDemo ? null : (userCats[0] || null);
   // Filtra compañeros de su mismo plantel
@@ -263,6 +280,40 @@ export default function JugadorView({module, sport, sp, club, player, players, s
 
     return (
       <div>
+        {/* ── Notificaciones del club ── */}
+        {notifs.length > 0 && (
+          <motion.div {...fadeUp} style={{...ss.card, marginBottom:"14px", padding:"12px 14px", border:`1px solid ${notifsNuevas.length>0?"#3B82F655":"var(--border-soft)"}`, background: notifsNuevas.length>0?"linear-gradient(135deg,rgba(59,130,246,0.08),transparent)":"var(--bg-glass)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: notifs.length>0?"10px":"0"}}>
+              <div style={{fontSize:"12px",fontWeight:700,display:"flex",alignItems:"center",gap:"6px"}}>
+                🔔 Notificaciones del club
+                {notifsNuevas.length > 0 && <Badge color="#3B82F6" glow>{notifsNuevas.length} nuevas</Badge>}
+              </div>
+              {notifsNuevas.length > 0 && (
+                <motion.button whileTap={{scale:0.95}} onClick={marcarVistas}
+                  style={{...ss.btn,background:"transparent",color:"var(--text-3)",fontSize:"10px",padding:"3px 8px",border:"1px solid var(--border-soft)"}}>
+                  Marcar vistas
+                </motion.button>
+              )}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+              {notifs.slice(0,4).map(n => {
+                const esNueva = !notifsVistas.includes(n.id);
+                const iconos = {nomina:"📋",resultado:"🏆",wellness:"💪",general:"📣"};
+                return (
+                  <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:"8px",padding:"8px 10px",borderRadius:"var(--r-sm)",background:esNueva?"rgba(59,130,246,0.08)":"transparent",border:esNueva?"1px solid rgba(59,130,246,0.2)":"1px solid transparent"}}>
+                    <span style={{fontSize:"16px",flexShrink:0}}>{iconos[n.type]||"📣"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:"12px",fontWeight:esNueva?700:500,color:esNueva?"var(--text-1)":"var(--text-2)"}}>{n.title}</div>
+                      {n.body && <div style={{fontSize:"11px",color:"var(--text-3)",marginTop:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.body}</div>}
+                    </div>
+                    {esNueva && <span style={{width:"7px",height:"7px",borderRadius:"50%",background:"#3B82F6",boxShadow:"0 0 8px #3B82F6",flexShrink:0,marginTop:"3px"}}/>}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
         {/* ── Cabecera jugador ── */}
         <motion.div {...fadeUp} style={{...ss.card, marginBottom:"16px", border:`1px solid ${sportColor}33`, background:`linear-gradient(135deg,${sportColor}12,${sportColor}03)`, display:"flex", alignItems:"center", gap:"14px", padding:"14px 16px"}}>
           <motion.div whileHover={{rotate:8,scale:1.05}} style={{width:"52px",height:"52px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",fontWeight:900,color:sportColor,border:`2.5px solid ${sportColor}77`,boxShadow:`0 0 20px ${sportColor}44`,flexShrink:0}}>{player.num}</motion.div>

@@ -189,3 +189,69 @@ export async function getMatches(clubId) {
   if (error) throw error;
   return data;
 }
+
+export async function saveMatch(clubId, partido) {
+  const { data, error } = await supabase
+    .from("matches")
+    .insert({
+      club_id:    clubId,
+      rival:      partido.rival,
+      match_date: partido.fecha,
+      location:   partido.lugar,
+      result:     partido.resultado || null,
+      score_home: partido.golesLocal  != null ? Number(partido.golesLocal)  : null,
+      score_away: partido.golesVisita != null ? Number(partido.golesVisita) : null,
+      notes:      partido.resumen    || null,
+      hora:       partido.hora       || null,
+      estado:     partido.estado     || "programado",
+      equipo:     partido.equipo     || "A",
+      cat:        partido.cat        || null,
+      destacados: partido.destacados || [],
+      autor:      partido.autor      || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Convierte fila de matches a objeto partido del app
+export function matchToPartido(m) {
+  return {
+    id:          m.id,
+    cat:         m.cat         || "Primer Equipo",
+    equipo:      m.equipo      || "A",
+    rival:       m.rival,
+    fecha:       m.match_date,
+    hora:        m.hora        || "00:00",
+    lugar:       m.location    || "Local",
+    estado:      m.estado      || "programado",
+    golesLocal:  m.score_home,
+    golesVisita: m.score_away,
+    resultado:   m.result,
+    autor:       m.autor       || "Entrenador",
+    resumen:     m.notes       || "",
+    destacados:  m.destacados  || [],
+    videoUrl: null, aiAnalysis: null, aiStatus: null,
+  };
+}
+
+// ─── NOTIFICACIONES ───────────────────────────────────────────────────────────
+
+export async function saveNotification({ clubId, type = "general", title, body = "", data = {} }) {
+  const { error } = await supabase
+    .from("notifications")
+    .insert({ club_id: clubId, type, title, body, data });
+  if (error) throw error;
+}
+
+export async function getNotifications(clubId, limit = 20) {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("club_id", clubId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
