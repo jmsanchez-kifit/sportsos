@@ -12,6 +12,7 @@ import EntrenadorView from "./EntrenadorView";
 import PreparadorView from "./PreparadorView";
 import JugadorView from "./JugadorView";
 import HomeView from "./HomeView";
+import PerfilView from "./PerfilView";
 
 const PLAN_COLOR = { free:"#6B7896", pro:"#C0392B", elite:"#C98408" };
 
@@ -190,24 +191,51 @@ function VistaRoles({ rolePreviewProps, showToast }) {
           👁️ Viendo como: {ROLES_PREVIEW.find(r=>r.id===rolActivo)?.icon} {ROLES_PREVIEW.find(r=>r.id===rolActivo)?.label} → {modActivo}
         </div>
 
-        {rolActivo==="admin" && modActivo==="home" &&
+        {/* Mi Perfil: igual para todos los roles — muestra foto del jugador demo */}
+        {modActivo==="miperfil" && (() => {
+          const demoPlayer = (rp.players||[])[0] || {};
+          const demoUser = {
+            id: demoPlayer.profile_id || null,
+            nombre: demoPlayer.name || "Jugador Demo",
+            email: "jugador@demo.com",
+            rol: rolActivo,
+            avatar_url: demoPlayer.avatar_url || null,
+          };
+          return (
+            <div>
+              <div style={{marginBottom:"12px",padding:"8px 12px",borderRadius:"var(--r-sm)",background:"rgba(59,130,246,0.07)",border:"1px solid rgba(59,130,246,0.2)",fontSize:"11px",color:"var(--text-3)"}}>
+                💡 Vista de demostración — el jugador real puede subir su foto desde aquí. Si el jugador tiene foto cargada en Supabase, aparece en el círculo de abajo.
+              </div>
+              <PerfilView
+                currentUser={demoUser}
+                sport={rp.sport||"rugby"}
+                sportColor={rolColor}
+                readOnly={!demoPlayer.profile_id}
+                playerData={demoPlayer.avatar_url ? demoPlayer : null}
+                onSaved={()=>{}}
+              />
+            </div>
+          );
+        })()}
+
+        {modActivo!=="miperfil" && rolActivo==="admin" && modActivo==="home" &&
           <HomeView role="admin" players={rp.players||[]} sportColor={rp.sportColor} club={rp.club} sp={rp.sp} countryData={rp.countryData} payments={rp.payments||[]} partidos={rp.partidos||[]} onNavigate={setModActivo} currentUser={null} isDemo={true}/>}
-        {rolActivo==="admin" && modActivo!=="home" &&
+        {modActivo!=="miperfil" && rolActivo==="admin" && modActivo!=="home" &&
           <AdminView module={modActivo} sport={rp.sport} sp={rp.sp} club={rp.club} activeClubs={{rugby:true}} setActiveClubs={()=>{}} countryData={rp.countryData} players={rp.players||[]} addPlayer={()=>{}} updatePlayer={()=>{}} removePlayer={()=>{}} showToast={showToast} sportColor={rp.sportColor} payments={rp.payments||[]} setPayments={()=>{}} userPlan="free"/>}
 
-        {rolActivo==="entrenador" && modActivo==="home" &&
+        {modActivo!=="miperfil" && rolActivo==="entrenador" && modActivo==="home" &&
           <HomeView role="entrenador" players={rp.players||[]} sportColor={rp.sportColor} club={rp.club} sp={rp.sp} countryData={rp.countryData} payments={rp.payments||[]} partidos={rp.partidos||[]} onNavigate={setModActivo} currentUser={null} isDemo={true}/>}
-        {rolActivo==="entrenador" && modActivo!=="home" &&
+        {modActivo!=="miperfil" && rolActivo==="entrenador" && modActivo!=="home" &&
           <EntrenadorView module={modActivo} sport={rp.sport} sp={rp.sp} club={rp.club} players={rp.players||[]} postLikes={{}} setPostLikes={()=>{}} showToast={showToast} sportColor={rp.sportColor} currentCategory={rp.sp?.categories?.[0]||""} hiaModal={false} setHiaModal={()=>{}} userCats={[]} isDemo={true} partidos={rp.partidos||[]} setPartidos={()=>{}} clubId={null} currentUserId={null}/>}
 
-        {rolActivo==="preparador" && modActivo==="home" &&
+        {modActivo!=="miperfil" && rolActivo==="preparador" && modActivo==="home" &&
           <HomeView role="preparador" players={rp.players||[]} sportColor={rp.sportColor} club={rp.club} sp={rp.sp} countryData={rp.countryData} payments={rp.payments||[]} partidos={rp.partidos||[]} onNavigate={setModActivo} currentUser={null} isDemo={true}/>}
-        {rolActivo==="preparador" && modActivo!=="home" &&
+        {modActivo!=="miperfil" && rolActivo==="preparador" && modActivo!=="home" &&
           <PreparadorView module={modActivo} sp={rp.sp} showToast={showToast} sportColor={rp.sportColor} publishedPlan={rp.publishedPlan} setPublishedPlan={rp.setPublishedPlan||((v)=>{})} newExForm={rp.newExForm||false} setNewExForm={rp.setNewExForm||((v)=>{})} newEx={rp.newEx||{name:"",sets:3,reps:8,pct:70,rest:120,notes:"",muscles:""}} setNewEx={rp.setNewEx||((v)=>{})} gymPlanExercises={rp.gymPlanExercises} setGymPlanExercises={rp.setGymPlanExercises||((v)=>{})} rankTab={rp.rankTab||"volumen"} setRankTab={rp.setRankTab||((v)=>{})} expandedDay={rp.expandedDay||"lunes"} setExpandedDay={rp.setExpandedDay||((v)=>{})} userCats={[]} isDemo={true}/>}
 
-        {rolActivo==="jugador" && modActivo==="home" &&
+        {modActivo!=="miperfil" && rolActivo==="jugador" && modActivo==="home" &&
           <HomeView role="jugador" players={rp.players||[]} sportColor={rp.sportColor} club={rp.club} sp={rp.sp} countryData={rp.countryData} payments={rp.payments||[]} partidos={rp.partidos||[]} onNavigate={setModActivo} currentUser={null} isDemo={true}/>}
-        {rolActivo==="jugador" && modActivo!=="home" &&
+        {modActivo!=="miperfil" && rolActivo==="jugador" && modActivo!=="home" &&
           <JugadorView module={modActivo} sport={rp.sport} sp={rp.sp} club={rp.club} player={(rp.players||[])[0]} players={rp.players||[]} sportColor={rp.sportColor} countryData={rp.countryData} convocado={null} setConvocado={()=>{}} setWhatsappModal={()=>{}} showToast={showToast} gymLog={{}} setGymLog={()=>{}} completedSession={false} setCompletedSession={()=>{}} newRecord={false} setNewRecord={()=>{}} expandedEx={null} setExpandedEx={()=>{}} rankTab={rp.rankTab||"volumen"} setRankTab={rp.setRankTab||((v)=>{})} payments={rp.payments||[]} setPayments={()=>{}} userCats={[]} isDemo={true} partidos={rp.partidos||[]} clubId={null}/>}
       </div>
     </div>
