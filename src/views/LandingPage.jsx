@@ -1,8 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import AuroraBg from "../components/AuroraBg";
-import { ss } from "../styles/tokens";
 
+// ── Design tokens (scoped to this Landing — no app theme dependency) ────────
+const T = {
+  bg:        "#08080A",
+  bgCard:    "#0D0D0F",
+  bgSection: "#0B0B0D",
+  accent:    "#C9F527",   // chartreuse eléctrico — reflectores sobre pasto
+  danger:    "#FF3230",
+  gold:      "#D4A820",
+  text:      "#F0EDE5",   // blanco cálido
+  text2:     "#7A7770",
+  text3:     "#454340",
+  border:    "rgba(240,237,229,0.07)",
+  borderAcc: "rgba(201,245,39,0.2)",
+};
+
+const FF = {
+  display: "'Bebas Neue', cursive",
+  body:    "'Archivo', sans-serif",
+  mono:    "'Space Mono', monospace",
+};
+
+// ── Data ─────────────────────────────────────────────────────────────────────
 const SPORTS = [
   { icon:"🏉", name:"Rugby",      color:"#1FA04A" },
   { icon:"⚽", name:"Fútbol",     color:"#0896B0" },
@@ -31,11 +51,11 @@ const ROLES_FEATURES = {
     label:"Admin del Club", icon:"🏢", color:"#3B82F6",
     desc:"Tienes el control total del club sin perder tiempo en administración.",
     features:[
-      { icon:"👥", title:"Plantel completo",    desc:"Todos los jugadores con estado médico, cuota y categoría." },
+      { icon:"👥", title:"Plantel completo",       desc:"Todos los jugadores con estado médico, cuota y categoría." },
       { icon:"💰", title:"Finanzas en tiempo real", desc:"Ve quién pagó, quién debe y cobra masivamente." },
-      { icon:"🔗", title:"Invitaciones por link", desc:"Invita a entrenadores y jugadores con un link. Cada uno entra con su rol." },
-      { icon:"📊", title:"Reportes automáticos", desc:"Exporta el estado financiero del club en un click." },
-    ]
+      { icon:"🔗", title:"Invitaciones por link",   desc:"Invita a entrenadores y jugadores con un link. Cada uno entra con su rol." },
+      { icon:"📊", title:"Reportes automáticos",    desc:"Exporta el estado financiero del club en un click." },
+    ],
   },
   entrenador: {
     label:"Entrenador", icon:"📋", color:"#C98408",
@@ -45,90 +65,103 @@ const ROLES_FEATURES = {
       { icon:"✅", title:"Asistencia digital",     desc:"Cada jugador marca su presencia. Tú ves el resumen al instante." },
       { icon:"🏆", title:"Match Center",           desc:"Carga resultado, tarjetas y estadísticas. Se notifica solo." },
       { icon:"💬", title:"El Muro",                desc:"Publica avisos, resultados e insignias para el equipo." },
-    ]
+    ],
   },
   preparador: {
     label:"Preparador Físico", icon:"💪", color:"#C0392B",
     desc:"Monitorea la carga y el estado del plantel en un solo lugar.",
     features:[
-      { icon:"📅", title:"Microciclo semanal",    desc:"Publica el plan de entrenamiento. Los jugadores lo ven en su celular." },
-      { icon:"💪", title:"Estado del plantel",    desc:"Wellness post-partido con cuestionario Hooper Index automático." },
-      { icon:"🏋️", title:"Ranking de fuerza",    desc:"Compara el rendimiento físico del plantel en tiempo real." },
-      { icon:"🚑", title:"Lesiones y golpes",     desc:"Registra el mapa de golpes post-partido y gestiona suspensiones." },
-    ]
+      { icon:"📅", title:"Microciclo semanal",  desc:"Publica el plan de entrenamiento. Los jugadores lo ven en su celular." },
+      { icon:"💪", title:"Estado del plantel",  desc:"Wellness post-partido con cuestionario Hooper Index automático." },
+      { icon:"🏋️", title:"Ranking de fuerza",  desc:"Compara el rendimiento físico del plantel en tiempo real." },
+      { icon:"🚑", title:"Lesiones y golpes",   desc:"Registra el mapa de golpes post-partido y gestiona suspensiones." },
+    ],
   },
   jugador: {
     label:"Jugador", icon:"👤", color:"#1FA04A",
     desc:"El jugador sabe exactamente qué tiene que hacer y cuándo.",
     features:[
-      { icon:"🎽", title:"¿Estoy convocado?",    desc:"Ve su estado de convocatoria al abrir la app. Sin llamadas." },
-      { icon:"💳", title:"Mi cuota",             desc:"Paga directamente desde la app. Sin transferencias manuales." },
-      { icon:"🏋️", title:"Mi Gym",              desc:"Registra sus series, pesos y ve su progreso semana a semana." },
-      { icon:"📰", title:"Noticias del club",    desc:"Resultados, avisos del entrenador y logros del equipo." },
-    ]
+      { icon:"🎽", title:"¿Estoy convocado?",  desc:"Ve su estado de convocatoria al abrir la app. Sin llamadas." },
+      { icon:"💳", title:"Mi cuota",           desc:"Paga directamente desde la app. Sin transferencias manuales." },
+      { icon:"🏋️", title:"Mi Gym",            desc:"Registra sus series, pesos y ve su progreso semana a semana." },
+      { icon:"📰", title:"Noticias del club",  desc:"Resultados, avisos del entrenador y logros del equipo." },
+    ],
   },
 };
 
 const TESTIMONIALS = [
-  { name:"Carlos Vega",    role:"Entrenador · Rugby Club Santiago",   text:"Antes usábamos 3 grupos de WhatsApp y una planilla Excel. Ahora todo está en un solo lugar. Los jugadores saben exactamente qué tienen que hacer.", stars:5 },
-  { name:"María Torres",   role:"Admin · Club Deportivo Andes",       text:"El cobro de cuotas era un caos total. Con SportOS envío el cobro masivo en un click y tengo el historial de pagos en tiempo real. Recuperé 3 horas semanales.", stars:5 },
-  { name:"Diego Fuentes",  role:"Preparador Físico · HC Tigres",      text:"Publico el microciclo del lunes y los chicos ya lo tienen en su celular. El ranking de fuerza los motiva un montón y el wellness post-partido es clave.", stars:5 },
+  { name:"Carlos Vega",   role:"Entrenador · Rugby Club Santiago", initials:"CV",
+    text:"Antes usábamos 3 grupos de WhatsApp y una planilla Excel. Ahora todo está en un solo lugar. Los jugadores saben exactamente qué tienen que hacer.", stars:5 },
+  { name:"María Torres",  role:"Admin · Club Deportivo Andes",     initials:"MT",
+    text:"El cobro de cuotas era un caos total. Con SportOS envío el cobro masivo en un click y tengo el historial de pagos en tiempo real. Recuperé 3 horas semanales.", stars:5 },
+  { name:"Diego Fuentes", role:"Preparador Físico · HC Tigres",    initials:"DF",
+    text:"Publico el microciclo del lunes y los chicos ya lo tienen en su celular. El ranking de fuerza los motiva un montón y el wellness post-partido es clave.", stars:5 },
 ];
 
 const PLANS = [
-  { name:"Starter", price:"$0",  period:"/ mes",      color:"#6B7896", badge:null,          cta:"Empezar gratis",       features:["Hasta 25 jugadores","1 categoría","Asistencia y plantel","El Muro básico"] },
-  { name:"Pro",     price:"$29", period:"USD / mes",  color:"#C0392B", badge:"MÁS POPULAR", cta:"Probar 14 días gratis", features:["Jugadores ilimitados","Todas las categorías","Match Center + nóminas","Finanzas y reportes","Soporte prioritario"] },
-  { name:"Elite",   price:"$59", period:"USD / mes",  color:"#C98408", badge:null,          cta:"Hablar con ventas",     features:["Todo lo de Pro","Múltiples deportes","Ranking de fuerza","Wellness avanzado","Onboarding dedicado"] },
+  { name:"Starter", price:"$0",  period:"/ mes",     color:"#6B7896", badge:null,
+    cta:"Empezar gratis",        features:["Hasta 25 jugadores","1 categoría","Asistencia y plantel","El Muro básico"] },
+  { name:"Pro",     price:"$29", period:"USD / mes", color:T.accent,  badge:"MÁS POPULAR",
+    cta:"Probar 14 días gratis", features:["Jugadores ilimitados","Todas las categorías","Match Center + nóminas","Finanzas y reportes","Soporte prioritario"] },
+  { name:"Elite",   price:"$59", period:"USD / mes", color:"#C98408", badge:null,
+    cta:"Hablar con ventas",     features:["Todo lo de Pro","Múltiples deportes","Ranking de fuerza","Wellness avanzado","Onboarding dedicado"] },
 ];
 
 const FAQS = [
   { q:"¿Necesito saber de tecnología para usar SportOS?", a:"No. Si sabes usar WhatsApp, sabes usar SportOS. El setup inicial tarda menos de 5 minutos y te guiamos en cada paso." },
-  { q:"¿Funciona en celular?", a:"Sí, está diseñado primero para celular. Los jugadores marcan asistencia, ven la nómina y pagan su cuota desde su teléfono sin instalar nada." },
-  { q:"¿Qué pasa con los datos de mis jugadores?", a:"Tus datos son tuyos. Están encriptados en servidores seguros. Nunca los compartimos ni vendemos. Puedes exportarlos cuando quieras." },
-  { q:"¿Puedo cambiar de plan o cancelar?", a:"Sí, en cualquier momento y sin penalidad. Puedes subir, bajar o cancelar tu plan desde la configuración del club." },
-  { q:"¿Funciona para cualquier deporte?", a:"Hoy soportamos Rugby, Fútbol, Handball, Basketball y Hockey. Cada deporte tiene sus propias posiciones, estadísticas y formaciones." },
-  { q:"¿Qué pasa si mi club tiene varias categorías?", a:"Con el plan Pro puedes manejar todas las categorías — Sub-10, Sub-14, Primera, etc. — con sus propios jugadores y calendarios." },
+  { q:"¿Funciona en celular?",                            a:"Sí, está diseñado primero para celular. Los jugadores marcan asistencia, ven la nómina y pagan su cuota desde su teléfono sin instalar nada." },
+  { q:"¿Qué pasa con los datos de mis jugadores?",        a:"Tus datos son tuyos. Están encriptados en servidores seguros. Nunca los compartimos ni vendemos. Puedes exportarlos cuando quieras." },
+  { q:"¿Puedo cambiar de plan o cancelar?",               a:"Sí, en cualquier momento y sin penalidad. Puedes subir, bajar o cancelar tu plan desde la configuración del club." },
+  { q:"¿Funciona para cualquier deporte?",                a:"Hoy soportamos Rugby, Fútbol, Handball, Basketball y Hockey. Cada deporte tiene sus propias posiciones, estadísticas y formaciones." },
+  { q:"¿Qué pasa si mi club tiene varias categorías?",    a:"Con el plan Pro puedes manejar todas las categorías — Sub-10, Sub-14, Primera, etc. — con sus propios jugadores y calendarios." },
 ];
 
-// ── Componentes ─────────────────────────────────────────────────────────
+// ── Micro-componentes ─────────────────────────────────────────────────────────
 
-function Section({ children, style={} }) {
+function Wrap({ children, style = {} }) {
   return (
-    <section style={{ position:"relative", zIndex:1, padding:"80px clamp(16px,5vw,80px)", ...style }}>
+    <section style={{
+      position:"relative", zIndex:1,
+      padding:"clamp(60px,8vw,100px) clamp(20px,5vw,80px)",
+      ...style,
+    }}>
       {children}
     </section>
   );
 }
 
-function SectionLabel({ text }) {
+function Eyebrow({ children }) {
   return (
-    <motion.div initial={{opacity:0,y:10}} whileInView={{opacity:1,y:0}} viewport={{once:true}}
-      style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"5px 14px",
-        borderRadius:"99px", background:"rgba(192,57,43,0.1)", border:"1px solid rgba(192,57,43,0.3)",
-        marginBottom:"16px" }}>
-      <span style={{ width:"6px", height:"6px", borderRadius:"50%", background:"#C0392B", display:"inline-block" }}/>
-      <span style={{ fontSize:"11px", fontWeight:700, color:"#C0392B", textTransform:"uppercase", letterSpacing:"0.1em" }}>{text}</span>
+    <motion.div
+      initial={{ opacity:0, y:8 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+      style={{ display:"inline-flex", alignItems:"center", gap:"10px", marginBottom:"18px" }}
+    >
+      <div style={{ width:"24px", height:"2px", background:T.accent }} />
+      <span style={{ fontFamily:FF.mono, fontSize:"10px", fontWeight:700, color:T.accent,
+        textTransform:"uppercase", letterSpacing:"0.15em" }}>
+        {children}
+      </span>
     </motion.div>
   );
 }
 
-function SectionHeading({ title, sub }) {
+function BigH({ children, style = {} }) {
   return (
-    <div style={{ marginBottom:"48px" }}>
-      <motion.h2 initial={{opacity:0,y:16}} whileInView={{opacity:1,y:0}} viewport={{once:true}}
-        style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:900, letterSpacing:"-0.03em",
-          margin:"0 0 14px", lineHeight:1.1 }}>
-        {title}
-      </motion.h2>
-      {sub && <motion.p initial={{opacity:0}} whileInView={{opacity:1}} viewport={{once:true}} transition={{delay:0.1}}
-        style={{ fontSize:"16px", color:"var(--text-2)", maxWidth:"580px", lineHeight:1.6, margin:0 }}>
-        {sub}
-      </motion.p>}
-    </div>
+    <motion.h2
+      initial={{ opacity:0, y:14 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+      style={{ fontFamily:FF.display, fontSize:"clamp(44px,6vw,72px)", fontWeight:400,
+        lineHeight:0.98, letterSpacing:"0.01em", color:T.text, margin:"0 0 20px", ...style }}
+    >
+      {children}
+    </motion.h2>
   );
 }
 
-// ── Landing principal ─────────────────────────────────────────────────────
+function HR() {
+  return <div style={{ height:"1px", background:T.border }} />;
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export default function LandingPage({ onLogin, onRegister, onJoinRequest }) {
   const [activeSport, setActiveSport] = useState(0);
@@ -136,335 +169,536 @@ export default function LandingPage({ onLogin, onRegister, onJoinRequest }) {
   const [openFaq,     setOpenFaq]     = useState(null);
   const [email,       setEmail]       = useState("");
 
-  const sport = SPORTS[activeSport];
+  const sport    = SPORTS[activeSport];
   const roleData = ROLES_FEATURES[activeRole];
+
+  // Inyectar tipografías
+  useEffect(() => {
+    const id = "sportosLandingFonts";
+    if (document.getElementById(id)) return;
+    const link   = document.createElement("link");
+    link.id      = id;
+    link.rel     = "stylesheet";
+    link.href    = "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap";
+    document.head.appendChild(link);
+    return () => { const el = document.getElementById(id); if (el) el.remove(); };
+  }, []);
 
   const handleCTA = () => {
     if (email.trim()) setTimeout(() => onRegister(), 200);
     else onRegister();
   };
 
-  return (
-    <div style={{ position:"relative", minHeight:"100vh", background:"var(--bg-base)",
-      color:"var(--text-1)", fontFamily:"'Inter',system-ui,sans-serif", overflowX:"hidden",
-      overflowY:"auto", height:"100vh" }}>
-      <AuroraBg/>
+  const btn = {
+    border:"none", borderRadius:"2px", cursor:"pointer",
+    fontFamily:FF.body, fontWeight:700, fontSize:"14px",
+    padding:"12px 24px", display:"inline-flex", alignItems:"center",
+    gap:"6px", transition:"all 0.15s ease",
+  };
 
-      {/* ── NAV ── */}
-      <nav style={{ position:"sticky", top:0, zIndex:50, display:"flex", alignItems:"center",
-        justifyContent:"space-between", padding:"0 clamp(16px,5vw,80px)", height:"60px",
-        background:"var(--bg-glass)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)",
-        borderBottom:"1px solid var(--border-soft)" }}>
-        <div style={{ fontWeight:900, fontSize:"18px", color:sport.color, letterSpacing:"-0.03em",
-          filter:`drop-shadow(0 0 12px ${sport.color}66)` }}>⚡ SportOS</div>
+  const inp = {
+    background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:"2px",
+    color:T.text, fontFamily:FF.body, fontSize:"14px",
+    padding:"12px 16px", outline:"none",
+  };
+
+  const card = {
+    background:T.bgCard, border:`1px solid ${T.border}`,
+    borderRadius:"2px", padding:"24px",
+  };
+
+  return (
+    <div
+      className="sportosLanding"
+      style={{
+        position:"relative", minHeight:"100vh", height:"100vh",
+        background:T.bg, color:T.text, fontFamily:FF.body,
+        overflowX:"hidden", overflowY:"auto",
+      }}
+    >
+      {/* Estilos globales para esta página */}
+      <style>{`
+        .sportosLanding * { -webkit-font-smoothing: antialiased; }
+        .sportosLanding input::placeholder { color: #454340; }
+        .sportosCtaInv input::placeholder  { color: rgba(8,8,10,0.38); }
+      `}</style>
+
+      {/* Textura de grano */}
+      <div style={{
+        position:"fixed", inset:0, pointerEvents:"none", zIndex:200,
+        backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
+        backgroundSize:"256px 256px", opacity:0.03,
+      }} />
+
+      {/* ── NAV ─────────────────────────────────────────────────────────── */}
+      <nav style={{
+        position:"sticky", top:0, zIndex:50,
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"0 clamp(20px,5vw,80px)", height:"56px",
+        background:"rgba(8,8,10,0.92)", backdropFilter:"blur(20px)",
+        borderBottom:`1px solid ${T.border}`,
+      }}>
+        <div style={{ fontFamily:FF.display, fontSize:"22px", letterSpacing:"0.05em", lineHeight:1 }}>
+          <span style={{ color:T.accent }}>SPORT</span>
+          <span style={{ color:T.text }}>OS</span>
+        </div>
         <div style={{ display:"flex", gap:"8px", alignItems:"center" }}>
-          <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={onLogin}
-            style={{ ...ss.btn, background:"transparent", color:"var(--text-2)",
-              border:"1px solid var(--border-soft)", fontSize:"13px" }}>
+          <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }} onClick={onLogin}
+            style={{ ...btn, background:"transparent", color:T.text2,
+              border:`1px solid ${T.border}`, fontSize:"13px", padding:"8px 16px" }}>
             Ingresar
           </motion.button>
           {onJoinRequest && (
-            <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={onJoinRequest}
-              style={{ ...ss.btn, background:"transparent", color:"var(--text-2)",
-                border:`1px solid ${sport.color}55`, fontSize:"13px", color:sport.color }}>
-              🔑 Tengo un código
+            <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }} onClick={onJoinRequest}
+              style={{ ...btn, background:"transparent", color:T.accent,
+                border:`1px solid ${T.borderAcc}`, fontSize:"13px", padding:"8px 16px" }}>
+              Tengo un código
             </motion.button>
           )}
-          <motion.button whileHover={{scale:1.03}} whileTap={{scale:0.97}} onClick={onRegister}
-            style={{ ...ss.btn, background:`linear-gradient(135deg,${sport.color},${sport.color}cc)`,
-              color:"#fff", fontSize:"13px", boxShadow:`0 4px 14px ${sport.color}44` }}>
-            Crear club gratis →
+          <motion.button
+            whileHover={{ scale:1.03, y:-1, boxShadow:`0 8px 24px rgba(201,245,39,0.35)` }}
+            whileTap={{ scale:0.97 }} onClick={onRegister}
+            style={{ ...btn, background:T.accent, color:T.bg, fontSize:"13px",
+              padding:"8px 20px", boxShadow:`0 0 18px rgba(201,245,39,0.25)` }}>
+            Crear club →
           </motion.button>
         </div>
       </nav>
 
-      {/* ── HERO ── */}
-      <Section style={{ textAlign:"center", paddingTop:"clamp(60px,10vh,120px)", paddingBottom:"60px" }}>
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section style={{
+        position:"relative", zIndex:1, minHeight:"calc(100vh - 56px)",
+        display:"flex", flexDirection:"column", justifyContent:"center",
+        padding:"80px clamp(20px,5vw,80px)",
+        backgroundImage:`
+          repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(240,237,229,0.022) 80px),
+          repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(240,237,229,0.012) 80px)
+        `,
+      }}>
+        {/* Marca de agua grande */}
+        <div style={{
+          position:"absolute", right:"-3%", top:"50%", transform:"translateY(-50%)",
+          fontFamily:FF.display, fontSize:"clamp(140px,19vw,270px)", lineHeight:0.88,
+          color:"rgba(201,245,39,0.04)", pointerEvents:"none", userSelect:"none",
+          letterSpacing:"0.02em", whiteSpace:"nowrap",
+        }}>
+          SPORT<br />OS
+        </div>
 
-        {/* Sport pills */}
-        <div style={{ display:"flex", justifyContent:"center", gap:"8px", marginBottom:"32px", flexWrap:"wrap" }}>
-          {SPORTS.map((s,i) => (
-            <motion.button key={i} whileHover={{scale:1.08}} whileTap={{scale:0.95}} onClick={()=>setActiveSport(i)}
-              style={{ padding:"6px 14px", borderRadius:"99px", border:`1px solid ${i===activeSport?s.color+"55":"transparent"}`,
-                cursor:"pointer", fontSize:"12px", fontWeight:600,
-                background:i===activeSport?`${s.color}22`:"var(--bg-elev-2)",
-                color:i===activeSport?s.color:"var(--text-3)", transition:"all 0.2s" }}>
+        {/* Selector de deporte */}
+        <div style={{ display:"flex", gap:"6px", marginBottom:"32px", flexWrap:"wrap" }}>
+          {SPORTS.map((s, i) => (
+            <motion.button key={i} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}
+              onClick={() => setActiveSport(i)}
+              style={{
+                padding:"5px 12px", borderRadius:"2px", cursor:"pointer",
+                fontFamily:FF.body, fontSize:"12px", fontWeight:600,
+                border:`1px solid ${i === activeSport ? s.color+"66" : T.border}`,
+                background:i === activeSport ? `${s.color}18` : "transparent",
+                color:i === activeSport ? s.color : T.text3,
+                transition:"all 0.18s",
+              }}>
               {s.icon} {s.name}
             </motion.button>
           ))}
         </div>
 
-        {/* Dolor primero */}
-        <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:0.1}}
-          style={{ display:"inline-flex", alignItems:"center", gap:"8px", padding:"6px 16px",
-            borderRadius:"99px", background:"rgba(192,57,43,0.1)", border:"1px solid rgba(192,57,43,0.3)",
-            marginBottom:"24px" }}>
-          <span style={{ fontSize:"12px", color:"#C0392B", fontWeight:600 }}>
-            ¿Todavía gestionas tu club con Excel y grupos de WhatsApp?
+        {/* Etiqueta de dolor */}
+        <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}
+          style={{ display:"inline-flex", alignItems:"center", gap:"8px", marginBottom:"20px" }}>
+          <div style={{ width:"2px", height:"16px", background:T.danger }} />
+          <span style={{ fontFamily:FF.mono, fontSize:"11px", color:T.danger,
+            fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>
+            ¿Todavía gestionas tu club con Excel y WhatsApp?
           </span>
         </motion.div>
 
+        {/* Titular principal */}
         <AnimatePresence mode="wait">
-          <motion.h1 key={activeSport} initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
-            exit={{opacity:0,y:-16}} transition={{duration:0.4}}
-            style={{ fontSize:"clamp(40px,6.5vw,82px)", fontWeight:900, margin:"0 0 20px",
-              lineHeight:1.05, letterSpacing:"-0.04em",
-              background:`linear-gradient(135deg,#fff 0%,${sport.color} 100%)`,
-              WebkitBackgroundClip:"text", backgroundClip:"text", WebkitTextFillColor:"transparent" }}>
-            Tu club de {sport.name}<br/>merece algo mejor
+          <motion.h1 key={activeSport}
+            initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }}
+            exit={{ opacity:0, y:-22 }} transition={{ duration:0.35 }}
+            style={{
+              fontFamily:FF.display, fontSize:"clamp(52px,8.5vw,112px)",
+              fontWeight:400, lineHeight:0.92, letterSpacing:"0.01em",
+              margin:"0 0 24px", maxWidth:"860px",
+            }}>
+            <span style={{ color:T.text }}>TU CLUB DE </span>
+            <span style={{ color:sport.color }}>{sport.name.toUpperCase()}</span>
+            <br />
+            <span style={{ color:T.text }}>MERECE </span>
+            <span style={{
+              WebkitTextStroke:`2px ${T.accent}`,
+              color:"transparent",
+            }}>
+              ALGO MEJOR
+            </span>
           </motion.h1>
         </AnimatePresence>
 
-        <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.2}}
-          style={{ fontSize:"clamp(16px,2vw,20px)", color:"var(--text-2)", maxWidth:"600px",
-            margin:"0 auto 40px", lineHeight:1.6 }}>
+        {/* Subtítulo */}
+        <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.2 }}
+          style={{ fontSize:"clamp(15px,1.8vw,18px)", color:T.text2, maxWidth:"560px",
+            lineHeight:1.65, margin:"0 0 40px", fontWeight:400 }}>
           SportOS reemplaza las planillas, los grupos de WhatsApp y el caos administrativo.
           Plantel, asistencia, finanzas, wellness y comunicación — todo en un solo lugar.
         </motion.p>
 
         {/* CTA */}
-        <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:0.3}}
-          style={{ display:"flex", gap:"10px", justifyContent:"center", flexWrap:"wrap", marginBottom:"14px" }}>
-          <input value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleCTA()}
-            placeholder="tu@email.com"
-            style={{ ...ss.input, width:"240px", fontSize:"14px", padding:"12px 16px" }}/>
-          <motion.button whileHover={{scale:1.04,y:-2}} whileTap={{scale:0.97}} onClick={handleCTA}
-            style={{ ...ss.btn, background:`linear-gradient(135deg,${sport.color},${sport.color}bb)`,
-              color:"#fff", fontSize:"14px", padding:"12px 28px",
-              boxShadow:`0 8px 24px ${sport.color}44`, fontWeight:700 }}>
+        <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+          style={{ display:"flex", gap:"8px", flexWrap:"wrap", alignItems:"center", marginBottom:"14px" }}>
+          <input value={email} onChange={e => setEmail(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleCTA()}
+            placeholder="tu@email.com" style={{ ...inp, width:"220px" }} />
+          <motion.button
+            whileHover={{ scale:1.03, y:-2, boxShadow:`0 14px 36px rgba(201,245,39,0.38)` }}
+            whileTap={{ scale:0.97 }} onClick={handleCTA}
+            style={{ ...btn, background:T.accent, color:T.bg, fontSize:"15px",
+              padding:"12px 32px", boxShadow:`0 6px 22px rgba(201,245,39,0.28)` }}>
             Empezar gratis →
           </motion.button>
         </motion.div>
-        <div style={{ fontSize:"12px", color:"var(--text-3)" }}>
+        <div style={{ fontFamily:FF.mono, fontSize:"11px", color:T.text3, letterSpacing:"0.05em" }}>
           14 días gratis · Sin tarjeta de crédito · Cancela cuando quieras
         </div>
 
         {/* Stats */}
-        <div style={{ display:"flex", gap:"clamp(24px,5vw,64px)", justifyContent:"center",
-          marginTop:"64px", flexWrap:"wrap" }}>
-          {[["5","deportes"],["65+","clubes"],["3","países LATAM"],["4h","ahorradas/semana"]].map(([n,l],i) => (
-            <motion.div key={i} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:0.4+i*0.08}}
-              style={{ textAlign:"center" }}>
-              <div style={{ fontSize:"clamp(24px,4vw,36px)", fontWeight:900, letterSpacing:"-0.03em",
-                color:sport.color }}>{n}</div>
-              <div style={{ fontSize:"12px", color:"var(--text-3)", marginTop:"4px",
-                textTransform:"uppercase", letterSpacing:"0.08em" }}>{l}</div>
+        <div style={{
+          display:"flex", gap:"clamp(24px,5vw,56px)", marginTop:"68px",
+          paddingTop:"28px", borderTop:`1px solid ${T.border}`, flexWrap:"wrap",
+        }}>
+          {[["5","deportes"],["65+","clubes activos"],["3","países LATAM"],["4h","ahorradas/sem"]].map(([n, l], i) => (
+            <motion.div key={i} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay:0.4 + i * 0.08 }}>
+              <div style={{ fontFamily:FF.display, fontSize:"clamp(32px,5vw,48px)",
+                color:T.accent, lineHeight:1 }}>{n}</div>
+              <div style={{ fontFamily:FF.mono, fontSize:"10px", color:T.text3,
+                marginTop:"4px", textTransform:"uppercase", letterSpacing:"0.12em" }}>{l}</div>
             </motion.div>
           ))}
         </div>
-      </Section>
+      </section>
 
-      {/* ── ANTES / DESPUÉS ── */}
-      <Section style={{ background:"rgba(0,0,0,0.3)", borderTop:"1px solid var(--border-soft)", borderBottom:"1px solid var(--border-soft)" }}>
-        <div style={{ maxWidth:"900px", margin:"0 auto" }}>
-          <SectionLabel text="El problema que resolvemos"/>
-          <SectionHeading
-            title="Deja el caos atrás"
-            sub="Esto es lo que viven hoy la mayoría de clubes deportivos en LATAM. Y cómo SportOS lo cambia."/>
-          <div style={{ display:"flex", flexDirection:"column", gap:"12px" }}>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 40px 1fr", gap:"0",
-              marginBottom:"8px", fontSize:"11px", fontWeight:700, textTransform:"uppercase",
-              letterSpacing:"0.08em" }}>
-              <div style={{ color:"#EF4444", padding:"0 0 8px 12px" }}>😓 Antes</div>
-              <div/>
-              <div style={{ color:"#1FA04A", padding:"0 0 8px 12px" }}>✅ Con SportOS</div>
-            </div>
-            {PAIN_VS.map((row,i) => (
-              <motion.div key={i} initial={{opacity:0,x:-20}} whileInView={{opacity:1,x:0}}
-                viewport={{once:true}} transition={{delay:i*0.07}}
-                style={{ display:"grid", gridTemplateColumns:"1fr 40px 1fr", alignItems:"center", gap:"0" }}>
-                <div style={{ padding:"14px 16px", borderRadius:"var(--r-md) 0 0 var(--r-md)",
-                  background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)",
-                  borderRight:"none", fontSize:"13px", color:"var(--text-2)" }}>
-                  {row.antes}
-                </div>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:"18px", background:"var(--bg-elev-2)",
-                  border:"1px solid var(--border-soft)", height:"100%", borderLeft:"none", borderRight:"none" }}>
-                  →
-                </div>
-                <div style={{ padding:"14px 16px", borderRadius:"0 var(--r-md) var(--r-md) 0",
-                  background:"rgba(31,160,74,0.06)", border:"1px solid rgba(31,160,74,0.15)",
-                  borderLeft:"none", fontSize:"13px", color:"var(--text-1)", fontWeight:500 }}>
-                  {row.despues}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </Section>
+      <HR />
 
-      {/* ── CÓMO FUNCIONA ── */}
-      <Section>
-        <div style={{ maxWidth:"900px", margin:"0 auto", textAlign:"center" }}>
-          <SectionLabel text="Cómo funciona"/>
-          <SectionHeading title="En 3 pasos y menos de 5 minutos"/>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"20px", textAlign:"left" }}>
-            {STEPS.map((step,i) => (
-              <motion.div key={i} initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}}
-                viewport={{once:true}} transition={{delay:i*0.1}}
-                style={{ ...ss.card, padding:"28px 24px", position:"relative", overflow:"hidden" }}>
-                <div style={{ fontSize:"48px", fontWeight:900, color:"rgba(255,255,255,0.04)",
-                  position:"absolute", top:"8px", right:"16px", lineHeight:1 }}>{step.num}</div>
-                <div style={{ fontSize:"32px", marginBottom:"14px" }}>{step.icon}</div>
-                <div style={{ fontWeight:800, fontSize:"16px", marginBottom:"8px" }}>{step.title}</div>
-                <div style={{ fontSize:"13px", color:"var(--text-2)", lineHeight:1.6 }}>{step.desc}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* ── FEATURES POR ROL ── */}
-      <Section style={{ background:"rgba(0,0,0,0.2)", borderTop:"1px solid var(--border-soft)", borderBottom:"1px solid var(--border-soft)" }}>
+      {/* ── ANTES / DESPUÉS ──────────────────────────────────────────────── */}
+      <Wrap style={{ background:T.bgSection }}>
         <div style={{ maxWidth:"960px", margin:"0 auto" }}>
-          <SectionLabel text="Diseñado para cada rol"/>
-          <SectionHeading
-            title="Cada usuario ve lo que necesita"
-            sub="Entrenadores, preparadores, admins y jugadores tienen su propia vista. Sin información de más ni de menos."/>
+          <Eyebrow>El problema que resolvemos</Eyebrow>
+          <BigH>DEJA EL CAOS ATRÁS</BigH>
+          <p style={{ color:T.text2, fontSize:"15px", maxWidth:"540px",
+            lineHeight:1.65, margin:"0 0 48px" }}>
+            Esto es lo que viven hoy la mayoría de clubes en LATAM — y cómo SportOS lo cambia.
+          </p>
 
-          {/* Tabs de roles */}
-          <div style={{ display:"flex", gap:"8px", marginBottom:"32px", flexWrap:"wrap" }}>
-            {Object.entries(ROLES_FEATURES).map(([key,r]) => (
-              <motion.button key={key} whileTap={{scale:0.97}} onClick={()=>setActiveRole(key)}
-                style={{ padding:"8px 18px", borderRadius:"99px", border:`1px solid ${activeRole===key?r.color+"55":"var(--border-soft)"}`,
-                  cursor:"pointer", fontSize:"13px", fontWeight:activeRole===key?700:500,
-                  background:activeRole===key?`${r.color}18`:"transparent",
-                  color:activeRole===key?r.color:"var(--text-2)", transition:"all 0.2s" }}>
+          {/* Cabecera tabla */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 40px 1fr", marginBottom:"12px" }}>
+            <div style={{ paddingBottom:"10px", borderBottom:`2px solid ${T.danger}` }}>
+              <span style={{ fontFamily:FF.mono, fontSize:"10px", fontWeight:700,
+                color:T.danger, textTransform:"uppercase", letterSpacing:"0.12em" }}>✕ Antes</span>
+            </div>
+            <div />
+            <div style={{ paddingBottom:"10px", borderBottom:"2px solid #1FA04A" }}>
+              <span style={{ fontFamily:FF.mono, fontSize:"10px", fontWeight:700,
+                color:"#1FA04A", textTransform:"uppercase", letterSpacing:"0.12em" }}>✓ Con SportOS</span>
+            </div>
+          </div>
+
+          {PAIN_VS.map((row, i) => (
+            <motion.div key={i}
+              initial={{ opacity:0, x:-16 }} whileInView={{ opacity:1, x:0 }}
+              viewport={{ once:true }} transition={{ delay:i * 0.06 }}
+              style={{ display:"grid", gridTemplateColumns:"1fr 40px 1fr",
+                alignItems:"stretch", borderBottom:`1px solid ${T.border}` }}>
+              <div style={{ padding:"16px 16px 16px 0", fontSize:"13px", color:T.text2,
+                lineHeight:1.55, borderRight:`1px solid ${T.border}` }}>
+                {row.antes}
+              </div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
+                fontFamily:FF.mono, fontSize:"14px", fontWeight:700, color:T.accent }}>
+                →
+              </div>
+              <div style={{ padding:"16px 0 16px 16px", fontSize:"13px", color:T.text,
+                lineHeight:1.55, fontWeight:500 }}>
+                {row.despues}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </Wrap>
+
+      <HR />
+
+      {/* ── CÓMO FUNCIONA ────────────────────────────────────────────────── */}
+      <Wrap>
+        <div style={{ maxWidth:"960px", margin:"0 auto" }}>
+          <Eyebrow>Cómo funciona</Eyebrow>
+          <BigH>EN 3 PASOS, MENOS DE 5 MINUTOS</BigH>
+          {/* Grid con separadores */}
+          <div style={{
+            display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",
+            gap:"1px", background:T.border, border:`1px solid ${T.border}`,
+          }}>
+            {STEPS.map((step, i) => (
+              <motion.div key={i}
+                initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
+                viewport={{ once:true }} transition={{ delay:i * 0.1 }}
+                style={{ ...card, borderRadius:0, border:"none",
+                  position:"relative", overflow:"hidden", padding:"36px 28px" }}>
+                {/* Número de fondo */}
+                <div style={{
+                  position:"absolute", bottom:"-20px", right:"10px",
+                  fontFamily:FF.display, fontSize:"120px", lineHeight:1,
+                  color:"rgba(201,245,39,0.04)", userSelect:"none",
+                }}>
+                  {step.num}
+                </div>
+                <div style={{ width:"28px", height:"3px", background:T.accent, marginBottom:"28px" }} />
+                <div style={{ fontFamily:FF.display, fontSize:"18px", color:T.accent,
+                  letterSpacing:"0.1em", marginBottom:"10px" }}>{step.num}</div>
+                <div style={{ fontSize:"30px", marginBottom:"12px" }}>{step.icon}</div>
+                <div style={{ fontFamily:FF.body, fontWeight:700, fontSize:"16px",
+                  marginBottom:"8px", color:T.text }}>{step.title}</div>
+                <div style={{ fontSize:"13px", color:T.text2, lineHeight:1.65 }}>{step.desc}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </Wrap>
+
+      <HR />
+
+      {/* ── FEATURES POR ROL ─────────────────────────────────────────────── */}
+      <Wrap style={{ background:T.bgSection }}>
+        <div style={{ maxWidth:"960px", margin:"0 auto" }}>
+          <Eyebrow>Diseñado para cada rol</Eyebrow>
+          <BigH>CADA USUARIO VE LO QUE NECESITA</BigH>
+          <p style={{ color:T.text2, fontSize:"15px", maxWidth:"540px",
+            lineHeight:1.65, margin:"0 0 32px" }}>
+            Entrenadores, preparadores, admins y jugadores tienen su propia vista.
+            Sin información de más ni de menos.
+          </p>
+
+          {/* Tabs de rol */}
+          <div style={{
+            display:"flex", gap:"0", marginBottom:"28px", flexWrap:"wrap",
+            border:`1px solid ${T.border}`, borderRadius:"2px", overflow:"hidden",
+          }}>
+            {Object.entries(ROLES_FEATURES).map(([key, r]) => (
+              <motion.button key={key} whileTap={{ scale:0.98 }}
+                onClick={() => setActiveRole(key)}
+                style={{
+                  padding:"10px 20px", border:"none",
+                  borderRight:`1px solid ${T.border}`, cursor:"pointer",
+                  fontFamily:FF.body, fontSize:"13px",
+                  fontWeight:activeRole === key ? 700 : 500,
+                  background:activeRole === key ? `${r.color}18` : "transparent",
+                  color:activeRole === key ? r.color : T.text2,
+                  borderBottom:activeRole === key ? `2px solid ${r.color}` : "2px solid transparent",
+                  transition:"all 0.18s", flex:"1 1 auto", minWidth:"100px",
+                }}>
                 {r.icon} {r.label}
               </motion.button>
             ))}
           </div>
 
           <AnimatePresence mode="wait">
-            <motion.div key={activeRole} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}}
-              exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
-              <div style={{ marginBottom:"20px", fontSize:"14px", color:"var(--text-2)" }}>
+            <motion.div key={activeRole}
+              initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
+              exit={{ opacity:0, y:-8 }} transition={{ duration:0.25 }}>
+              <p style={{ fontSize:"14px", color:T.text2, marginBottom:"20px", lineHeight:1.6 }}>
                 {roleData.desc}
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:"14px" }}>
-                {roleData.features.map((f,i) => (
-                  <motion.div key={i} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}}
-                    transition={{delay:i*0.07}}
-                    style={{ ...ss.card, padding:"20px", display:"flex", gap:"14px", alignItems:"flex-start",
-                      border:`1px solid ${roleData.color}22`,
-                      background:`linear-gradient(135deg,${roleData.color}06,transparent)` }}>
-                    <div style={{ fontSize:"24px", flexShrink:0 }}>{f.icon}</div>
-                    <div>
-                      <div style={{ fontWeight:700, fontSize:"14px", marginBottom:"4px" }}>{f.title}</div>
-                      <div style={{ fontSize:"12px", color:"var(--text-2)", lineHeight:1.5 }}>{f.desc}</div>
-                    </div>
+              </p>
+              <div style={{
+                display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
+                gap:"12px",
+              }}>
+                {roleData.features.map((f, i) => (
+                  <motion.div key={i}
+                    initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
+                    transition={{ delay:i * 0.06 }}
+                    style={{
+                      ...card,
+                      borderLeft:`3px solid ${roleData.color}`,
+                      display:"flex", flexDirection:"column", gap:"10px",
+                      background:`linear-gradient(135deg, ${roleData.color}07, transparent)`,
+                    }}>
+                    <div style={{ fontSize:"22px" }}>{f.icon}</div>
+                    <div style={{ fontWeight:700, fontSize:"14px", color:T.text }}>{f.title}</div>
+                    <div style={{ fontSize:"12px", color:T.text2, lineHeight:1.55 }}>{f.desc}</div>
                   </motion.div>
                 ))}
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
-      </Section>
+      </Wrap>
 
-      {/* ── TESTIMONIOS ── */}
-      <Section>
-        <div style={{ maxWidth:"900px", margin:"0 auto" }}>
-          <SectionLabel text="Lo que dicen los clubes"/>
-          <SectionHeading title="Clubes reales. Resultados reales."/>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"16px" }}>
-            {TESTIMONIALS.map((t,i) => (
-              <motion.div key={i} initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}}
-                viewport={{once:true}} transition={{delay:i*0.1}}
-                style={{ ...ss.card, padding:"24px", display:"flex", flexDirection:"column", gap:"14px" }}>
+      <HR />
+
+      {/* ── TESTIMONIOS ──────────────────────────────────────────────────── */}
+      <Wrap>
+        <div style={{ maxWidth:"960px", margin:"0 auto" }}>
+          <Eyebrow>Lo que dicen los clubes</Eyebrow>
+          <BigH>CLUBES REALES. RESULTADOS REALES.</BigH>
+          <div style={{
+            display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",
+            gap:"16px",
+          }}>
+            {TESTIMONIALS.map((t, i) => (
+              <motion.div key={i}
+                initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }}
+                viewport={{ once:true }} transition={{ delay:i * 0.1 }}
+                style={{ ...card, display:"flex", flexDirection:"column", gap:"16px" }}>
                 <div style={{ display:"flex", gap:"2px" }}>
-                  {"★".repeat(t.stars).split("").map((_,j) => (
-                    <span key={j} style={{ color:"#C98408", fontSize:"14px" }}>★</span>
+                  {"★★★★★".split("").map((_, j) => (
+                    <span key={j} style={{ color:T.gold, fontSize:"13px" }}>★</span>
                   ))}
                 </div>
-                <div style={{ fontSize:"13px", color:"var(--text-2)", lineHeight:1.7, flex:1 }}>
+                <p style={{ fontSize:"13px", color:T.text2, lineHeight:1.7, flex:1, margin:0 }}>
                   "{t.text}"
-                </div>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:"13px" }}>{t.name}</div>
-                  <div style={{ fontSize:"11px", color:"var(--text-3)", marginTop:"2px" }}>{t.role}</div>
+                </p>
+                <div style={{ display:"flex", alignItems:"center", gap:"12px" }}>
+                  <div style={{
+                    width:"36px", height:"36px", borderRadius:"2px",
+                    background:`linear-gradient(135deg, ${T.accent}22, ${T.accent}08)`,
+                    border:`1px solid ${T.borderAcc}`,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontFamily:FF.mono, fontSize:"12px", fontWeight:700, color:T.accent,
+                    flexShrink:0,
+                  }}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:"13px", color:T.text }}>{t.name}</div>
+                    <div style={{ fontSize:"11px", color:T.text3, marginTop:"2px" }}>{t.role}</div>
+                  </div>
                 </div>
               </motion.div>
             ))}
           </div>
         </div>
-      </Section>
+      </Wrap>
 
-      {/* ── PLANES ── */}
-      <Section style={{ background:"rgba(0,0,0,0.3)", borderTop:"1px solid var(--border-soft)", borderBottom:"1px solid var(--border-soft)" }}>
-        <div style={{ maxWidth:"900px", margin:"0 auto", textAlign:"center" }}>
-          <SectionLabel text="Planes"/>
-          <SectionHeading
-            title="Simple y transparente"
-            sub="Sin costos ocultos. Sin contratos anuales forzados. Cancela cuando quieras."/>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"16px", textAlign:"left" }}>
-            {PLANS.map((plan,i) => (
-              <motion.div key={i} initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}}
-                viewport={{once:true}} transition={{delay:i*0.1}}
-                style={{ ...ss.card, padding:"28px 24px", position:"relative", overflow:"hidden",
-                  border:`1px solid ${plan.color}${plan.badge?"55":"22"}`,
-                  background:plan.badge?`linear-gradient(135deg,${plan.color}10,transparent)`:"var(--bg-glass)" }}>
+      <HR />
+
+      {/* ── PLANES ───────────────────────────────────────────────────────── */}
+      <Wrap style={{ background:T.bgSection }}>
+        <div style={{ maxWidth:"960px", margin:"0 auto" }}>
+          <Eyebrow>Planes</Eyebrow>
+          <BigH>SIMPLE Y TRANSPARENTE</BigH>
+          <p style={{ color:T.text2, fontSize:"15px", maxWidth:"460px",
+            lineHeight:1.65, margin:"0 0 44px" }}>
+            Sin costos ocultos. Sin contratos anuales forzados. Cancela cuando quieras.
+          </p>
+          <div style={{
+            display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",
+            gap:"16px",
+          }}>
+            {PLANS.map((plan, i) => (
+              <motion.div key={i}
+                initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
+                viewport={{ once:true }} transition={{ delay:i * 0.1 }}
+                style={{
+                  ...card, position:"relative", overflow:"hidden",
+                  borderTop:`3px solid ${plan.color}`,
+                  background:plan.badge
+                    ? `linear-gradient(160deg, ${plan.color}09, transparent)`
+                    : T.bgCard,
+                }}>
                 {plan.badge && (
-                  <div style={{ position:"absolute", top:"14px", right:"14px", fontSize:"10px",
-                    fontWeight:700, padding:"3px 10px", borderRadius:"99px",
-                    background:plan.color, color:"#fff" }}>{plan.badge}</div>
+                  <div style={{
+                    position:"absolute", top:"14px", right:"14px",
+                    fontFamily:FF.mono, fontSize:"9px", fontWeight:700,
+                    padding:"4px 10px", background:plan.color,
+                    color:plan.badge && plan.color === T.accent ? T.bg : "#fff",
+                    letterSpacing:"0.1em",
+                  }}>
+                    {plan.badge}
+                  </div>
                 )}
-                <div style={{ fontSize:"14px", fontWeight:700, color:plan.color, marginBottom:"8px" }}>{plan.name}</div>
+                <div style={{ fontFamily:FF.mono, fontSize:"10px", fontWeight:700,
+                  color:plan.color, marginBottom:"12px", textTransform:"uppercase",
+                  letterSpacing:"0.1em" }}>{plan.name}</div>
                 <div style={{ display:"flex", alignItems:"baseline", gap:"4px", marginBottom:"4px" }}>
-                  <span style={{ fontSize:"36px", fontWeight:900, letterSpacing:"-0.03em" }}>{plan.price}</span>
-                  <span style={{ fontSize:"12px", color:"var(--text-3)" }}>{plan.period}</span>
+                  <span style={{ fontFamily:FF.display, fontSize:"48px", lineHeight:1,
+                    color:T.text }}>{plan.price}</span>
+                  <span style={{ fontFamily:FF.mono, fontSize:"10px", color:T.text3 }}>{plan.period}</span>
                 </div>
-                <div style={{ height:"1px", background:"var(--border-soft)", margin:"18px 0" }}/>
+                <div style={{ height:"1px", background:T.border, margin:"20px 0" }} />
                 <div style={{ display:"flex", flexDirection:"column", gap:"10px", marginBottom:"24px" }}>
-                  {plan.features.map((f,j) => (
-                    <div key={j} style={{ display:"flex", alignItems:"center", gap:"8px", fontSize:"13px" }}>
-                      <span style={{ color:plan.color, flexShrink:0, fontWeight:700 }}>✓</span>
-                      <span style={{ color:"var(--text-2)" }}>{f}</span>
+                  {plan.features.map((f, j) => (
+                    <div key={j} style={{ display:"flex", gap:"8px", alignItems:"flex-start", fontSize:"13px" }}>
+                      <span style={{ color:plan.color, fontWeight:700, flexShrink:0, marginTop:"1px" }}>✓</span>
+                      <span style={{ color:T.text2 }}>{f}</span>
                     </div>
                   ))}
                 </div>
-                <motion.button whileHover={{scale:1.03,y:-2}} whileTap={{scale:0.97}} onClick={onRegister}
-                  style={{ ...ss.btn, width:"100%", padding:"12px",
-                    background:plan.badge?`linear-gradient(135deg,${plan.color},${plan.color}cc)`:"transparent",
-                    color:plan.badge?"#fff":plan.color,
+                <motion.button
+                  whileHover={{ scale:1.02, y:-1 }} whileTap={{ scale:0.97 }}
+                  onClick={onRegister}
+                  style={{
+                    ...btn, width:"100%", justifyContent:"center",
+                    background:plan.badge ? plan.color : "transparent",
+                    color:plan.badge
+                      ? (plan.color === T.accent ? T.bg : "#fff")
+                      : plan.color,
                     border:`1px solid ${plan.color}55`,
-                    fontSize:"13px", fontWeight:700,
-                    boxShadow:plan.badge?`0 6px 20px ${plan.color}44`:"none" }}>
+                    boxShadow:plan.badge ? `0 4px 18px ${plan.color}44` : "none",
+                    fontSize:"13px",
+                  }}>
                   {plan.cta}
                 </motion.button>
               </motion.div>
             ))}
           </div>
         </div>
-      </Section>
+      </Wrap>
 
-      {/* ── FAQ ── */}
-      <Section>
+      <HR />
+
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
+      <Wrap>
         <div style={{ maxWidth:"720px", margin:"0 auto" }}>
-          <SectionLabel text="Preguntas frecuentes"/>
-          <SectionHeading title="Todo lo que necesitas saber"/>
-          <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-            {FAQS.map((faq,i) => (
-              <motion.div key={i} initial={{opacity:0,y:8}} whileInView={{opacity:1,y:0}}
-                viewport={{once:true}} transition={{delay:i*0.06}}
-                style={{ ...ss.card, padding:"0", overflow:"hidden",
-                  border:`1px solid ${openFaq===i?"rgba(192,57,43,0.3)":"var(--border-soft)"}` }}>
-                <button onClick={()=>setOpenFaq(openFaq===i?null:i)}
+          <Eyebrow>Preguntas frecuentes</Eyebrow>
+          <BigH>TODO LO QUE NECESITAS SABER</BigH>
+          <div style={{ display:"flex", flexDirection:"column" }}>
+            {FAQS.map((faq, i) => (
+              <motion.div key={i}
+                initial={{ opacity:0, y:6 }} whileInView={{ opacity:1, y:0 }}
+                viewport={{ once:true }} transition={{ delay:i * 0.05 }}
+                style={{ borderBottom:`1px solid ${T.border}` }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   style={{ width:"100%", display:"flex", justifyContent:"space-between",
-                    alignItems:"center", padding:"18px 20px", background:"transparent",
-                    border:"none", cursor:"pointer", textAlign:"left", gap:"12px" }}>
-                  <span style={{ fontSize:"14px", fontWeight:600, color:"var(--text-1)" }}>{faq.q}</span>
-                  <motion.span animate={{rotate:openFaq===i?45:0}} transition={{duration:0.2}}
-                    style={{ fontSize:"20px", color:"#C0392B", flexShrink:0, fontWeight:300 }}>+</motion.span>
+                    alignItems:"center", padding:"20px 0", background:"transparent",
+                    border:"none", cursor:"pointer", textAlign:"left", gap:"16px" }}>
+                  <span style={{ fontSize:"14px", fontWeight:600, color:T.text, lineHeight:1.45 }}>
+                    {faq.q}
+                  </span>
+                  <motion.div
+                    animate={{ rotate:openFaq === i ? 45 : 0 }}
+                    transition={{ duration:0.2 }}
+                    style={{
+                      width:"24px", height:"24px", flexShrink:0,
+                      border:`1px solid ${openFaq === i ? T.accent : T.border}`,
+                      borderRadius:"2px",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      color:openFaq === i ? T.accent : T.text3,
+                      fontSize:"18px", fontWeight:300,
+                    }}>
+                    +
+                  </motion.div>
                 </button>
                 <AnimatePresence>
-                  {openFaq===i && (
-                    <motion.div initial={{height:0,opacity:0}} animate={{height:"auto",opacity:1}}
-                      exit={{height:0,opacity:0}} transition={{duration:0.25}}
+                  {openFaq === i && (
+                    <motion.div
+                      initial={{ height:0, opacity:0 }} animate={{ height:"auto", opacity:1 }}
+                      exit={{ height:0, opacity:0 }} transition={{ duration:0.22 }}
                       style={{ overflow:"hidden" }}>
-                      <div style={{ padding:"0 20px 18px", fontSize:"13px", color:"var(--text-2)", lineHeight:1.7 }}>
+                      <p style={{ padding:"0 0 20px", fontSize:"13px",
+                        color:T.text2, lineHeight:1.7, margin:0 }}>
                         {faq.a}
-                      </div>
+                      </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -472,45 +706,85 @@ export default function LandingPage({ onLogin, onRegister, onJoinRequest }) {
             ))}
           </div>
         </div>
-      </Section>
+      </Wrap>
 
-      {/* ── CTA FINAL ── */}
-      <Section style={{ textAlign:"center", paddingBottom:"100px" }}>
-        <motion.div initial={{opacity:0,y:20}} whileInView={{opacity:1,y:0}} viewport={{once:true}}
-          style={{ maxWidth:"640px", margin:"0 auto" }}>
-          <div style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:900, letterSpacing:"-0.03em",
-            marginBottom:"16px", lineHeight:1.1 }}>
-            Tu club merece una herramienta<br/>
-            <span style={{ color:"#C0392B" }}>a la altura del equipo</span>
+      {/* ── CTA FINAL — sección invertida (fondo chartreuse) ─────────────── */}
+      <section
+        className="sportosCtaInv"
+        style={{
+          position:"relative", zIndex:1, overflow:"hidden",
+          background:T.accent,
+          padding:"clamp(60px,8vw,100px) clamp(20px,5vw,80px)",
+        }}>
+        {/* Marca de agua */}
+        <div style={{
+          position:"absolute", right:"-4%", top:"50%", transform:"translateY(-50%)",
+          fontFamily:FF.display, fontSize:"clamp(120px,18vw,240px)", lineHeight:0.85,
+          color:"rgba(8,8,10,0.06)", pointerEvents:"none", userSelect:"none",
+          letterSpacing:"0.02em",
+        }}>
+          SPORT<br />OS
+        </div>
+
+        <div style={{ maxWidth:"640px", position:"relative" }}>
+          <div style={{ fontFamily:FF.mono, fontSize:"11px", fontWeight:700,
+            color:"rgba(8,8,10,0.45)", textTransform:"uppercase", letterSpacing:"0.15em",
+            marginBottom:"18px", display:"flex", alignItems:"center", gap:"10px" }}>
+            <div style={{ width:"24px", height:"2px", background:"rgba(8,8,10,0.3)" }} />
+            Únete hoy
           </div>
-          <p style={{ fontSize:"16px", color:"var(--text-2)", marginBottom:"36px", lineHeight:1.6 }}>
+
+          <h2 style={{
+            fontFamily:FF.display, fontSize:"clamp(44px,7vw,88px)", fontWeight:400,
+            color:T.bg, lineHeight:0.93, margin:"0 0 20px", letterSpacing:"0.01em",
+          }}>
+            TU CLUB MERECE<br />UNA HERRAMIENTA<br />A SU ALTURA
+          </h2>
+
+          <p style={{ fontSize:"16px", color:"rgba(8,8,10,0.58)",
+            marginBottom:"36px", lineHeight:1.6, maxWidth:"460px" }}>
             Únete a los clubes de LATAM que ya dejaron el Excel atrás. Crea tu club gratis hoy.
           </p>
-          <div style={{ display:"flex", gap:"10px", justifyContent:"center", flexWrap:"wrap", marginBottom:"16px" }}>
-            <input value={email} onChange={e=>setEmail(e.target.value)}
+
+          <div style={{ display:"flex", gap:"8px", flexWrap:"wrap", marginBottom:"14px" }}>
+            <input value={email} onChange={e => setEmail(e.target.value)}
               placeholder="tu@email.com"
-              style={{ ...ss.input, width:"240px", fontSize:"14px", padding:"12px 16px" }}/>
-            <motion.button whileHover={{scale:1.04,y:-2}} whileTap={{scale:0.97}} onClick={handleCTA}
-              style={{ ...ss.btn, background:"linear-gradient(135deg,#C0392B,#9B2335)",
-                color:"#fff", fontSize:"14px", padding:"12px 28px",
-                boxShadow:"0 8px 28px rgba(192,57,43,0.45)", fontWeight:700 }}>
+              style={{
+                ...inp,
+                background:"rgba(8,8,10,0.1)", border:"1px solid rgba(8,8,10,0.18)",
+                color:T.bg, width:"220px",
+              }} />
+            <motion.button
+              whileHover={{ scale:1.03, y:-2 }} whileTap={{ scale:0.97 }}
+              onClick={handleCTA}
+              style={{ ...btn, background:T.bg, color:T.accent, fontSize:"15px",
+                padding:"12px 32px" }}>
               Empezar gratis →
             </motion.button>
           </div>
-          <div style={{ fontSize:"12px", color:"var(--text-3)" }}>
+          <div style={{ fontFamily:FF.mono, fontSize:"11px", color:"rgba(8,8,10,0.45)",
+            letterSpacing:"0.05em" }}>
             14 días gratis · Sin tarjeta · 5 minutos para configurar
           </div>
-        </motion.div>
-      </Section>
+        </div>
+      </section>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop:"1px solid var(--border-soft)", padding:"24px clamp(16px,5vw,80px)",
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer style={{
+        borderTop:`1px solid ${T.border}`, background:T.bg,
+        padding:"22px clamp(20px,5vw,80px)",
         display:"flex", justifyContent:"space-between", alignItems:"center",
-        fontSize:"12px", color:"var(--text-3)", flexWrap:"wrap", gap:"12px",
-        position:"relative", zIndex:1 }}>
-        <div style={{ fontWeight:800, color:"#C0392B" }}>⚡ SportOS</div>
-        <div>Rugby · Fútbol · Handball · Basketball · Hockey · LATAM</div>
-        <div>© 2026 SportOS. Todos los derechos reservados.</div>
+        fontSize:"12px", color:T.text3, flexWrap:"wrap", gap:"12px",
+        position:"relative", zIndex:1,
+      }}>
+        <div style={{ fontFamily:FF.display, fontSize:"18px", letterSpacing:"0.05em" }}>
+          <span style={{ color:T.accent }}>SPORT</span>
+          <span style={{ color:T.text3 }}>OS</span>
+        </div>
+        <div style={{ fontFamily:FF.mono, fontSize:"10px", letterSpacing:"0.08em" }}>
+          RUGBY · FÚTBOL · HANDBALL · BASKETBALL · HOCKEY
+        </div>
+        <div>© 2026 SportOS.</div>
       </footer>
     </div>
   );
