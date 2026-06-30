@@ -142,7 +142,7 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-    if (onSaved) onSaved(form);
+    if (onSaved) onSaved({ ...form, avatar_url: avatarUrl });
   };
 
   const TABS = [

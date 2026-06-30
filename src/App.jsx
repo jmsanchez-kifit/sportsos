@@ -173,6 +173,7 @@ export default function SportOS() {
           sport: profile?.clubs?.sport || "rugby",
           plan: planEfectivo,
           onboarding_done: profile?.onboarding_done || false,
+          avatar_url: profile?.avatar_url || null,
           cats: [],
           isReal: true,
         };
@@ -354,8 +355,10 @@ export default function SportOS() {
           <span className="hide-mobile" style={{fontSize:"10px",padding:"1px 6px",borderRadius:"4px",background:"var(--bg-elev-3)",color:"var(--text-4)"}}>⌘K</span>
         </motion.button>
         <div className="hide-mobile" style={{fontSize:"11px",color:"var(--text-2)",display:"flex",alignItems:"center",gap:"4px",padding:"5px 10px",background:"var(--bg-elev-2)",borderRadius:"99px",whiteSpace:"nowrap"}}>🇨🇱 CLP</div>
-        <motion.div whileHover={{scale:1.1,rotate:5}} style={{width:"34px",height:"34px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`2px solid ${sportColor}55`,flexShrink:0,boxShadow:`0 0 12px ${sportColor}44`,cursor:"pointer"}}>
-          {isDemo ? "AC" : currentUser.nombre.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+        <motion.div whileHover={{scale:1.1,rotate:5}} style={{width:"34px",height:"34px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}44,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`2px solid ${sportColor}55`,flexShrink:0,boxShadow:`0 0 12px ${sportColor}44`,cursor:"pointer",overflow:"hidden"}}>
+          {!isDemo && currentUser?.avatar_url
+            ? <img src={currentUser.avatar_url} alt="foto" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            : isDemo ? "AC" : currentUser.nombre.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
         </motion.div>
       </div>
 
@@ -372,8 +375,10 @@ export default function SportOS() {
           {/* Perfil del usuario */}
           <div className="sidebar-profile" style={{padding:"14px 12px",borderBottom:"1px solid var(--border-soft)"}}>
             <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-              <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}44`,flexShrink:0}}>
-                {currentUser?.nombre?.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()||"?"}
+              <div style={{width:"36px",height:"36px",borderRadius:"50%",background:`linear-gradient(135deg,${sportColor}33,${sportColor}11)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:sportColor,border:`1.5px solid ${sportColor}44`,flexShrink:0,overflow:"hidden"}}>
+                {currentUser?.avatar_url
+                  ? <img src={currentUser.avatar_url} alt="foto" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  : currentUser?.nombre?.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()||"?"}
               </div>
               <div style={{minWidth:0}}>
                 <div style={{fontWeight:700,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{currentUser?.nombre}</div>
@@ -484,7 +489,7 @@ export default function SportOS() {
               {module!=="home"&&module!=="miperfil"&&role==="admin"&&<AdminView module={module} sport={sport} sp={sp} club={club} activeClubs={activeClubs} setActiveClubs={setActiveClubs} countryData={countryData} players={players} addPlayer={addPlayer} updatePlayer={updatePlayer} removePlayer={removePlayer} showToast={showToast} sportColor={sportColor} payments={payments} setPayments={setPayments} clubId={clubId} currentUser={currentUser} userPlan={userPlan}/>}
               {module!=="home"&&module!=="miperfil"&&role==="entrenador"&&<EntrenadorView module={module} sport={sport} sp={sp} club={club} players={players} postLikes={postLikes} setPostLikes={setPostLikes} showToast={showToast} sportColor={sportColor} currentCategory={currentCategory} hiaModal={hiaModal} setHiaModal={setHiaModal} userCats={userCats} isDemo={isDemo} partidos={partidos} setPartidos={setPartidos} clubId={clubId} currentUserId={currentUser?.id||null}/>}
               {module!=="home"&&module!=="miperfil"&&role==="preparador"&&<PreparadorView module={module} sp={sp} showToast={showToast} sportColor={sportColor} publishedPlan={publishedPlan} setPublishedPlan={setPublishedPlan} newExForm={newExForm} setNewExForm={setNewExForm} newEx={newEx} setNewEx={setNewEx} gymPlanExercises={gymPlanExercises} setGymPlanExercises={setGymPlanExercises} rankTab={rankTab} setRankTab={setRankTab} expandedDay={expandedDay} setExpandedDay={setExpandedDay} userCats={userCats} isDemo={isDemo}/>}
-              {module==="miperfil"&&<PerfilView currentUser={currentUser} sport={sport} sportColor={sportColor} onSaved={(data)=>{if(currentUser)setCurrentUser(u=>({...u,nombre:data.nombre}));showToast("Perfil actualizado ✅");}}/>}
+              {module==="miperfil"&&<PerfilView currentUser={currentUser} sport={sport} sportColor={sportColor} onSaved={(data)=>{if(currentUser)setCurrentUser(u=>({...u,nombre:data.nombre,avatar_url:data.avatar_url||u.avatar_url}));showToast("Perfil actualizado ✅");}}/>}
               {module!=="home"&&module!=="miperfil"&&role==="jugador"&&<JugadorView module={module} sport={sport} sp={sp} club={club} player={players[0]} players={players} sportColor={sportColor} countryData={countryData} convocado={convocado} setConvocado={setConvocado} setWhatsappModal={setWhatsappModal} showToast={showToast} gymLog={gymLog} setGymLog={setGymLog} completedSession={completedSession} setCompletedSession={setCompletedSession} newRecord={newRecord} setNewRecord={setNewRecord} expandedEx={expandedEx} setExpandedEx={setExpandedEx} rankTab={rankTab} setRankTab={setRankTab} payments={payments} setPayments={setPayments} userCats={userCats} isDemo={isDemo} partidos={partidos} clubId={clubId}/>}
             </motion.div>
           </AnimatePresence>
