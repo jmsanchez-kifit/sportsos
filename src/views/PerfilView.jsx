@@ -48,6 +48,7 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoLinkedWarn, setPhotoLinkedWarn] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // Edad calculada
   const edad = form.fecha_nacimiento
@@ -87,9 +88,15 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
     const file = e.target.files?.[0];
     if (!file || !currentUser?.id) return;
     setUploadingPhoto(true);
+    setUploadError("");
     const path = `${currentUser.id}.jpg`;
     const { error } = await supabase.storage.from("avatars")
       .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      setUploadError(`Error al subir: ${error.message}`);
+      setUploadingPhoto(false);
+      return;
+    }
     if (!error) {
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const cleanUrl = urlData.publicUrl;
@@ -250,8 +257,13 @@ export default function PerfilView({ currentUser, sport, sportColor, readOnly=fa
           <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload}
             style={{ display:"none" }}/>
           {photoLinkedWarn && (
-            <div style={{ fontSize:"10px", color:"#F59E0B", textAlign:"center", maxWidth:"100px", lineHeight:1.4 }}>
-              ⚠️ Foto guardada. El admin debe enviarte el link de invitación personal para que aparezca en el equipo.
+            <div style={{ fontSize:"10px", color:"#F59E0B", textAlign:"center", maxWidth:"110px", lineHeight:1.4 }}>
+              ⚠️ Foto guardada. Pide al admin el link personal para vincular al equipo.
+            </div>
+          )}
+          {uploadError && (
+            <div style={{ fontSize:"10px", color:"#EF4444", textAlign:"center", maxWidth:"110px", lineHeight:1.4 }}>
+              ❌ {uploadError}
             </div>
           )}
         </div>

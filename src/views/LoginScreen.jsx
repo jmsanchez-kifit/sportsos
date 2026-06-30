@@ -178,6 +178,7 @@ export default function LoginScreen({ onLogin, onDemo, onRegister, onBack }) {
           club_id: profile?.club_id || null,
           plan: planEfectivo,
           onboarding_done: profile?.onboarding_done || false,
+          avatar_url: profile?.avatar_url || null,
           cats: [],
           isReal: true,
         };

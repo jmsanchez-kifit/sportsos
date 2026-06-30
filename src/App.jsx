@@ -253,7 +253,7 @@ export default function SportOS() {
       onLogin={(user)=>{
         const rolFinal = user.email==="admin@sportostest.com" ? "superadmin" : user.rol;
         const planFinal = user.email==="admin@sportostest.com" ? "elite" : (user.plan||"free");
-        setCurrentUser({nombre:user.nombre, email:user.email, rol:rolFinal, club:user.club, club_id:user.club_id||null, cats:user.cats, plan:planFinal, isReal:true});
+        setCurrentUser({nombre:user.nombre, email:user.email, rol:rolFinal, club:user.club, club_id:user.club_id||null, cats:user.cats, plan:planFinal, avatar_url:user.avatar_url||null, isReal:true});
         setRole(rolFinal);
         setSport(user.sport||"rugby");
         setScreen("app");
